@@ -1,0 +1,8 @@
+[package]
+name = "scheng-passes"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+scheng-runtime-glow = { path = "../scheng-runtime-glow" }
+glow = "0.13"

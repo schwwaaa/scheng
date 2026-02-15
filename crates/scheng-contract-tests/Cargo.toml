@@ -1,0 +1,11 @@
+[package]
+name = "scheng-contract-tests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+# Contract crates only (SDK surface)
+scheng-core = { path = "../scheng-core" }
+scheng-graph = { path = "../scheng-graph" }
+scheng-runtime = { path = "../scheng-runtime", features = ["serde"] }

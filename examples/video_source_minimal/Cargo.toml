@@ -1,0 +1,19 @@
+[package]
+name = "scheng-example-video-source-minimal"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+scheng-graph = { path = "../../crates/scheng-graph" }
+scheng-runtime-glow = { path = "../../crates/scheng-runtime-glow" }
+scheng-input-video = { path = "../../crates/scheng-input-video" }
+scheng-control-osc = { path = "../../crates/scheng-control-osc" }
+
+glow = "0.13"
+glutin = "0.30"
+glutin-winit = "0.3"
+raw-window-handle = "0.5"
+winit = "0.28"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

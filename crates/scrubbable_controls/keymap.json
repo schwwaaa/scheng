@@ -1,0 +1,116 @@
+{
+  "bindings": {
+    "space": {
+      "label": "Toggle play/pause",
+      "action": {
+        "kind": "toggle_play"
+      }
+    },
+    "k": {
+      "label": "Play",
+      "action": {
+        "kind": "play"
+      }
+    },
+    "j": {
+      "label": "Pause",
+      "action": {
+        "kind": "pause"
+      }
+    },
+    "left": {
+      "label": "Scrub back small",
+      "action": {
+        "kind": "scrub_delta",
+        "delta": -0.01
+      }
+    },
+    "right": {
+      "label": "Scrub forward small",
+      "action": {
+        "kind": "scrub_delta",
+        "delta": 0.01
+      }
+    },
+    "down": {
+      "label": "Half speed",
+      "action": {
+        "kind": "set_speed",
+        "speed": 0.5
+      }
+    },
+    "up": {
+      "label": "Double speed",
+      "action": {
+        "kind": "set_speed",
+        "speed": 2.0
+      }
+    },
+    "l": {
+      "label": "Toggle loop",
+      "action": {
+        "kind": "toggle_loop"
+      }
+    },
+    "1": {
+      "label": "Set loop start",
+      "action": {
+        "kind": "set_loop_start"
+      }
+    },
+    "2": {
+      "label": "Set loop end",
+      "action": {
+        "kind": "set_loop_end"
+      }
+    },
+    "b": {
+      "label": "Brightness up",
+      "action": {
+        "kind": "brightness_delta",
+        "delta": 0.05
+      }
+    },
+    "v": {
+      "label": "Brightness down",
+      "action": {
+        "kind": "brightness_delta",
+        "delta": -0.05
+      }
+    },
+    "c": {
+      "label": "Contrast up",
+      "action": {
+        "kind": "contrast_delta",
+        "delta": 0.05
+      }
+    },
+    "x": {
+      "label": "Contrast down",
+      "action": {
+        "kind": "contrast_delta",
+        "delta": -0.05
+      }
+    },
+    "s": {
+      "label": "Saturation up",
+      "action": {
+        "kind": "saturation_delta",
+        "delta": 0.05
+      }
+    },
+    "a": {
+      "label": "Saturation down",
+      "action": {
+        "kind": "saturation_delta",
+        "delta": -0.05
+      }
+    },
+    "r": {
+      "label": "Reset color",
+      "action": {
+        "kind": "reset_color"
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+# Forbidden in scheng-core / scheng-graph (and anything you declare “contract-only”)
+winit
+glutin
+glutin-winit
+raw-window-handle
+egui
+eframe
+imgui
+notify
+midir
+cpal
+rodio
+ffmpeg
+gstreamer
+opencv
+tokio
+reqwest
+tauri
+windows
+cocoa
+core-graphics

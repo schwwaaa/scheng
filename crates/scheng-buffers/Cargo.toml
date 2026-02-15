@@ -1,0 +1,8 @@
+[package]
+name = "scheng-buffers"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+glow = "0.13"
+scheng-runtime-glow = { path = "../scheng-runtime-glow" }

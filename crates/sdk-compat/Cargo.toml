@@ -1,0 +1,10 @@
+[package]
+name = "sdk-compat"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+scheng-core = { path = "../scheng-core" }
+scheng-graph = { path = "../scheng-graph" }
+scheng-runtime = { path = "../scheng-runtime" }

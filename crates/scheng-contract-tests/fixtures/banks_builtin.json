@@ -1,0 +1,14 @@
+{
+    "banks": [{
+        "name": "Basic",
+        "scenes": [
+            { "name": "solo_0", "preset": "solo0" },
+            { "name": "solo_1", "preset": "solo1" },
+            { "name": "solo_2", "preset": "solo2" },
+            { "name": "solo_3", "preset": "solo3" },
+            { "name": "quad", "preset": "quad" },
+            { "name": "sum01", "preset": "sum01" },
+            { "name": "sum23", "preset": "sum23" }
+        ]
+    }]
+}

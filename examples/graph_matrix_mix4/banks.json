@@ -1,0 +1,12 @@
+{
+  "banks": [
+    {
+      "name": "My Bank",
+      "scenes": [
+        { "name": "A", "preset": "solo0" },
+        { "name": "B", "preset": "solo1" },
+        { "name": "ALL", "preset": "quad" }
+      ]
+    }
+  ]
+}

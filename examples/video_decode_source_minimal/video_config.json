@@ -1,0 +1,8 @@
+{
+  "file": "examples/video_decode_source_minimal/menino.mp4",
+  "width": 1280,
+  "height": 720,
+  "fps": 30,
+  "loop": true,
+  "ffmpeg_path": "/opt/homebrew/bin/ffmpeg"
+}

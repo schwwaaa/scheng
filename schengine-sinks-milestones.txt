@@ -1,0 +1,84 @@
+scheng Sinks Milestone Ladder (S1 → S4)
+
+S1 — Output as a concept (single “main” output, no multi-sink yet)
+Goal:
+- Make the engine/runtime expose “the result of executing the plan” as a first-class thing without changing how rendering currently works.
+
+What changes (minimal):
+- Runtime execution returns a handle to the final image (whatever your backend already uses internally for “current output RT/texture”).
+- Examples keep doing what they do today (draw to screen / present), but now they do it by consuming that returned output instead of reaching into internals.
+
+Definition of Done:
+- cargo check --workspace passes.
+- All examples run unchanged visually.
+- There is now exactly one obvious “final output” returned from execution.
+
+Why it’s surgical:
+- You’re not adding a sink system yet—just creating the “the output exists” seam.
+
+
+S2 — Introduce a sink interface (single sink, still “main” only)
+Goal:
+- Route that final output through a sink abstraction so examples stop depending on backend internals.
+
+What changes:
+- Add a sink trait/interface at the correct boundary:
+  - Maximum portability: define it in scheng-runtime as backend-agnostic, with “consume output” semantics.
+  - Ultra-surgical: define it in scheng-runtime-glow first, then lift it up later (S4).
+- Modify the execution path to accept one sink and call it with the produced output.
+
+Definition of Done:
+- Examples instantiate a sink and pass it in.
+- Still only one output (“main”), still one sink.
+- No changes to scheng-graph needed.
+
+Key constraint (rock-solid):
+- If shader compile fails, sink is never given an invalid handle (or the sink gets a “no frame” and does nothing). Keep failure behavior stable.
+
+
+S3 — Named outputs + routing (multi-output capable, even if only 1 used initially)
+Goal:
+- Make output routing explicit so you can evolve to multiple sinks, multiple outputs, and headless offscreen outputs.
+
+What changes:
+- Extend the plan/runtime notion of “final output” to “outputs identified by a stable name/key”.
+- Execution produces a small collection: { output_name → output_handle }.
+- Sink call becomes “consume output(s)” or “consume output by name”.
+
+Keep it surgical:
+- If you don’t yet have real multi-output graphs, still produce only “main”, but as a one-entry map/table.
+
+Definition of Done:
+- Examples still render exactly the same.
+- Output routing exists as a stable contract.
+- No backends besides glow need updates yet (unless you have others).
+
+Why it matters:
+- This is the SDK moment: output routing becomes stable and future-proof.
+
+
+S4 — Sink ecosystem + composition (multiple sinks, optional features)
+Goal:
+- Make it developer-friendly: users can attach sinks without understanding engine internals.
+
+What changes:
+- Provide a small sink pack:
+  - present-to-window sink (what you already do)
+  - offscreen sink (keeps last texture; optional readback later)
+  - fanout/composite sink that forwards one output to many sinks
+- Move sink interface to the best crate boundary (if you started in glow in S2, lift it up now).
+
+Definition of Done:
+- Examples show present sink, offscreen sink, and fanout sink (present + offscreen simultaneously).
+- No rewrites; just plugging sinks together.
+- Workspace stays clean and stable.
+
+Landing strategy:
+- Never add more than one new concept per milestone:
+  - S1: output exists
+  - S2: sink consumes output
+  - S3: outputs are named/routable
+  - S4: multiple sinks + convenience combinators
+
+Recommended first move:
+- Land S1 first (safest): usually one return-value change + small example adjustments.

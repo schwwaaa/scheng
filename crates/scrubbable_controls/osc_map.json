@@ -1,0 +1,91 @@
+{
+  "bindings": {
+    "/scheng/transport/play": {
+      "label": "Play",
+      "binding": {
+        "kind": "fixed",
+        "action": {
+          "kind": "play"
+        }
+      }
+    },
+    "/scheng/transport/pause": {
+      "label": "Pause",
+      "binding": {
+        "kind": "fixed",
+        "action": {
+          "kind": "pause"
+        }
+      }
+    },
+    "/scheng/transport/toggle": {
+      "label": "Toggle play/pause",
+      "binding": {
+        "kind": "fixed",
+        "action": {
+          "kind": "toggle_play"
+        }
+      }
+    },
+    "/scheng/transport/speed": {
+      "label": "Set absolute speed from f32",
+      "binding": {
+        "kind": "set_speed_from_arg"
+      }
+    },
+    "/scheng/transport/speed_nudge": {
+      "label": "Multiply speed by factor",
+      "binding": {
+        "kind": "nudge_speed_from_arg"
+      }
+    },
+    "/scheng/transport/jump": {
+      "label": "Jump to normalized position",
+      "binding": {
+        "kind": "jump_norm_from_arg"
+      }
+    },
+    "/scheng/transport/scrub": {
+      "label": "Scrub delta",
+      "binding": {
+        "kind": "scrub_delta_from_arg"
+      }
+    },
+    "/scheng/loop/toggle": {
+      "label": "Toggle loop",
+      "binding": {
+        "kind": "fixed",
+        "action": {
+          "kind": "toggle_loop"
+        }
+      }
+    },
+    "/scheng/color/brightness": {
+      "label": "Brightness delta",
+      "binding": {
+        "kind": "brightness_delta_from_arg"
+      }
+    },
+    "/scheng/color/contrast": {
+      "label": "Contrast delta",
+      "binding": {
+        "kind": "contrast_delta_from_arg"
+      }
+    },
+    "/scheng/color/saturation": {
+      "label": "Saturation delta",
+      "binding": {
+        "kind": "saturation_delta_from_arg"
+      }
+    },
+    "/scheng/color/reset": {
+      "label": "Reset color",
+      "binding": {
+        "kind": "fixed",
+        "action": {
+          "kind": "reset_color"
+        }
+      }
+    }
+  }
+}

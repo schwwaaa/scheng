@@ -1,0 +1,58 @@
+[workspace]
+resolver = "2"
+
+members = [
+  "crates/sdk-compat",
+  "crates/scheng-buffers",
+  "crates/scheng-control-osc",
+  "crates/scheng-core",
+  "crates/scheng-graph",
+  "crates/scheng-host-winit",
+  "crates/scheng-passes",
+  "crates/scheng-runtime",
+  "crates/scheng-runtime-glow",
+  "crates/scheng-contract-tests",
+  "crates/scheng-input-webcam",
+  "crates/scheng-input-video",
+  "crates/scrubbable_controls",
+  "examples/minimal",
+  "examples/pure_single_pass",
+  "examples/render_target_only",
+  "examples/feedback_pingpong",
+  "examples/feedback_orb",
+  "examples/graph_minimal",
+  "examples/graph_chain2",
+  "examples/graph_mixer2",
+  "examples/graph_mixer_builtin",
+  "examples/graph_matrix_mix4",
+  "examples/graph_matrix_mix4_webcam",
+"examples/graph_webcam_luma_key",
+  "examples/syphon_builtin_legacy",
+  "examples/syphon_minimal",
+  "examples/syphon_patchbay",
+  "examples/readback_minimal",
+  "examples/texture_input_minimal",
+  "examples/static_source_minimal",
+  "examples/webcam_source_minimal",
+  "examples/video_source_minimal",
+  "examples/video_decode_source_minimal",
+  "examples/video_device_capture_macos",
+  "examples/osc_minimal",
+  "examples/video_scrub_keyboard_transport",
+]
+
+exclude = ["examples/syphon_builtin_legacy"]
+
+[workspace.package]
+edition = "2021"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+lto = true
+codegen-units = 1

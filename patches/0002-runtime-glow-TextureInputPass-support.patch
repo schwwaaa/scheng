@@ -1,0 +1,64 @@
+diff --git a/crates/scheng-runtime-glow/src/lib.rs b/crates/scheng-runtime-glow/src/lib.rs
+--- a/crates/scheng-runtime-glow/src/lib.rs
++++ b/crates/scheng-runtime-glow/src/lib.rs
+@@
+ pub struct NodeProps {
+     pub shader_sources: HashMap<NodeId, ShaderSource>,
+     pub mixer_params: HashMap<NodeId, MixerParams>,
+     pub matrix_params: HashMap<NodeId, MatrixParams>,
+     pub output_names: HashMap<NodeId, String>,
++    /// External textures injected by the host for `NodeKind::TextureInputPass`.
++    pub texture_inputs: HashMap<NodeId, glow::NativeTexture>,
+ }
+@@
+ impl Default for NodeProps {
+     fn default() -> Self {
+         Self {
+             shader_sources: HashMap::new(),
+             mixer_params: HashMap::new(),
+             matrix_params: HashMap::new(),
+             output_names: HashMap::new(),
++            texture_inputs: HashMap::new(),
+         }
+     }
+ }
+@@
+ const FULLSCREEN_VERT: &str = r#"""..."""#;
++const TEXTURE_INPUT_FRAG: &str = r#"
++#version 330 core
++in vec2 vUv;
++out vec4 oColor;
++uniform sampler2D u_tex0;
++void main(){ oColor = texture(u_tex0, vUv); }
++"#;
+@@
+-        if node.kind == NodeKind::ShaderPass || node.kind.class() == NodeClass::Mixer {
++        if node.kind == NodeKind::ShaderPass
++            || node.kind == NodeKind::TextureInputPass
++            || node.kind.class() == NodeClass::Mixer
++        {
+@@
+-            let shader = props.shader_sources.get(&node.id);
++            let shader = if node.kind == NodeKind::TextureInputPass {
++                // Built-in copy pass unless the host overrides with a custom shader source.
++                props.shader_sources.get(&node.id).or_else(|| Some(&ShaderSource {
++                    vertex: FULLSCREEN_VERT.into(),
++                    fragment: TEXTURE_INPUT_FRAG.into(),
++                    origin: Some("TextureInputPass".into()),
++                }))
++            } else {
++                props.shader_sources.get(&node.id)
++            };
+@@
+-            // Collect input textures from upstream edges.
++            // Collect input textures from upstream edges.
+             let mut inputs: Vec<(u32, NativeTexture)> = Vec::new();
+@@
++            // Special case: TextureInputPass uses host-provided texture as unit 0 when no upstream edges exist.
++            if node.kind == NodeKind::TextureInputPass && inputs.is_empty() {
++                if let Some(tex) = props.texture_inputs.get(&node.id).copied() {
++                    inputs.push((0, tex));
++                } else {
++                    return Err(EngineError::Other("TextureInputPass missing host texture".into()));
++                }
++            }

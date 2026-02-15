@@ -1,0 +1,9 @@
+[package]
+name = "scheng-host-winit"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# Intentionally empty in the skeleton; winit/glutin integration will land later.
+scheng-runtime-glow = { path = "../scheng-runtime-glow" }

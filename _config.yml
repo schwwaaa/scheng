@@ -1,0 +1,8 @@
+title: "scheng / scheng Docs"
+description: "GPU video synthesis engine — SDK, instruments, and internals."
+theme: minima
+
+# GitHub Pages will serve from /docs if you configure it that way.
+# You don't *have* to set a baseurl locally, but you can if needed.
+markdown: kramdown
+

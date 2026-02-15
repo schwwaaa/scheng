@@ -1,0 +1,8 @@
+{
+    "banks": [{
+        "name": "Broken",
+        "scenes": [
+            { "name": "oops", "preset": "definitely_not_real" }
+        ]
+    }]
+}

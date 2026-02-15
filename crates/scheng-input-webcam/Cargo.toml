@@ -1,0 +1,11 @@
+[package]
+name = "scheng-input-webcam"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+native = ["dep:nokhwa"]
+
+[dependencies]
+thiserror = "1"
+nokhwa = { version = "0.10.10", default-features = false, features = ["input-native"], optional = true }

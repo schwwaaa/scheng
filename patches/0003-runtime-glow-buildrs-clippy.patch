@@ -1,0 +1,14 @@
+--- /mnt/data/build.rs	2026-01-12 22:18:33.909936823 +0000
++++ /mnt/data/build_runtime_glow.rs	2026-01-12 22:22:29.210711327 +0000
+@@ -38,9 +38,9 @@
+         .file("native/syphon_bridge.m")
+         .flag("-fobjc-arc")
+         .flag("-ObjC")
+-        .flag(&format!("-F{fw_dir_str}"))
++        .flag(format!("-F{fw_dir_str}"))
+         // Some clang configurations also require an explicit "framework include" search path.
+-        .flag(&format!("-iframework{fw_dir_str}"))
++        .flag(format!("-iframework{fw_dir_str}"))
+         .include("native")
+         .include(headers_dir)
+         .compile("syphon_bridge");

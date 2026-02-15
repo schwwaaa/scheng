@@ -1,0 +1,23 @@
+# examples/graph_matrix_mix4_webcam/Cargo.toml
+[package]
+name = "scheng-example-graph-matrix-mix4-webcam"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+# existing deps...
+glow = "0.13.1"
+winit = "0.28.7"
+glutin = "0.30.10"
+glutin-winit = "0.3.0"
+raw-window-handle = "0.5.2"
+
+scheng-graph = { path = "../../crates/scheng-graph" }
+scheng-runtime-glow = { path = "../../crates/scheng-runtime-glow" }
+scheng-runtime = { path = "../../crates/scheng-runtime" }
+scheng-core = { path = "../../crates/scheng-core" }
+scheng-input-webcam = { path = "../../crates/scheng-input-webcam", features = ["native"] }
+
+# NEW:
+scheng-control-osc = { path = "../../crates/scheng-control-osc" }

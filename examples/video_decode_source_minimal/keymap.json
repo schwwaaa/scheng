@@ -1,0 +1,46 @@
+{
+    "bindings": {
+        "Space": {
+            "kind": "TogglePlay"
+        },
+        "J": {
+            "kind": "PlaySpeedDown"
+        },
+        "K": {
+            "kind": "PlaySpeedReset"
+        },
+        "L": {
+            "kind": "PlaySpeedUp"
+        },
+        "Left": {
+            "kind": "JogBackward"
+        },
+        "Right": {
+            "kind": "JogForward"
+        },
+        "Down": {
+            "kind": "JumpStart"
+        },
+        "Up": {
+            "kind": "JumpEnd"
+        },
+        "Key1": {
+            "kind": "BrightnessDown"
+        },
+        "Key2": {
+            "kind": "BrightnessUp"
+        },
+        "Key3": {
+            "kind": "ContrastDown"
+        },
+        "Key4": {
+            "kind": "ContrastUp"
+        },
+        "Key5": {
+            "kind": "SaturationDown"
+        },
+        "Key6": {
+            "kind": "SaturationUp"
+        }
+    }
+}

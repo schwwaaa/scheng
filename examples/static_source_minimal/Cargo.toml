@@ -1,0 +1,16 @@
+[package]
+name = "scheng-example-static-source-minimal"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+glow = "0.13"
+glutin = "0.30"
+glutin-winit = "0.3"
+winit = "0.28"
+raw-window-handle = "0.5"
+
+scheng-graph = { path = "../../crates/scheng-graph" }
+scheng-runtime-glow = { path = "../../crates/scheng-runtime-glow" }
+scheng-runtime = { path = "../../crates/scheng-runtime" }
+scheng-core = { path = "../../crates/scheng-core" }

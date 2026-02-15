@@ -1,0 +1,19 @@
+[package]
+name = "scheng-runtime-glow"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+scheng-core = { path = "../scheng-core" }
+scheng-graph = { path = "../scheng-graph" }
+scheng-runtime = { path = "../scheng-runtime" }
+scheng-input-video = { path = "../scheng-input-video" }
+bytemuck = { version = "1", features = ["extern_crate_alloc"] }
+glow = "0.13"
+
+[build-dependencies]
+cc = "1"
+
+[features]
+syphon = []

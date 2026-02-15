@@ -1,0 +1,11 @@
+diff --git a/crates/scheng-graph/src/lib.rs b/crates/scheng-graph/src/lib.rs
+--- a/crates/scheng-graph/src/lib.rs
++++ b/crates/scheng-graph/src/lib.rs
+@@
+ pub enum NodeKind {
+@@
+     ShaderPass,
++    /// Host-provided GPU texture becomes a render pass output (samples unit0 and writes to the pass RT).
++    TextureInputPass,
+@@
+ }

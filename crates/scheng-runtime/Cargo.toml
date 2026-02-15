@@ -1,0 +1,16 @@
+[package]
+name = "scheng-runtime"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[features]
+# Enable JSON bank/scene loading helpers.
+serde = ["dep:serde", "dep:serde_json"]
+
+[dependencies]
+scheng-core = { path = "../scheng-core" }
+scheng-graph = { path = "../scheng-graph" }
+
+serde = { version = "1", features = ["derive"], optional = true }
+serde_json = { version = "1", optional = true }
