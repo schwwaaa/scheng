@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>scheng editor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+:root {
+  --bg:       #0c0c0f;
+  --bg1:      #13131a;
+  --bg2:      #1a1a24;
+  --bg3:      #22222f;
+  --border:   #252535;
+  --border-hi:#353550;
+  --accent:   #5b6eff;
+  --accent2:  #ff5f5f;
+  --accent3:  #3fffc8;
+  --yellow:   #ffd166;
+  --text:     #ddddf0;
+  --text2:    #7777a0;
+  --text3:    #44445a;
+  --node-w:   210px;
+  --port-r:   7px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'IBM Plex Mono', monospace;
+  background: var(--bg);
+  color: var(--text);
+  display: grid;
+  grid-template-rows: 42px 1fr;
+  grid-template-columns: 1fr 270px;
+  grid-template-areas: "hdr hdr" "cvs pnl";
+}
+
+/* ── HEADER ─────────────────────────────── */
+header {
+  grid-area: hdr;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+.logo {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+.logo em { color: var(--accent); font-style: normal; }
+.hdr-gap { flex: 1; }
+.hdr-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  color: var(--text2);
+  letter-spacing: 0.06em;
+}
+.dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text3);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.dot.on  { background: var(--accent3); box-shadow: 0 0 6px var(--accent3); }
+.dot.err { background: var(--accent2); }
+
+.hbtn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 3px;
+  border: 1px solid var(--border-hi);
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.hbtn:hover { color: var(--text); border-color: var(--accent); background: var(--bg3); }
+.hbtn.hi  { background: var(--accent); color: #fff; border-color: var(--accent); }
+.hbtn.hi:hover { filter: brightness(1.15); }
+.hbtn.warn { border-color: var(--yellow); color: var(--yellow); }
+.hbtn.warn:hover { background: rgba(255,209,102,0.1); }
+
+/* ── CANVAS ─────────────────────────────── */
+#cvs-wrap {
+  grid-area: cvs;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+  background-image:
+    radial-gradient(circle, #252535 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+#cvs { position: absolute; inset: 0; }
+svg#edges {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* ── NODES ──────────────────────────────── */
+.node {
+  position: absolute;
+  width: var(--node-w);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  box-shadow: 0 3px 16px rgba(0,0,0,0.5);
+  user-select: none;
+  z-index: 10;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.node:hover { border-color: var(--border-hi); }
+.node.sel   { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91,110,255,0.2), 0 3px 16px rgba(0,0,0,0.5); }
+
+/* Node kind accent stripe */
+.node-stripe {
+  height: 3px;
+  border-radius: 5px 5px 0 0;
+  background: var(--border-hi);
+}
+.k-shader_source  .node-stripe,
+.k-shader_pass    .node-stripe { background: var(--accent); }
+.k-crossfade      .node-stripe,
+.k-matrix_mix4    .node-stripe,
+.k-add            .node-stripe { background: #a855f7; }
+.k-pixels_out     .node-stripe,
+.k-syphon         .node-stripe { background: var(--accent3); }
+
+.node-hdr {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 10px 6px;
+  cursor: grab;
+  border-bottom: 1px solid var(--border);
+}
+.node-hdr:active { cursor: grabbing; }
+.node-badge {
+  font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 2px 5px; border-radius: 2px;
+  background: var(--bg3); color: var(--text2);
+  flex-shrink: 0;
+}
+.node-lbl {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 11px; font-weight: 500;
+  color: var(--text);
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.node-x {
+  width: 14px; height: 14px;
+  border: none; background: none;
+  color: var(--text3); cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 3px; flex-shrink: 0;
+  transition: color 0.1s, background 0.1s;
+}
+.node-x:hover { color: var(--accent2); background: rgba(255,95,95,0.12); }
+
+.node-ports {
+  display: flex; justify-content: space-between;
+  padding: 5px 0; min-height: 28px;
+}
+.pcol { display: flex; flex-direction: column; gap: 5px; }
+.pcol.ins { align-items: flex-start; }
+.pcol.outs { align-items: flex-end; }
+
+.prow {
+  display: flex; align-items: center; gap: 4px;
+  position: relative; height: 18px;
+}
+.pcol.outs .prow { flex-direction: row-reverse; }
+
+.pdot {
+  width: calc(var(--port-r) * 2); height: calc(var(--port-r) * 2);
+  border-radius: 50%;
+  border: 2px solid var(--border-hi);
+  background: var(--bg);
+  cursor: crosshair; flex-shrink: 0;
+  margin: 0 calc(0px - var(--port-r));
+  transition: border-color 0.1s, background 0.1s, transform 0.1s;
+  position: relative; z-index: 2;
+}
+.pdot:hover, .pdot.wiring { border-color: var(--accent); background: var(--accent); transform: scale(1.4); }
+.pdot.live { border-color: var(--accent3); background: rgba(63,255,200,0.12); }
+.plbl { font-size: 9px; color: var(--text3); padding: 0 8px; }
+
+/* ── EDGES ──────────────────────────────── */
+.edge {
+  fill: none; stroke: var(--accent); stroke-width: 1.5;
+  opacity: 0.55; stroke-linecap: round; pointer-events: none;
+}
+#draft-wire {
+  fill: none; stroke: var(--accent); stroke-width: 1.5; opacity: 0.7;
+  stroke-dasharray: 5 4; pointer-events: none;
+}
+
+/* ── PANEL ──────────────────────────────── */
+#panel {
+  grid-area: pnl;
+  background: var(--bg1);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.psec { border-bottom: 1px solid var(--border); }
+.ptitle {
+  font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--text3); padding: 9px 13px 7px;
+  font-family: 'IBM Plex Sans', sans-serif; font-weight: 500;
+}
+
+/* Add-node grid */
+.node-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 5px; padding: 0 10px 10px;
+}
+.ngbtn {
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+  letter-spacing: 0.05em; padding: 7px 5px; border-radius: 4px;
+  border: 1px solid var(--border); background: var(--bg2);
+  color: var(--text2); cursor: pointer; text-align: center;
+  transition: all 0.12s; line-height: 1.5;
+}
+.ngbtn:hover { color: var(--text); border-color: var(--accent); background: var(--bg3); }
+.ngbtn span { display: block; font-size: 8px; color: var(--text3); }
+
+/* Props */
+#props { flex: 1; overflow-y: auto; padding: 10px; }
+#props::-webkit-scrollbar { width: 3px; }
+#props::-webkit-scrollbar-thumb { background: var(--border); }
+.pempty { color: var(--text3); font-size: 10px; text-align: center; padding: 20px 0; line-height: 1.9; }
+
+.pf { margin-bottom: 10px; }
+.pf label { display: block; font-size: 9px; color: var(--text2); letter-spacing: 0.08em;
+            text-transform: uppercase; margin-bottom: 3px; }
+.pinput {
+  width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 3px;
+  color: var(--text); padding: 4px 7px; outline: none;
+  transition: border-color 0.12s;
+}
+.pinput:focus { border-color: var(--accent); }
+.pinput[readonly] { opacity: 0.4; }
+
+.prow-slider { display: flex; align-items: center; gap: 6px; }
+.pslider {
+  flex: 1; -webkit-appearance: none; height: 3px;
+  border-radius: 2px; background: var(--border-hi); cursor: pointer; outline: none;
+}
+.pslider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 10px; height: 10px;
+  border-radius: 50%; background: var(--accent); cursor: pointer;
+}
+.pval { font-size: 9px; color: var(--text3); min-width: 30px; text-align: right; }
+
+.shader-box {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; line-height: 1.55;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
+  color: var(--accent3); padding: 7px; width: 100%; height: 180px;
+  resize: vertical; outline: none; tab-size: 2;
+  transition: border-color 0.12s;
+}
+.shader-box:focus { border-color: var(--accent); }
+.apply-btn {
+  margin-top: 5px; width: 100%; font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 6px; border-radius: 3px; border: 1px solid var(--accent);
+  background: rgba(91,110,255,0.08); color: var(--accent);
+  cursor: pointer; transition: all 0.12s;
+}
+.apply-btn:hover { background: var(--accent); color: #fff; }
+
+/* Log */
+#log {
+  height: 110px; overflow-y: auto; padding: 6px 10px;
+  font-size: 9px; line-height: 1.8; color: var(--text3);
+}
+#log::-webkit-scrollbar { width: 2px; }
+#log::-webkit-scrollbar-thumb { background: var(--border); }
+.le { display: flex; gap: 7px; }
+.lt { color: var(--text3); flex-shrink: 0; }
+.lm { color: var(--text2); }
+.le.ok  .lm { color: var(--accent3); }
+.le.err .lm { color: var(--accent2); }
+.le.ev  .lm { color: var(--accent); }
+.le.warn .lm { color: var(--yellow); }
+
+/* Wire hint */
+#wire-hint {
+  position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+  background: var(--bg3); border: 1px solid var(--accent); border-radius: 20px;
+  padding: 5px 16px; font-size: 10px; color: var(--accent);
+  pointer-events: none; opacity: 0; transition: opacity 0.18s; z-index: 999;
+}
+#wire-hint.show { opacity: 1; }
+
+/* Compile-needed badge */
+#needs-compile {
+  font-size: 9px; letter-spacing: 0.06em;
+  padding: 3px 8px; border-radius: 3px;
+  background: rgba(255,209,102,0.12); color: var(--yellow);
+  border: 1px solid rgba(255,209,102,0.3);
+  display: none;
+}
+#needs-compile.show { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">sch<em>eng</em></div>
+  <div class="hdr-gap"></div>
+  <div id="needs-compile">needs compile</div>
+  <div class="hdr-status">
+    <div class="dot" id="dot"></div>
+    <span id="status-txt">disconnected</span>
+  </div>
+  <button class="hbtn" id="btn-connect">connect</button>
+  <button class="hbtn warn" id="btn-compile">compile</button>
+  <button class="hbtn" id="btn-template">load template</button>
+</header>
+
+<div id="cvs-wrap">
+  <svg id="edges">
+    <path id="draft-wire" d=""/>
+  </svg>
+  <div id="cvs"></div>
+</div>
+
+<aside id="panel">
+  <div class="psec">
+    <div class="ptitle">add node</div>
+    <div class="node-grid">
+      <button class="ngbtn" data-kind="shader_source" data-label="Source">◈ ShaderSource<span>generates pixels</span></button>
+      <button class="ngbtn" data-kind="shader_pass"   data-label="Pass">◧ ShaderPass<span>transforms</span></button>
+      <button class="ngbtn" data-kind="crossfade"     data-label="Mix">◑ Crossfade<span>blend a+b</span></button>
+      <button class="ngbtn" data-kind="matrix_mix4"   data-label="Matrix">⊞ MatrixMix4<span>4-input mix</span></button>
+      <button class="ngbtn" data-kind="pixels_out"    data-label="Output">▣ PixelsOut<span>primary out</span></button>
+      <button class="ngbtn" data-kind="syphon"        data-label="Syphon">⇡ Syphon<span>send frame</span></button>
+    </div>
+  </div>
+  <div class="psec">
+    <div class="ptitle">properties</div>
+    <div id="props"><div class="pempty">click a node<br/>to inspect it</div></div>
+  </div>
+  <div class="psec" style="flex-shrink:0">
+    <div class="ptitle">log</div>
+    <div id="log"></div>
+  </div>
+</aside>
+
+<div id="wire-hint">click an input port to connect  ·  esc cancels</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// PROTOCOL CONSTANTS — must match protocol.rs exactly
+// ═══════════════════════════════════════════════════
+// ClientMsg actions: add_node, remove_node, connect, disconnect,
+//                    set_shader, set_mix, set_weights, compile, get_state, move_node
+// EngineMsg events:  state, ok, error, node_added, node_removed,
+//                    edge_added, edge_removed, compiled, shader_updated,
+//                    param_updated, weights_updated, node_moved
+//
+// EdgeDesc fields:   from_id, from_port, to_id, to_port   (NOT from_node/to_node)
+// NodeDesc fields:   id, kind, label, position{x,y}, input_ports[], output_ports[],
+//                    frag (nullable), mix (nullable), weights (nullable)
+// SetShader:         { action:"set_shader", node_id, frag, vert? }
+// Connect:           { action:"connect", from_id, from_port, to_id, to_port }
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+const G = {
+  nodes: {},       // id → { el, desc }
+  edges: [],       // [ { from_id, from_port, to_id, to_port, pathEl } ]
+  sel: null,       // selected node id
+  ws: null,
+  connected: false,
+  compiled: false,
+  wiring: null,    // { nodeId, port, x, y } — in-progress wire drag
+  drag: null,      // node drag state
+};
+
+const WS = 'ws://127.0.0.1:7777';
+
+// ═══════════════════════════════════════════════════
+// WEBSOCKET
+// ═══════════════════════════════════════════════════
+function wsConnect() {
+  if (G.ws) G.ws.close();
+  G.ws = new WebSocket(WS);
+  G.ws.onopen = () => {
+    G.connected = true;
+    setDot('on', 'connected');
+    log('connected to scheng-bridge', 'ok');
+    send({ action: 'get_state' });
+  };
+  G.ws.onmessage = e => onMsg(JSON.parse(e.data));
+  G.ws.onclose   = () => { G.connected = false; setDot('', 'disconnected'); log('disconnected', 'err'); };
+  G.ws.onerror   = () => { setDot('err', 'error'); log('cannot reach ws://127.0.0.1:7777 — is scheng-bridge running?', 'err'); };
+}
+
+function send(obj) {
+  if (G.ws && G.ws.readyState === 1) G.ws.send(JSON.stringify(obj));
+  else log('not connected', 'err');
+}
+
+// ═══════════════════════════════════════════════════
+// MESSAGE DISPATCH
+// ═══════════════════════════════════════════════════
+function onMsg(m) {
+  switch (m.event) {
+    case 'state':        hydrate(m); break;
+    case 'node_added':   nodeAdd(m); log(`+ ${m.id} (${m.kind})`, 'ev'); break;
+    case 'node_removed': nodeRemove(m.id); log(`- ${m.id}`, 'ev'); break;
+    case 'edge_added':   edgeAdd(m); break;
+    case 'edge_removed': edgeRemove(m.from_id, m.from_port, m.to_id, m.to_port); break;
+    case 'compiled':
+      G.compiled = true;
+      setNeedsCompile(false);
+      log(`compiled ✓  ${m.node_count} nodes · ${m.edge_count} edges`, 'ok');
+      break;
+    case 'shader_updated':  log(`shader → ${m.node_id}`, 'ev'); break;
+    case 'param_updated':   log(`${m.node_id}.${m.param} = ${m.value.toFixed(3)}`, 'ev'); break;
+    case 'weights_updated': log(`${m.node_id} weights updated`, 'ev'); break;
+    case 'error':  log(`error: ${m.message}`, 'err'); break;
+    case 'ok':     log(m.ack, 'ok'); break;
+  }
+}
+
+function hydrate(snap) {
+  // Clear DOM completely
+  document.getElementById('cvs').innerHTML = '';
+  G.edges.forEach(e => e.pathEl?.remove());
+  G.nodes = {}; G.edges = [];
+  G.sel = null;
+  G.compiled = snap.compiled;
+  setNeedsCompile(!snap.compiled);
+  snap.nodes.forEach(nodeAdd);
+  // Small delay so DOM is painted before we measure port positions
+  setTimeout(() => snap.edges.forEach(edgeAdd), 30);
+  log(`state: ${snap.nodes.length} nodes · ${snap.edges.length} edges`, 'ok');
+}
+
+// ═══════════════════════════════════════════════════
+// NODE DOM
+// ═══════════════════════════════════════════════════
+function nodeAdd(d) {
+  if (G.nodes[d.id]) return;
+
+  const el = document.createElement('div');
+  el.className = `node k-${d.kind}`;
+  el.id = 'n-' + d.id;
+  el.style.left = (d.position?.x ?? 60) + 'px';
+  el.style.top  = (d.position?.y ?? 60) + 'px';
+
+  // Stripe
+  const stripe = document.createElement('div');
+  stripe.className = 'node-stripe';
+  el.appendChild(stripe);
+
+  // Header
+  const hdr = document.createElement('div');
+  hdr.className = 'node-hdr';
+  hdr.innerHTML = `
+    <span class="node-badge">${kindBadge(d.kind)}</span>
+    <span class="node-lbl">${d.label}</span>
+    <button class="node-x" title="delete">×</button>`;
+  el.appendChild(hdr);
+
+  // Ports row
+  const ports = document.createElement('div');
+  ports.className = 'node-ports';
+  const ins  = document.createElement('div'); ins.className  = 'pcol ins';
+  const outs = document.createElement('div'); outs.className = 'pcol outs';
+
+  (d.input_ports  || []).forEach(p => ins.appendChild(makePortRow(d.id, p, 'in')));
+  (d.output_ports || []).forEach(p => outs.appendChild(makePortRow(d.id, p, 'out')));
+
+  ports.appendChild(ins);
+  ports.appendChild(outs);
+  el.appendChild(ports);
+
+  // Events
+  hdr.addEventListener('mousedown', startDrag);
+  el.addEventListener('click', ev => { if (!ev.defaultPrevented) selectNode(d.id); });
+  hdr.querySelector('.node-x').addEventListener('click', ev => {
+    ev.preventDefault();
+    send({ action: 'remove_node', id: d.id });
+    setNeedsCompile(true);
+  });
+
+  document.getElementById('cvs').appendChild(el);
+  G.nodes[d.id] = { el, desc: d };
+  updateLivePorts();
+}
+
+function makePortRow(nodeId, portName, dir) {
+  const row = document.createElement('div');
+  row.className = 'prow';
+  const dot = document.createElement('div');
+  dot.className = 'pdot';
+  dot.dataset.node = nodeId;
+  dot.dataset.port = portName;
+  dot.dataset.dir  = dir;
+  dot.title = portName;
+  const lbl = document.createElement('span');
+  lbl.className = 'plbl';
+  lbl.textContent = portName;
+  if (dir === 'in') { row.appendChild(dot); row.appendChild(lbl); }
+  else              { row.appendChild(lbl); row.appendChild(dot); }
+  dot.addEventListener('mousedown', portMouseDown);
+  return row;
+}
+
+function nodeRemove(id) {
+  G.nodes[id]?.el.remove();
+  G.edges = G.edges.filter(e => {
+    if (e.from_id === id || e.to_id === id) { e.pathEl?.remove(); return false; }
+    return true;
+  });
+  delete G.nodes[id];
+  if (G.sel === id) { G.sel = null; renderProps(null); }
+  updateLivePorts();
+}
+
+function kindBadge(k) {
+  return {
+    shader_source:'SRC', shader_pass:'SHD', crossfade:'MIX',
+    matrix_mix4:'MTX', pixels_out:'OUT', syphon:'SYP',
+    color_correct:'CLR', blur:'BLR', keyer:'KEY', add:'ADD',
+    noise_source:'NSE', texture_input_pass:'TEX', video_decode_source:'VID',
+  }[k] ?? k.slice(0,3).toUpperCase();
+}
+
+// ═══════════════════════════════════════════════════
+// EDGE DOM
+// ═══════════════════════════════════════════════════
+function edgeAdd(d) {
+  // Deduplicate
+  if (G.edges.find(e => e.from_id===d.from_id && e.from_port===d.from_port
+                     && e.to_id===d.to_id   && e.to_port===d.to_port)) return;
+  const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.classList.add('edge');
+  document.getElementById('edges').insertBefore(path, document.getElementById('draft-wire'));
+  const edge = { ...d, pathEl: path };
+  G.edges.push(edge);
+  drawEdge(edge);
+  updateLivePorts();
+}
+
+function edgeRemove(fi, fp, ti, tp) {
+  const i = G.edges.findIndex(e => e.from_id===fi && e.from_port===fp && e.to_id===ti && e.to_port===tp);
+  if (i >= 0) { G.edges[i].pathEl?.remove(); G.edges.splice(i,1); }
+  updateLivePorts();
+}
+
+function drawEdge(e) {
+  const a = portPos(e.from_id, e.from_port, 'out');
+  const b = portPos(e.to_id,   e.to_port,   'in');
+  if (!a || !b) return;
+  e.pathEl.setAttribute('d', bez(a.x, a.y, b.x, b.y));
+}
+
+function redrawEdges() { G.edges.forEach(drawEdge); }
+
+function bez(x1,y1,x2,y2) {
+  const dx = Math.abs(x2-x1)*0.55 + 30;
+  return `M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`;
+}
+
+function portPos(nodeId, port, dir) {
+  const entry = G.nodes[nodeId]; if (!entry) return null;
+  const dot = entry.el.querySelector(`.pdot[data-port="${port}"][data-dir="${dir}"]`);
+  if (!dot) return null;
+  const r  = dot.getBoundingClientRect();
+  const wr = document.getElementById('cvs-wrap').getBoundingClientRect();
+  return { x: r.left - wr.left + r.width/2, y: r.top - wr.top + r.height/2 };
+}
+
+function updateLivePorts() {
+  document.querySelectorAll('.pdot').forEach(d => d.classList.remove('live'));
+  G.edges.forEach(e => {
+    G.nodes[e.from_id]?.el.querySelector(`.pdot[data-port="${e.from_port}"][data-dir="out"]`)?.classList.add('live');
+    G.nodes[e.to_id  ]?.el.querySelector(`.pdot[data-port="${e.to_port}"][data-dir="in"]`)   ?.classList.add('live');
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// WIRING (drag from output → click input)
+// ═══════════════════════════════════════════════════
+function portMouseDown(ev) {
+  ev.stopPropagation(); ev.preventDefault();
+  const dot  = ev.currentTarget;
+  const dir  = dot.dataset.dir;
+
+  // If already wiring, try to finish
+  if (G.wiring) { finishWire(dot.dataset.node, dot.dataset.port, dir); return; }
+
+  if (dir !== 'out') { log('start wires from output ports (right side)', 'warn'); return; }
+
+  const wr = document.getElementById('cvs-wrap').getBoundingClientRect();
+  const r  = dot.getBoundingClientRect();
+  G.wiring = {
+    nodeId: dot.dataset.node, port: dot.dataset.port,
+    x: r.left - wr.left + r.width/2,
+    y: r.top  - wr.top  + r.height/2,
+  };
+  dot.classList.add('wiring');
+  document.getElementById('wire-hint').classList.add('show');
+}
+
+function finishWire(toId, toPort, toDir) {
+  const from = G.wiring;
+  cancelWire();
+  if (toDir !== 'in')      { log('connect to an input port (left side)', 'warn'); return; }
+  if (from.nodeId === toId){ log('cannot connect a node to itself', 'warn'); return; }
+  send({ action:'connect', from_id: from.nodeId, from_port: from.port, to_id: toId, to_port: toPort });
+  setNeedsCompile(true);
+}
+
+function cancelWire() {
+  if (!G.wiring) return;
+  document.querySelectorAll('.pdot.wiring').forEach(d => d.classList.remove('wiring'));
+  G.wiring = null;
+  document.getElementById('draft-wire').setAttribute('d','');
+  document.getElementById('wire-hint').classList.remove('show');
+}
+
+// While wiring: track mouse for live draft wire
+document.addEventListener('mousemove', ev => {
+  if (G.wiring) {
+    const wr = document.getElementById('cvs-wrap').getBoundingClientRect();
+    const mx = ev.clientX - wr.left, my = ev.clientY - wr.top;
+    document.getElementById('draft-wire').setAttribute('d', bez(G.wiring.x, G.wiring.y, mx, my));
+  }
+  if (G.drag) {
+    const dx = ev.clientX - G.drag.sx, dy = ev.clientY - G.drag.sy;
+    const entry = G.nodes[G.drag.id];
+    if (entry) {
+      entry.el.style.left = (G.drag.nx + dx) + 'px';
+      entry.el.style.top  = (G.drag.ny + dy) + 'px';
+      redrawEdges();
+    }
+  }
+});
+
+document.addEventListener('mouseup', ev => {
+  if (G.drag) {
+    const entry = G.nodes[G.drag.id];
+    if (entry) send({ action:'move_node', id: G.drag.id, position:{
+      x: parseInt(entry.el.style.left), y: parseInt(entry.el.style.top) }});
+    G.drag = null;
+  }
+});
+
+// Click on an input port while wiring
+document.addEventListener('click', ev => {
+  if (!G.wiring) return;
+  const dot = ev.target.closest('.pdot');
+  if (dot) finishWire(dot.dataset.node, dot.dataset.port, dot.dataset.dir);
+}, true);
+
+// Click on canvas background: cancel wire, deselect
+document.getElementById('cvs-wrap').addEventListener('click', ev => {
+  if (!ev.target.closest('.node')) { cancelWire(); selectNode(null); }
+});
+
+document.addEventListener('keydown', ev => { if (ev.key==='Escape') cancelWire(); });
+
+// ═══════════════════════════════════════════════════
+// NODE DRAG
+// ═══════════════════════════════════════════════════
+function startDrag(ev) {
+  if (ev.target.closest('.node-x') || ev.target.closest('.pdot')) return;
+  ev.preventDefault();
+  const nodeEl = ev.currentTarget.closest('.node');
+  const id = nodeEl.id.replace('n-','');
+  G.drag = {
+    id, sx: ev.clientX, sy: ev.clientY,
+    nx: parseInt(nodeEl.style.left), ny: parseInt(nodeEl.style.top),
+  };
+}
+
+// ═══════════════════════════════════════════════════
+// SELECTION + PROPERTIES PANEL
+// ═══════════════════════════════════════════════════
+function selectNode(id) {
+  document.querySelectorAll('.node.sel').forEach(n => n.classList.remove('sel'));
+  G.sel = id;
+  if (id && G.nodes[id]) { G.nodes[id].el.classList.add('sel'); renderProps(id); }
+  else renderProps(null);
+}
+
+function renderProps(id) {
+  const panel = document.getElementById('props');
+  if (!id || !G.nodes[id]) {
+    panel.innerHTML = '<div class="pempty">click a node<br/>to inspect it</div>';
+    return;
+  }
+  const d = G.nodes[id].desc;
+  let h = `
+    <div class="pf"><label>label</label><input class="pinput" id="p-lbl" value="${d.label}"/></div>
+    <div class="pf"><label>id</label><input class="pinput" value="${d.id}" readonly/></div>
+    <div class="pf"><label>kind</label><input class="pinput" value="${d.kind}" readonly/></div>`;
+
+  if (d.mix != null) {
+    h += `<div class="pf"><label>mix (0–1)</label>
+      <div class="prow-slider">
+        <input type="range" class="pslider" id="p-mix" min="0" max="1" step="0.01" value="${d.mix}"/>
+        <span class="pval" id="p-mix-val">${d.mix.toFixed(2)}</span>
+      </div></div>`;
+  }
+
+  if (d.frag != null) {
+    h += `<div class="pf"><label>fragment shader</label>
+      <textarea class="shader-box" id="p-frag">${escHtml(d.frag)}</textarea>
+      <button class="apply-btn" id="p-apply">▶ apply shader</button></div>`;
+  }
+
+  panel.innerHTML = h;
+
+  // Wire mix slider
+  const mixEl = panel.querySelector('#p-mix');
+  if (mixEl) {
+    mixEl.addEventListener('input', () => {
+      const v = parseFloat(mixEl.value);
+      panel.querySelector('#p-mix-val').textContent = v.toFixed(2);
+      d.mix = v;
+      send({ action:'set_mix', node_id: id, mix: v });
+    });
+  }
+
+  // Wire shader apply
+  panel.querySelector('#p-apply')?.addEventListener('click', () => {
+    const frag = panel.querySelector('#p-frag').value;
+    d.frag = frag;
+    send({ action:'set_shader', node_id: id, frag });
+    // Shader change does NOT need recompile — runtime picks it up next frame
+    log(`shader sent to ${id}`, 'ok');
+  });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ═══════════════════════════════════════════════════
+// ADD NODE PALETTE
+// ═══════════════════════════════════════════════════
+let _nidx = 0;
+document.querySelectorAll('.ngbtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const kind  = btn.dataset.kind;
+    const label = btn.dataset.label;
+    const idx   = ++_nidx;
+    const id    = `${kind}_${idx}`;
+    const x = 80 + Math.random() * 260;
+    const y = 60 + Math.random() * 180;
+    send({ action:'add_node', id, kind, label: `${label} ${idx}`, position:{x,y} });
+    setNeedsCompile(true);
+  });
+});
+
+// ═══════════════════════════════════════════════════
+// HEADER BUTTONS
+// ═══════════════════════════════════════════════════
+document.getElementById('btn-connect').addEventListener('click', wsConnect);
+
+document.getElementById('btn-compile').addEventListener('click', () => {
+  send({ action:'compile' });
+});
+
+document.getElementById('btn-template').addEventListener('click', loadTemplate);
+
+// ═══════════════════════════════════════════════════
+// TEMPLATE — proves the pipeline works end-to-end
+// Mirrors the starter graph seeded in main.rs:
+//   ShaderSource → ShaderPass → PixelsOut
+// ═══════════════════════════════════════════════════
+function loadTemplate() {
+  if (!G.connected) {
+    log('connect first, then load template', 'warn');
+    return;
+  }
+
+  // HOW THE ENGINE WORKS:
+  // - ShaderSource provides shader CODE only, not a texture.
+  //   Its frag shader runs on a ShaderPass that has it as an incoming edge.
+  //   The ShaderPass gets the shader via "path 3" (back-compat edge resolution).
+  // - ShaderPass → ShaderPass: the first pass renders to an FBO,
+  //   the second reads it as iChannel0 (bound automatically by the engine).
+  // - So a two-stage setup is: ShaderSource → PassA → PassB → PixelsOut
+  //   PassA gets its shader from ShaderSource (path 3), runs it, produces a texture.
+  //   PassB has its own shader set directly (path 1), reads PassA's output as iChannel0.
+
+  Object.keys(G.nodes).forEach(id => send({ action:'remove_node', id }));
+
+  setTimeout(() => {
+    send({ action:'add_node', id:'src_0',  kind:'shader_source', label:'Source',   position:{x:60,  y:120} });
+    send({ action:'add_node', id:'pass_0', kind:'shader_pass',   label:'Stage A',  position:{x:290, y:120} });
+    send({ action:'add_node', id:'pass_1', kind:'shader_pass',   label:'Stage B',  position:{x:520, y:120} });
+    send({ action:'add_node', id:'out_0',  kind:'pixels_out',    label:'Output',   position:{x:750, y:120} });
+
+    setTimeout(() => {
+      // ShaderSource → PassA (shader code flows here, not texture)
+      send({ action:'connect', from_id:'src_0',  from_port:'out', to_id:'pass_0', to_port:'in' });
+      // PassA → PassB (texture flows here — PassA's FBO output becomes iChannel0 in PassB)
+      send({ action:'connect', from_id:'pass_0', from_port:'out', to_id:'pass_1', to_port:'in' });
+      // PassB → Output
+      send({ action:'connect', from_id:'pass_1', from_port:'out', to_id:'out_0',  to_port:'in' });
+
+      setTimeout(() => {
+        // Shader for Stage A — attached to ShaderSource, resolved via path 3
+        // This shader GENERATES pixels (no iChannel0 needed)
+        send({ action:'set_shader', node_id:'src_0', frag: `#version 330 core
+in vec2 v_uv;
+out vec4 fragColor;
+uniform float u_time;
+void main() {
+  vec3 col = 0.5 + 0.5 * cos(u_time + v_uv.xyx + vec3(0.0, 2.1, 4.2));
+  fragColor = vec4(col, 1.0);
+}` });
+
+        // Shader for Stage B — set directly on pass_1, reads Stage A output as iChannel0
+        send({ action:'set_shader', node_id:'pass_1', frag: `#version 330 core
+in vec2 v_uv;
+out vec4 fragColor;
+uniform sampler2D iChannel0;
+uniform float u_time;
+void main() {
+  vec4 c = texture(iChannel0, v_uv);
+  vec2 uv = v_uv - 0.5;
+  float vig = 1.0 - dot(uv, uv) * 1.6;
+  fragColor = vec4(c.rgb * vig, 1.0);
+}` });
+
+        setTimeout(() => {
+          send({ action:'compile' });
+          log('template loaded — Stage A: colour wheel  ·  Stage B: vignette', 'ok');
+        }, 100);
+      }, 150);
+    }, 150);
+  }, 200);
+}
+
+// ═══════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════
+function setDot(cls, txt) {
+  document.getElementById('dot').className = 'dot ' + cls;
+  document.getElementById('status-txt').textContent = txt;
+}
+
+function setNeedsCompile(v) {
+  G.compiled = !v;
+  document.getElementById('needs-compile').classList.toggle('show', v);
+}
+
+function log(msg, type='') {
+  const area = document.getElementById('log');
+  const row  = document.createElement('div');
+  row.className = 'le ' + type;
+  const now = new Date();
+  const t = [now.getHours(), now.getMinutes(), now.getSeconds()]
+    .map(n => String(n).padStart(2,'0')).join(':');
+  row.innerHTML = `<span class="lt">${t}</span><span class="lm">${msg}</span>`;
+  area.appendChild(row);
+  area.scrollTop = area.scrollHeight;
+  while (area.children.length > 300) area.removeChild(area.firstChild);
+}
+
+// ═══════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  log('scheng editor ready', 'ok');
+  log('1. run  cargo run -p scheng-bridge', '');
+  log('2. click connect', '');
+  log('3. click load template to validate the pipeline', '');
+});
+</script>
+</body>
+</html>

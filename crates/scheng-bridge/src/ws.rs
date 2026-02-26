@@ -1,0 +1,240 @@
+use crate::protocol::*;
+use crate::state::BridgeState;
+use futures_util::{SinkExt, StreamExt};
+use std::net::SocketAddr;
+use std::sync::{Arc, Mutex};
+use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::broadcast;
+use tokio_tungstenite::tungstenite::Message;
+use tracing::{error, info, warn};
+
+// The single bundle the render thread reads each frame.
+// Only swapped during Compile.
+pub struct RenderBundle {
+    pub graph: scheng_graph::Graph,
+    pub plan:  scheng_graph::Plan,
+    pub props: scheng_runtime_glow::NodeProps,
+}
+
+pub type SharedBundle = Arc<Mutex<Option<RenderBundle>>>;
+
+pub async fn run_ws_server(
+    addr: SocketAddr,
+    ws_state: Arc<Mutex<BridgeState>>,
+    bundle: SharedBundle,
+) {
+    let listener = match TcpListener::bind(addr).await {
+        Ok(l) => l,
+        Err(e) => { error!("bind {addr}: {e}"); return; }
+    };
+    let (tx, _) = broadcast::channel::<String>(256);
+    loop {
+        match listener.accept().await {
+            Ok((stream, peer)) => {
+                info!("client: {peer}");
+                tokio::spawn(handle(stream, peer, ws_state.clone(), bundle.clone(), tx.clone()));
+            }
+            Err(e) => error!("accept: {e}"),
+        }
+    }
+}
+
+async fn handle(
+    stream: TcpStream,
+    peer: SocketAddr,
+    ws_state: Arc<Mutex<BridgeState>>,
+    bundle: SharedBundle,
+    bcast_tx: broadcast::Sender<String>,
+) {
+    let ws = match tokio_tungstenite::accept_async(stream).await {
+        Ok(w) => w,
+        Err(e) => { warn!("{peer}: {e}"); return; }
+    };
+    let (mut sink, mut source) = ws.split();
+    let mut bcast_rx = bcast_tx.subscribe();
+
+    {
+        let snap = serde_json::to_string(
+            &EngineMsg::State(ws_state.lock().unwrap().snapshot())
+        ).unwrap();
+        let _ = sink.send(Message::Text(snap.into())).await;
+    }
+
+    loop {
+        tokio::select! {
+            msg = source.next() => {
+                match msg {
+                    Some(Ok(Message::Text(text))) => {
+                        eprintln!("[ws] {text}");
+                        let responses = dispatch(&ws_state, &bundle, &text);
+                        for r in responses {
+                            let _ = bcast_tx.send(serde_json::to_string(&r).unwrap());
+                        }
+                    }
+                    Some(Ok(Message::Close(_))) | None => { info!("left: {peer}"); break; }
+                    Some(Err(e)) => { warn!("{peer}: {e}"); break; }
+                    _ => {}
+                }
+            }
+            msg = bcast_rx.recv() => {
+                match msg {
+                    Ok(json) => { if sink.send(Message::Text(json.into())).await.is_err() { break; } }
+                    Err(broadcast::error::RecvError::Lagged(n)) => warn!("lagged {n}"),
+                    Err(_) => break,
+                }
+            }
+        }
+    }
+}
+
+fn dispatch(ws_state: &Arc<Mutex<BridgeState>>, bundle: &SharedBundle, raw: &str) -> Vec<EngineMsg> {
+    let msg: ClientMsg = match serde_json::from_str(raw) {
+        Ok(m) => m,
+        Err(e) => return vec![EngineMsg::Error { message: format!("parse: {e}") }],
+    };
+
+    let mut s = ws_state.lock().unwrap();
+
+    match msg {
+        ClientMsg::AddNode { id, kind, label, position } => match s.add_node(id, kind, label, position) {
+            Ok(desc) => vec![EngineMsg::NodeAdded(desc)],
+            Err(e)   => vec![EngineMsg::Error { message: e }],
+        },
+        ClientMsg::RemoveNode { id } => match s.remove_node(&id) {
+            Ok(())  => vec![EngineMsg::NodeRemoved { id }],
+            Err(e)  => vec![EngineMsg::Error { message: e }],
+        },
+        ClientMsg::Connect { from_id, from_port, to_id, to_port } => match s.connect(from_id, from_port, to_id, to_port) {
+            Ok(edge) => vec![EngineMsg::EdgeAdded(edge)],
+            Err(e)   => vec![EngineMsg::Error { message: e }],
+        },
+        ClientMsg::Disconnect { from_id, from_port, to_id, to_port } => match s.disconnect(&from_id, &from_port, &to_id, &to_port) {
+            Ok(())  => vec![EngineMsg::EdgeRemoved { from_id, from_port, to_id, to_port }],
+            Err(e)  => vec![EngineMsg::Error { message: e }],
+        },
+        // set_shader just stores the frag — does NOT promote to render.
+        // The next Compile will pick it up.
+        ClientMsg::SetShader { node_id, vert, frag } => match s.set_shader(&node_id, vert, frag) {
+            Ok(()) => vec![EngineMsg::ShaderUpdated { node_id }],
+            Err(e) => vec![EngineMsg::Error { message: e }],
+        },
+        ClientMsg::SetMix { node_id, mix } => {
+            let v = mix.clamp(0.0, 1.0);
+            match s.set_mix(&node_id, v) {
+                Ok(()) => vec![EngineMsg::ParamUpdated { node_id, param: "mix".into(), value: v }],
+                Err(e) => vec![EngineMsg::Error { message: e }],
+            }
+        },
+        ClientMsg::SetWeights { node_id, weights } => match s.set_weights(&node_id, weights) {
+            Ok(()) => vec![EngineMsg::WeightsUpdated { node_id, weights }],
+            Err(e) => vec![EngineMsg::Error { message: e }],
+        },
+
+        // Compile: build graph from scratch in deterministic order, compile plan,
+        // build props, swap bundle. One code path, no staging graph.
+        ClientMsg::Compile => {
+            match compile_bundle(&s) {
+                Ok(new_bundle) => {
+                    let nc = new_bundle.plan.nodes.len();
+                    let ec = new_bundle.plan.edges.len();
+                    *bundle.lock().unwrap() = Some(new_bundle);
+                    s.compiled = true;
+                    eprintln!("[compile] bundle swapped: {nc} nodes, {ec} edges");
+                    vec![
+                        EngineMsg::Compiled { node_count: nc, edge_count: ec },
+                        EngineMsg::State(s.snapshot()),
+                    ]
+                }
+                Err(e) => {
+                    eprintln!("[compile] FAILED: {e}");
+                    vec![EngineMsg::Error { message: format!("compile: {e}") }]
+                }
+            }
+        },
+        ClientMsg::GetState => vec![EngineMsg::State(s.snapshot())],
+        ClientMsg::MoveNode { id, position } => match s.move_node(&id, position.clone()) {
+            Ok(())  => vec![EngineMsg::NodeMoved { id, position }],
+            Err(e)  => vec![EngineMsg::Error { message: e }],
+        },
+    }
+}
+
+fn compile_bundle(s: &BridgeState) -> Result<RenderBundle, String> {
+    use scheng_graph::{Graph, NodeId};
+    use scheng_runtime_glow::{NodeProps, ShaderSource, FULLSCREEN_VERT};
+    use std::collections::HashMap;
+
+    // Build graph in sorted order (deterministic NodeId assignment)
+    let mut graph = Graph::new();
+    let mut id_map: HashMap<String, NodeId> = HashMap::new();
+
+    let mut ordered: Vec<&str> = s.nodes.keys().map(|k| k.as_str()).collect();
+    ordered.sort();
+    eprintln!("[compile] node order: {:?}", ordered);
+
+    for bridge_id in &ordered {
+        let meta = s.nodes.get(*bridge_id).unwrap();
+        let eid = graph.add_node(meta.kind.to_engine());
+        id_map.insert((*bridge_id).to_string(), eid);
+        eprintln!("[compile]   {} -> {:?} ({:?})", bridge_id, eid, meta.kind);
+    }
+
+    for edge in &s.edges {
+        let f = *id_map.get(&edge.from_id).ok_or_else(|| format!("unknown: {}", edge.from_id))?;
+        let t = *id_map.get(&edge.to_id  ).ok_or_else(|| format!("unknown: {}", edge.to_id))?;
+        eprintln!("[compile]   edge {:?}.{} -> {:?}.{}", f, edge.from_port, t, edge.to_port);
+        graph.connect_named(f, &edge.from_port, t, &edge.to_port).map_err(|e| e.to_string())?;
+    }
+
+    let plan = graph.compile().map_err(|e| e.to_string())?;
+    eprintln!("[compile] plan: {:?}", plan.nodes);
+
+    // Build props using the id_map (bridge_id → new engine NodeId)
+    let mut props = NodeProps::default();
+    for (bridge_id, &eid) in &id_map {
+        if let Some(frag) = s.shaders.frag.get(bridge_id) {
+            let vert = s.shaders.vert.get(bridge_id)
+                .cloned().unwrap_or_else(|| FULLSCREEN_VERT.to_string());
+            eprintln!("[compile]   shader '{}' ({:?}): {} chars", bridge_id, eid, frag.len());
+            props.shader_sources.insert(eid, ShaderSource {
+                vert, frag: frag.clone(),
+                origin: Some(format!("bridge:{bridge_id}")),
+            });
+        }
+        if let Some(&p) = s.shaders.mix.get(bridge_id) {
+            props.mixer_params.insert(eid, p);
+        }
+        if let Some(&p) = s.shaders.matrix.get(bridge_id) {
+            props.matrix_params.insert(eid, p);
+        }
+    }
+
+    eprintln!("[compile] props.shader_sources keys: {:?}", props.shader_sources.keys().collect::<Vec<_>>());
+    eprintln!("[compile] plan nodes: {:?}", plan.nodes);
+
+    // Verify every ShaderPass has a resolvable shader
+    for &nid in &plan.nodes {
+        if let Some(node) = graph.node(nid) {
+            use scheng_graph::NodeKind;
+            if node.kind == NodeKind::ShaderPass {
+                if props.shader_sources.contains_key(&nid) {
+                    eprintln!("[compile]   ShaderPass {:?} has direct shader (path 1) ✓", nid);
+                } else {
+                    // Check path 3: incoming ShaderSource edge
+                    let has_src = graph.edges().iter().any(|e| {
+                        e.to.node == nid && graph.node(e.from.node)
+                            .map(|n| n.kind == NodeKind::ShaderSource)
+                            .unwrap_or(false)
+                    });
+                    if has_src {
+                        eprintln!("[compile]   ShaderPass {:?} will use ShaderSource (path 3) ✓", nid);
+                    } else {
+                        eprintln!("[compile]   ShaderPass {:?} has NO shader source — will fail!", nid);
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(RenderBundle { graph, plan, props })
+}
