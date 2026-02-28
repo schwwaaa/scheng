@@ -2,36 +2,36 @@
 name = "scheng-bridge"
 version = "0.1.0"
 edition = "2021"
-description = "WebSocket bridge: exposes the scheng engine to a visual frontend editor"
 
 [[bin]]
 name = "scheng-bridge"
 path = "src/main.rs"
 
 [dependencies]
-# Scheng engine crates (same path convention as every other crate in this workspace)
 scheng-core         = { path = "../scheng-core" }
 scheng-graph        = { path = "../scheng-graph" }
 scheng-runtime      = { path = "../scheng-runtime" }
 scheng-runtime-glow = { path = "../scheng-runtime-glow" }
 glow                = "0.13"
 
-# Window + GL context (same version set used across all examples)
-winit            = "0.28"
-glutin           = "0.30"
-glutin-winit     = "0.3"
+winit             = "0.28"
+glutin            = "0.30"
+glutin-winit      = "0.3"
 raw-window-handle = "0.5"
 
-# WebSocket server
-tokio            = { version = "1", features = ["full"] }
+tokio             = { version = "1", features = ["full"] }
 tokio-tungstenite = "0.21"
-futures-util     = "0.3"
+futures-util      = "0.3"
 
-# Serialization
 serde      = { version = "1", features = ["derive"] }
 serde_json = "1"
 
-# Logging / errors
 tracing            = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 anyhow             = "1"
+
+# OSC input (UDP, port 57120 by default)
+rosc = "0.10"
+
+# MIDI input
+midir = "0.9"

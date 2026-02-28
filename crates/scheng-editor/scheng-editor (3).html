@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>scheng editor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+:root {
+  --bg:#0c0c0f;--bg1:#13131a;--bg2:#1a1a24;--bg3:#22222f;
+  --border:#252535;--border-hi:#353550;
+  --accent:#5b6eff;--accent2:#ff5f5f;--accent3:#3fffc8;--yellow:#ffd166;--purple:#a855f7;
+  --text:#ddddf0;--text2:#7777a0;--text3:#44445a;
+  --node-w:224px;--port-r:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden}
+body{font-family:'IBM Plex Mono',monospace;background:var(--bg);color:var(--text);
+  display:grid;grid-template-rows:42px 1fr;grid-template-columns:1fr 296px;
+  grid-template-areas:"hdr hdr""cvs pnl"}
+header{grid-area:hdr;display:flex;align-items:center;gap:10px;padding:0 14px;
+  background:var(--bg1);border-bottom:1px solid var(--border);user-select:none}
+.logo{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:15px;color:var(--text)}
+.logo em{color:var(--accent);font-style:normal}
+.hgap{flex:1}
+.hstat{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--text2);letter-spacing:.06em}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--text3);transition:background .3s,box-shadow .3s}
+.dot.on{background:var(--accent3);box-shadow:0 0 6px var(--accent3)}.dot.err{background:var(--accent2)}
+.hbtn{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  padding:5px 11px;border-radius:3px;border:1px solid var(--border-hi);background:transparent;
+  color:var(--text2);cursor:pointer;transition:all .12s;white-space:nowrap}
+.hbtn:hover{color:var(--text);border-color:var(--accent);background:var(--bg3)}
+.hbtn.warn{border-color:var(--yellow);color:var(--yellow)}.hbtn.warn:hover{background:rgba(255,209,102,.1)}
+#nc{font-size:9px;padding:3px 8px;border-radius:3px;background:rgba(255,209,102,.12);
+  color:var(--yellow);border:1px solid rgba(255,209,102,.3);display:none}
+#nc.show{display:block}
+/* Canvas */
+#cw{grid-area:cvs;position:relative;overflow:hidden;background:var(--bg);
+  background-image:radial-gradient(circle,#252535 1px,transparent 1px);background-size:24px 24px}
+#cv{position:absolute;inset:0}
+svg#el{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+/* Nodes */
+.node{position:absolute;width:var(--node-w);border-radius:6px;border:1px solid var(--border);
+  background:var(--bg2);box-shadow:0 3px 16px rgba(0,0,0,.5);user-select:none;z-index:10;
+  transition:border-color .12s,box-shadow .12s}
+.node:hover{border-color:var(--border-hi)}
+.node.sel{border-color:var(--accent);box-shadow:0 0 0 2px rgba(91,110,255,.2),0 3px 16px rgba(0,0,0,.5)}
+.node.has-error{border-color:var(--accent2)!important;box-shadow:0 0 0 2px rgba(255,95,95,.2)!important}
+.stripe{height:3px;border-radius:5px 5px 0 0;background:var(--border-hi)}
+.k-shader_source .stripe,.k-shader_pass .stripe{background:var(--accent)}
+.k-crossfade .stripe,.k-matrix_mix4 .stripe,.k-add .stripe{background:var(--purple)}
+.k-pixels_out .stripe,.k-syphon .stripe{background:var(--accent3)}
+.nhdr{display:flex;align-items:center;gap:7px;padding:7px 10px 6px;
+  cursor:grab;border-bottom:1px solid var(--border)}
+.nhdr:active{cursor:grabbing}
+.nbadge{font-size:8px;letter-spacing:.12em;text-transform:uppercase;padding:2px 5px;
+  border-radius:2px;background:var(--bg3);color:var(--text2);flex-shrink:0}
+.nlbl{font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:500;
+  flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nx{width:16px;height:16px;border:none;background:none;color:var(--text3);cursor:pointer;
+  font-size:15px;display:flex;align-items:center;justify-content:center;
+  border-radius:3px;flex-shrink:0;transition:color .1s,background .1s}
+.nx:hover{color:var(--accent2);background:rgba(255,95,95,.12)}
+.nerr{font-size:9px;color:var(--accent2);padding:3px 10px 3px;line-height:1.5;
+  background:rgba(255,95,95,.06);border-bottom:1px solid rgba(255,95,95,.15);display:none}
+.nerr.show{display:block}
+.nports{display:flex;justify-content:space-between;padding:6px 0;min-height:30px}
+.pcol{display:flex;flex-direction:column;gap:6px}
+.pcol.ins{align-items:flex-start}.pcol.outs{align-items:flex-end}
+.prow{display:flex;align-items:center;gap:4px;height:20px}
+.pcol.outs .prow{flex-direction:row-reverse}
+.pdot{width:calc(var(--port-r)*2);height:calc(var(--port-r)*2);border-radius:50%;
+  border:2px solid var(--border-hi);background:var(--bg);cursor:crosshair;flex-shrink:0;
+  margin:0 calc(0px - var(--port-r));transition:border-color .1s,background .1s,transform .1s;
+  position:relative;z-index:20}
+.pdot:hover{border-color:var(--accent);background:var(--accent);transform:scale(1.3)}
+.pdot.wiring{border-color:var(--yellow)!important;background:var(--yellow)!important;transform:scale(1.4)}
+.pdot.live{border-color:var(--accent3);background:rgba(63,255,200,.2)}
+.pdot.can-connect{border-color:var(--accent3);background:var(--accent3);transform:scale(1.35);
+  animation:pulse .5s infinite alternate}
+@keyframes pulse{from{box-shadow:0 0 0 0 rgba(63,255,200,.5)}to{box-shadow:0 0 0 8px rgba(63,255,200,0)}}
+.plbl{font-size:9px;color:var(--text3);padding:0 8px}
+/* Edges */
+.edge{fill:none;stroke:var(--accent);stroke-width:2;opacity:.55;stroke-linecap:round;cursor:pointer}
+.edge:hover{opacity:1;stroke:var(--accent2);stroke-width:2.5}
+.edge.code-edge{stroke:var(--text3);stroke-dasharray:5 4;opacity:.35}
+.edge.code-edge:hover{stroke:var(--accent2);opacity:.8}
+#dw{fill:none;stroke:var(--yellow);stroke-width:2;opacity:.85;stroke-dasharray:7 4;pointer-events:none}
+/* Panel */
+#panel{grid-area:pnl;background:var(--bg1);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden}
+.psec{border-bottom:1px solid var(--border);flex-shrink:0}
+.ptitle{font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--text3);padding:9px 13px 7px;font-family:'IBM Plex Sans',sans-serif;font-weight:500;
+  display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+.ptitle .arrow{font-size:8px;transition:transform .15s;margin-left:auto}
+.ptitle.collapsed .arrow{transform:rotate(-90deg)}
+.psec-body{overflow:hidden;transition:max-height .2s}
+.psec-body.collapsed{max-height:0!important}
+/* Palette — built from registry */
+.ngrid{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:0 10px 10px}
+.ngbtn{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.04em;
+  padding:7px 5px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);
+  color:var(--text2);cursor:pointer;text-align:center;transition:all .12s;line-height:1.5}
+.ngbtn:hover{color:var(--text);border-color:var(--accent);background:var(--bg3)}
+.ngbtn span{display:block;font-size:8px;color:var(--text3)}
+.ngbtn.cat-source:hover{border-color:var(--accent)}
+.ngbtn.cat-processor:hover{border-color:var(--accent)}
+.ngbtn.cat-mixer:hover{border-color:var(--purple)}
+.ngbtn.cat-output:hover{border-color:var(--accent3)}
+/* Templates */
+.tmplgrid{display:flex;flex-direction:column;gap:3px;padding:0 10px 10px}
+.tmbtn{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:6px 8px;border-radius:4px;
+  border:1px solid var(--border);background:var(--bg2);color:var(--text2);
+  cursor:pointer;text-align:left;transition:all .12s;display:flex;justify-content:space-between;align-items:center}
+.tmbtn:hover{color:var(--text);border-color:var(--accent3);background:var(--bg3)}
+.tmbtn em{color:var(--text3);font-style:normal;font-size:8px}
+/* Props */
+.pscroll{flex:1;overflow-y:auto;min-height:0}
+.pscroll::-webkit-scrollbar{width:3px}
+.pscroll::-webkit-scrollbar-thumb{background:var(--border)}
+#props{padding:10px}
+.pempty{color:var(--text3);font-size:10px;text-align:center;padding:20px 0;line-height:2}
+.pf{margin-bottom:10px}
+.pf label{display:block;font-size:9px;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}
+.pinput{width:100%;font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:3px;color:var(--text);padding:4px 7px;outline:none;transition:border-color .12s}
+.pinput:focus{border-color:var(--accent)}.pinput[readonly]{opacity:.4}
+.prow-s{display:flex;align-items:center;gap:6px}
+.pslider{flex:1;-webkit-appearance:none;height:3px;border-radius:2px;background:var(--border-hi);cursor:pointer;outline:none}
+.pslider::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:var(--accent);cursor:pointer}
+.pval{font-size:9px;color:var(--text3);min-width:32px;text-align:right}
+.sbox{font-family:'IBM Plex Mono',monospace;font-size:10px;line-height:1.55;background:var(--bg);
+  border:1px solid var(--border);border-radius:3px;color:var(--accent3);padding:7px;
+  width:100%;height:190px;resize:vertical;outline:none;tab-size:2;transition:border-color .12s}
+.sbox:focus{border-color:var(--accent)}
+.sbox.has-error{border-color:var(--accent2)}
+.shader-err{margin-top:4px;padding:5px 7px;background:rgba(255,95,95,.08);
+  border:1px solid rgba(255,95,95,.25);border-radius:3px;font-size:9px;color:var(--accent2);
+  line-height:1.6;white-space:pre-wrap;display:none}
+.shader-err.show{display:block}
+.abtn{margin-top:5px;width:100%;font-family:'IBM Plex Mono',monospace;font-size:9px;
+  letter-spacing:.1em;text-transform:uppercase;padding:6px;border-radius:3px;
+  border:1px solid var(--accent);background:rgba(91,110,255,.08);color:var(--accent);
+  cursor:pointer;transition:all .12s}
+.abtn:hover{background:var(--accent);color:#fff}
+.pnote{font-size:9px;color:var(--text3);padding:4px 0;line-height:1.7;font-style:italic}
+.ptag{display:inline-block;font-size:8px;padding:2px 5px;border-radius:2px;
+  margin-right:3px;letter-spacing:.06em;vertical-align:middle}
+.ptag.src{background:rgba(91,110,255,.15);color:var(--accent)}
+.ptag.proc{background:rgba(91,110,255,.15);color:var(--accent)}
+.ptag.mix{background:rgba(168,85,247,.15);color:var(--purple)}
+.ptag.out{background:rgba(63,255,200,.12);color:var(--accent3)}
+/* OSC/MIDI ref panel */
+.oscref{padding:0 10px 10px;font-size:9px;color:var(--text3);line-height:1.8}
+.oscref code{color:var(--accent3);font-family:'IBM Plex Mono',monospace;font-size:8.5px}
+.oscref b{color:var(--text2)}
+/* Log */
+#log{height:100px;overflow-y:auto;padding:6px 10px;font-size:9px;line-height:1.8;color:var(--text3);flex-shrink:0}
+#log::-webkit-scrollbar{width:2px}
+#log::-webkit-scrollbar-thumb{background:var(--border)}
+.le{display:flex;gap:7px}.lt{color:var(--text3);flex-shrink:0}.lm{color:var(--text2)}
+.le.ok .lm{color:var(--accent3)}.le.err .lm{color:var(--accent2)}
+.le.ev .lm{color:var(--accent)}.le.warn .lm{color:var(--yellow)}
+.le.glsl .lm{color:var(--accent2);font-weight:500}
+/* Wire hint */
+#wh{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+  background:var(--bg3);border:1px solid var(--yellow);border-radius:20px;
+  padding:6px 20px;font-size:11px;color:var(--yellow);pointer-events:none;
+  opacity:0;transition:opacity .2s;z-index:999;white-space:nowrap}
+#wh.show{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">sch<em>eng</em></div>
+  <div class="hgap"></div>
+  <div id="nc">needs compile</div>
+  <div class="hstat"><div class="dot" id="dot"></div><span id="stxt">disconnected</span></div>
+  <button class="hbtn" id="btn-connect">connect</button>
+  <button class="hbtn warn" id="btn-compile">compile</button>
+</header>
+<div id="cw">
+  <svg id="el"><path id="dw" d=""/></svg>
+  <div id="cv"></div>
+</div>
+<aside id="panel">
+  <!-- Palette — populated from registry on connect -->
+  <div class="psec" id="sec-palette">
+    <div class="ptitle" id="hdr-palette">add node<span class="arrow">▾</span></div>
+    <div class="psec-body" id="body-palette">
+      <div class="ngrid" id="palette-grid">
+        <div style="grid-column:1/-1;font-size:9px;color:var(--text3);padding:6px 4px">connecting…</div>
+      </div>
+    </div>
+  </div>
+  <!-- Templates -->
+  <div class="psec" id="sec-tmpl">
+    <div class="ptitle" id="hdr-tmpl">templates<span class="arrow">▾</span></div>
+    <div class="psec-body" id="body-tmpl">
+      <div class="tmplgrid">
+        <button class="tmbtn" data-tmpl="minimal">graph_minimal<em>src→pass→out</em></button>
+        <button class="tmbtn" data-tmpl="chain2">graph_chain2<em>warp fx chain</em></button>
+        <button class="tmbtn" data-tmpl="mixer2">graph_mixer2<em>crossfade composite</em></button>
+        <button class="tmbtn" data-tmpl="matrix4">graph_matrix_mix4<em>4-ch blend</em></button>
+        <button class="tmbtn" data-tmpl="single">pure_single_pass<em>no src node</em></button>
+        <button class="tmbtn" data-tmpl="plasma">plasma+scanlines<em>2-pass gen</em></button>
+        <button class="tmbtn" data-tmpl="tunnel">uv tunnel<em>single pass</em></button>
+        <button class="tmbtn" data-tmpl="sdf">SDF+chroma<em>distance fields</em></button>
+      </div>
+    </div>
+  </div>
+  <!-- Properties -->
+  <div class="psec" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0">
+    <div class="ptitle">properties</div>
+    <div class="pscroll"><div id="props"><div class="pempty">click a node<br/>to edit it</div></div></div>
+  </div>
+  <!-- OSC/MIDI reference -->
+  <div class="psec" id="sec-osc">
+    <div class="ptitle" id="hdr-osc">osc / midi<span class="arrow">▾</span></div>
+    <div class="psec-body" id="body-osc">
+      <div class="oscref">
+        <b>OSC</b> — UDP port 57120 (SCHENG_OSC_PORT)<br/>
+        <code>/scheng/node/{id}/mix</code> &nbsp;f32<br/>
+        <code>/scheng/node/{id}/weights</code> &nbsp;f32×4<br/>
+        <code>/scheng/node/{id}/shader</code> &nbsp;string<br/>
+        <code>/scheng/compile</code><br/><br/>
+        <b>MIDI</b> — scheng-midi.json next to binary<br/>
+        CC 0–127 normalised → 0.0–1.0<br/>
+        params: <code>mix</code> <code>weight0</code>…<code>weight3</code><br/><br/>
+        <b>Example mapping:</b><br/>
+        <code>{"ch":1,"cc":7,"node":"mix_0","param":"mix"}</code>
+      </div>
+    </div>
+  </div>
+  <!-- Log -->
+  <div style="border-top:1px solid var(--border);flex-shrink:0">
+    <div class="ptitle" style="cursor:default">log</div>
+    <div id="log"></div>
+  </div>
+</aside>
+<div id="wh">mousedown an INPUT port to finish  ·  esc cancels</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// ENGINE MODEL
+// ShaderSource → ShaderPass : CODE edge  (shader code, no texture)
+// ShaderPass   → ShaderPass : TEXTURE edge  (iChannel0)
+// ShaderPass   → Mixer      : TEXTURE edge
+// Mixer/Pass   → PixelsOut  : present to screen
+//
+// Shader resolution per ShaderPass:
+//   Path 1: frag set directly on this node (wins)
+//   Path 2: builtin op
+//   Path 3: incoming ShaderSource edge
+//
+// Uniforms: u_time, u_resolution, iChannel0–3
+// ─────────────────────────────────────────────────────────────────────────────
+
+const G = {
+  nodes:{}, edges:[], sel:null,
+  ws:null, connected:false,
+  wiring:null, drag:null,
+  registry:[],          // populated from GetRegistry on connect
+  shaderErrors:{},      // nodeId → error string
+};
+
+// ── WebSocket ──────────────────────────────────────────────────────────────
+function wsConnect() {
+  if(G.ws) G.ws.close();
+  G.ws = new WebSocket('ws://127.0.0.1:7777');
+  G.ws.onopen    = ()=>{ G.connected=true; setDot('on','connected'); log('connected','ok');
+    send({action:'get_state'}); send({action:'get_registry'}); };
+  G.ws.onmessage = e=>onMsg(JSON.parse(e.data));
+  G.ws.onclose   = ()=>{ G.connected=false; setDot('','disconnected'); log('disconnected','err'); };
+  G.ws.onerror   = ()=>{ setDot('err','error'); log('cannot reach ws://127.0.0.1:7777','err'); };
+}
+function send(o){ if(G.ws?.readyState===1) G.ws.send(JSON.stringify(o)); else log('not connected','err'); }
+
+// ── Message dispatch ───────────────────────────────────────────────────────
+function onMsg(m) {
+  switch(m.event){
+    case 'state':          hydrate(m); break;
+    case 'node_added':     nodeAdd(m); log(`+ ${m.id}  (${m.kind})`,'ev'); break;
+    case 'node_removed':   nodeRemove(m.id); break;
+    case 'edge_added':     edgeAdd(m); break;
+    case 'edge_removed':   edgeRemove(m.from_id,m.from_port,m.to_id,m.to_port); break;
+    case 'compiled':
+      setNC(false);
+      // Clear all shader errors on successful compile
+      G.shaderErrors={};
+      document.querySelectorAll('.node.has-error').forEach(n=>n.classList.remove('has-error'));
+      document.querySelectorAll('.nerr').forEach(n=>{ n.textContent=''; n.classList.remove('show'); });
+      log(`compiled ✓  ${m.node_count} nodes · ${m.edge_count} edges`,'ok');
+      break;
+    case 'shader_error':
+      // GLSL compilation failed on a specific node — show inline in the graph
+      G.shaderErrors[m.node_id] = m.error;
+      showShaderError(m.node_id, m.error);
+      log(`✗ GLSL error on ${m.node_id}`, 'glsl');
+      break;
+    case 'shader_updated': log(`shader → ${m.node_id}`,'ev'); break;
+    case 'param_updated':  log(`${m.node_id}.${m.param} = ${m.value.toFixed(3)} (osc/midi)`,'ev'); break;
+    case 'weights_updated':log(`${m.node_id}.weights updated (osc/midi)`,'ev'); break;
+    case 'error':          log(`✗ ${m.message}`,'err'); break;
+    case 'registry':       applyRegistry(m.nodes); break;
+  }
+}
+
+function hydrate(snap) {
+  document.getElementById('cv').innerHTML='';
+  G.edges.forEach(e=>e.el?.remove());
+  G.nodes={}; G.edges=[]; G.sel=null; G.shaderErrors={};
+  setNC(!snap.compiled);
+  snap.nodes.forEach(nodeAdd);
+  setTimeout(()=>snap.edges.forEach(edgeAdd),40);
+  log(`state: ${snap.nodes.length} nodes · ${snap.edges.length} edges`,'ok');
+}
+
+// ── Registry — builds palette from server-provided node definitions ─────────
+function applyRegistry(defs) {
+  G.registry = defs;
+  const grid = document.getElementById('palette-grid');
+  grid.innerHTML = '';
+  // Group by category
+  const cats = {};
+  defs.forEach(d=>{ (cats[d.category]||(cats[d.category]=[])).push(d); });
+  ['source','processor','mixer','output'].forEach(cat=>{
+    (cats[cat]||[]).forEach(d=>{
+      const btn = document.createElement('button');
+      btn.className=`ngbtn cat-${cat}`;
+      btn.dataset.kind=d.kind;
+      btn.dataset.label=d.label;
+      btn.title=d.description;
+      btn.innerHTML=`${catIcon(cat)} ${d.label}<span>${d.category}</span>`;
+      btn.addEventListener('click',()=>addNodeFromPalette(d));
+      grid.appendChild(btn);
+    });
+  });
+  log(`registry: ${defs.length} node types loaded`,'ok');
+}
+
+function catIcon(c){ return {source:'◈',processor:'◧',mixer:'◑',output:'▣'}[c]||'·'; }
+
+function addNodeFromPalette(def) {
+  let _ni = (G._ni=(G._ni||0)+1);
+  const id=`${def.kind}_${_ni}`;
+  send({action:'add_node',id,kind:def.kind,label:`${def.label} ${_ni}`,
+    position:{x:80+Math.random()*240,y:60+Math.random()*200}});
+  setNC(true);
+}
+
+// ── Node DOM ───────────────────────────────────────────────────────────────
+function nodeAdd(d) {
+  if(G.nodes[d.id]) return;
+  const el=document.createElement('div');
+  el.className=`node k-${d.kind}`; el.id='n-'+d.id;
+  el.style.left=(d.position?.x??80)+'px'; el.style.top=(d.position?.y??80)+'px';
+
+  const inPorts  = (d.input_ports||[]);
+  const outPorts = (d.output_ports||[]);
+  const regDef   = G.registry.find(r=>r.kind===d.kind);
+
+  el.innerHTML=`<div class="stripe"></div>
+    <div class="nhdr">
+      <span class="nbadge">${badge(d.kind)}</span>
+      <span class="nlbl">${d.label}</span>
+      <button class="nx" title="remove">×</button>
+    </div>
+    <div class="nerr" id="nerr-${d.id}"></div>
+    <div class="nports">
+      <div class="pcol ins">${inPorts.map(p=>{
+        const pd = regDef?.ports.find(r=>r.name===p&&r.dir==='in');
+        return portHTML(d.id,p,'in',pd?.description||p,pd?.kind||'any');
+      }).join('')}</div>
+      <div class="pcol outs">${outPorts.map(p=>{
+        const pd = regDef?.ports.find(r=>r.name===p&&r.dir==='out');
+        return portHTML(d.id,p,'out',pd?.description||p,pd?.kind||'texture');
+      }).join('')}</div>
+    </div>`;
+
+  el.querySelector('.nhdr').addEventListener('mousedown',startDrag);
+  el.querySelector('.nx').addEventListener('click',ev=>{
+    ev.stopPropagation(); send({action:'remove_node',id:d.id}); setNC(true);
+  });
+  el.addEventListener('click',ev=>{ if(!ev.target.closest('.pdot')&&!ev.target.closest('.nx')) selectNode(d.id); });
+  el.querySelectorAll('.pdot').forEach(dot=>dot.addEventListener('mousedown',portMouseDown));
+  document.getElementById('cv').appendChild(el);
+  G.nodes[d.id]={el,desc:d};
+
+  // Restore any pending shader error
+  if(G.shaderErrors[d.id]) showShaderError(d.id, G.shaderErrors[d.id]);
+  updateLive();
+}
+
+function portHTML(nodeId,port,dir,desc,kind) {
+  const lbl=`<span class="plbl" title="${desc}">${port}</span>`;
+  const dot=`<div class="pdot" data-node="${nodeId}" data-port="${port}" data-dir="${dir}" data-kind="${kind}" title="${dir}: ${port} — ${desc}"></div>`;
+  return `<div class="prow">${dir==='in'?dot+lbl:lbl+dot}</div>`;
+}
+
+function showShaderError(nodeId, err) {
+  const entry = G.nodes[nodeId]; if(!entry) return;
+  entry.el.classList.add('has-error');
+  const box = entry.el.querySelector('.nerr');
+  if(box){ box.textContent=err.split('\n')[0]; box.classList.add('show'); }
+  // Also update props panel if this node is selected
+  if(G.sel===nodeId) renderProps(nodeId);
+}
+
+function nodeRemove(id) {
+  G.nodes[id]?.el.remove();
+  G.edges=G.edges.filter(e=>{ if(e.from_id===id||e.to_id===id){e.el?.remove();return false;}return true; });
+  delete G.nodes[id]; delete G.shaderErrors[id];
+  if(G.sel===id){G.sel=null;renderProps(null);}
+  updateLive();
+}
+
+function badge(k){return{shader_source:'SRC',shader_pass:'SHD',crossfade:'MIX',
+  matrix_mix4:'MTX',pixels_out:'OUT',syphon:'SYP',add:'ADD'}[k]??k.slice(0,3).toUpperCase();}
+
+// ── Edges ──────────────────────────────────────────────────────────────────
+function edgeAdd(d) {
+  if(G.edges.find(e=>e.from_id===d.from_id&&e.from_port===d.from_port&&e.to_id===d.to_id&&e.to_port===d.to_port)) return;
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.classList.add('edge');
+  const fk=G.nodes[d.from_id]?.desc?.kind, tk=G.nodes[d.to_id]?.desc?.kind;
+  if(fk==='shader_source'&&tk==='shader_pass') path.classList.add('code-edge');
+  document.getElementById('el').insertBefore(path,document.getElementById('dw'));
+  const edge={...d,el:path};
+  G.edges.push(edge); drawEdge(edge);
+  path.addEventListener('click',()=>{
+    if(confirm(`Disconnect ${edge.from_id}.${edge.from_port} → ${edge.to_id}.${edge.to_port}?`)){
+      send({action:'disconnect',from_id:edge.from_id,from_port:edge.from_port,to_id:edge.to_id,to_port:edge.to_port});
+      setNC(true);
+    }
+  });
+  updateLive();
+}
+
+function edgeRemove(fi,fp,ti,tp) {
+  const i=G.edges.findIndex(e=>e.from_id===fi&&e.from_port===fp&&e.to_id===ti&&e.to_port===tp);
+  if(i>=0){G.edges[i].el?.remove();G.edges.splice(i,1);}
+  updateLive();
+}
+
+function drawEdge(e) {
+  const a=portPos(e.from_id,e.from_port,'out'),b=portPos(e.to_id,e.to_port,'in');
+  if(!a||!b){e.el.setAttribute('d','');return;}
+  e.el.setAttribute('d',bez(a.x,a.y,b.x,b.y));
+}
+function redrawEdges(){G.edges.forEach(drawEdge);}
+function bez(x1,y1,x2,y2){const d=Math.abs(x2-x1)*.55+40;return`M${x1},${y1} C${x1+d},${y1} ${x2-d},${y2} ${x2},${y2}`;}
+
+function portPos(nid,port,dir){
+  const entry=G.nodes[nid]; if(!entry) return null;
+  const dot=entry.el.querySelector(`.pdot[data-port="${port}"][data-dir="${dir}"]`);
+  if(!dot) return null;
+  const r=dot.getBoundingClientRect(),wr=document.getElementById('cw').getBoundingClientRect();
+  return{x:r.left-wr.left+r.width/2,y:r.top-wr.top+r.height/2};
+}
+
+function updateLive(){
+  document.querySelectorAll('.pdot').forEach(d=>d.classList.remove('live'));
+  G.edges.forEach(e=>{
+    G.nodes[e.from_id]?.el.querySelector(`.pdot[data-port="${e.from_port}"][data-dir="out"]`)?.classList.add('live');
+    G.nodes[e.to_id]?.el.querySelector(`.pdot[data-port="${e.to_port}"][data-dir="in"]`)?.classList.add('live');
+  });
+}
+
+// ── Wiring — mousedown only ─────────────────────────────────────────────────
+function portMouseDown(ev) {
+  ev.stopPropagation(); ev.preventDefault();
+  const dot=ev.currentTarget;
+  const {node:nodeId,port,dir}=dot.dataset;
+  if(G.wiring){
+    if(dir==='in') finishWire(nodeId,port);
+    else{ cancelWire(); beginWire(dot,nodeId,port); }
+    return;
+  }
+  if(dir==='out') beginWire(dot,nodeId,port);
+  else log('start from an OUTPUT port (right side)','warn');
+}
+
+function beginWire(dot,nodeId,port){
+  const wr=document.getElementById('cw').getBoundingClientRect();
+  const r=dot.getBoundingClientRect();
+  G.wiring={nodeId,port,x:r.left-wr.left+r.width/2,y:r.top-wr.top+r.height/2};
+  dot.classList.add('wiring');
+  document.querySelectorAll('.pdot[data-dir="in"]').forEach(d=>{ if(d.dataset.node!==nodeId) d.classList.add('can-connect'); });
+  document.getElementById('wh').classList.add('show');
+}
+
+function finishWire(toId,toPort){
+  const from=G.wiring; cancelWire();
+  if(from.nodeId===toId){log('cannot connect node to itself','warn');return;}
+  send({action:'connect',from_id:from.nodeId,from_port:from.port,to_id:toId,to_port:toPort});
+  setNC(true);
+}
+
+function cancelWire(){
+  if(!G.wiring) return;
+  document.querySelectorAll('.pdot.wiring,.pdot.can-connect').forEach(d=>d.classList.remove('wiring','can-connect'));
+  G.wiring=null;
+  document.getElementById('dw').setAttribute('d','');
+  document.getElementById('wh').classList.remove('show');
+}
+
+document.addEventListener('mousemove',ev=>{
+  if(G.wiring){
+    const wr=document.getElementById('cw').getBoundingClientRect();
+    document.getElementById('dw').setAttribute('d',bez(G.wiring.x,G.wiring.y,ev.clientX-wr.left,ev.clientY-wr.top));
+  }
+  if(G.drag){
+    const dx=ev.clientX-G.drag.sx,dy=ev.clientY-G.drag.sy;
+    const e=G.nodes[G.drag.id];
+    if(e){e.el.style.left=(G.drag.nx+dx)+'px';e.el.style.top=(G.drag.ny+dy)+'px';redrawEdges();}
+  }
+});
+document.addEventListener('mouseup',ev=>{
+  if(G.drag){
+    const e=G.nodes[G.drag.id];
+    if(e) send({action:'move_node',id:G.drag.id,position:{x:parseInt(e.el.style.left),y:parseInt(e.el.style.top)}});
+    G.drag=null;
+  }
+});
+document.getElementById('cw').addEventListener('mousedown',ev=>{
+  if(!ev.target.closest('.node')&&!ev.target.closest('.pdot')){ cancelWire(); selectNode(null); }
+});
+document.addEventListener('keydown',ev=>{ if(ev.key==='Escape') cancelWire(); });
+
+function startDrag(ev){
+  if(ev.target.closest('.nx')||ev.target.closest('.pdot')) return;
+  ev.preventDefault();
+  const nodeEl=ev.currentTarget.closest('.node');
+  const id=nodeEl.id.replace('n-','');
+  G.drag={id,sx:ev.clientX,sy:ev.clientY,nx:parseInt(nodeEl.style.left),ny:parseInt(nodeEl.style.top)};
+}
+
+// ── Properties panel ────────────────────────────────────────────────────────
+function selectNode(id){
+  document.querySelectorAll('.node.sel').forEach(n=>n.classList.remove('sel'));
+  G.sel=id;
+  if(id&&G.nodes[id]){G.nodes[id].el.classList.add('sel');renderProps(id);}
+  else renderProps(null);
+}
+
+function renderProps(id){
+  const panel=document.getElementById('props');
+  if(!id||!G.nodes[id]){panel.innerHTML='<div class="pempty">click a node<br/>to edit it</div>';return;}
+  const d=G.nodes[id].desc;
+  const reg=G.registry.find(r=>r.kind===d.kind);
+  const catTag=reg?`<span class="ptag ${reg.category.slice(0,3)}">${reg.category}</span>`:'';
+  const glslErr=G.shaderErrors[id];
+
+  let h=`<div class="pf">${catTag}<label style="margin-top:6px">label</label>
+    <input class="pinput" id="p-lbl" value="${esc(d.label)}"/></div>
+    <div class="pf"><label>id</label><input class="pinput" value="${esc(d.id)}" readonly/></div>`;
+
+  if(reg?.description)
+    h+=`<div class="pnote">${esc(reg.description)}</div>`;
+
+  if(reg?.ports?.length)
+    h+=`<div class="pf"><label>ports</label>${reg.ports.map(p=>
+      `<div style="font-size:9px;color:var(--text3);padding:1px 0">
+        <span style="color:${p.dir==='in'?'var(--accent3)':'var(--accent)'}">${p.dir}</span>
+        <b style="color:var(--text2)">${p.name}</b>
+        <span style="color:var(--text3)">${p.kind==='code'?' ⟨code⟩':''} — ${p.description}</span>
+      </div>`).join('')}</div>`;
+
+  if(d.mix!=null) h+=`<div class="pf"><label>mix  <span style="font-size:8px;color:var(--text3)">osc: /scheng/node/${esc(d.id)}/mix  midi: cc7</span></label>
+    <div class="prow-s">
+      <input type="range" class="pslider" id="p-mix" min="0" max="1" step="0.01" value="${d.mix}"/>
+      <span class="pval" id="p-mv">${d.mix.toFixed(2)}</span>
+    </div></div>`;
+
+  if(d.frag!=null){
+    const errCls=glslErr?'has-error':'';
+    h+=`<div class="pf"><label>fragment shader</label>
+      <textarea class="sbox ${errCls}" id="p-frag" spellcheck="false">${esc(d.frag)}</textarea>
+      <div class="shader-err${glslErr?' show':''}" id="p-serr">${glslErr?esc(glslErr):''}</div>
+      <button class="abtn" id="p-apply">▶ apply + compile</button>
+      </div>`;
+  }
+
+  panel.innerHTML=h;
+
+  panel.querySelector('#p-mix')?.addEventListener('input',e=>{
+    const v=parseFloat(e.target.value);
+    panel.querySelector('#p-mv').textContent=v.toFixed(2);
+    d.mix=v; send({action:'set_mix',node_id:id,mix:v});
+  });
+  panel.querySelector('#p-apply')?.addEventListener('click',()=>{
+    const frag=panel.querySelector('#p-frag').value;
+    d.frag=frag;
+    send({action:'set_shader',node_id:id,frag});
+    send({action:'compile'});
+    log(`shader applied + compiled → ${id}`,'ok');
+  });
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── Collapsible panel sections ──────────────────────────────────────────────
+['palette','tmpl','osc'].forEach(name=>{
+  const hdr=document.getElementById(`hdr-${name}`);
+  const body=document.getElementById(`body-${name}`);
+  body.style.maxHeight=body.scrollHeight+'px';
+  hdr.addEventListener('click',()=>{
+    const collapsed=body.classList.toggle('collapsed');
+    hdr.classList.toggle('collapsed',collapsed);
+    if(!collapsed) body.style.maxHeight=body.scrollHeight+'px';
+  });
+});
+
+// ── Header buttons ──────────────────────────────────────────────────────────
+document.getElementById('btn-connect').addEventListener('click',wsConnect);
+document.getElementById('btn-compile').addEventListener('click',()=>send({action:'compile'}));
+
+// ── Template helpers ────────────────────────────────────────────────────────
+function clearThen(fn){
+  if(!G.connected){log('connect first','warn');return;}
+  Object.keys(G.nodes).forEach(id=>send({action:'remove_node',id}));
+  setTimeout(fn,260);
+}
+function addNodes(nodes){nodes.forEach(([id,kind,label,x,y])=>send({action:'add_node',id,kind,label,position:{x,y}}));}
+function addEdges(edges){edges.forEach(([fi,fp,ti,tp])=>send({action:'connect',from_id:fi,from_port:fp,to_id:ti,to_port:tp}));}
+function setShaders(shaders,then){shaders.forEach(([id,frag])=>send({action:'set_shader',node_id:id,frag}));setTimeout(then,120);}
+function compileThen(msg){send({action:'compile'});log(msg,'ok');}
+
+// ── Shaders (from examples/) ────────────────────────────────────────────────
+const S={
+  minimal_src:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform float u_time;uniform vec2 u_resolution;
+void main(){vec2 uv01=clamp(v_uv*.5,0.,1.);float t=.5+.5*sin(u_time);fragColor=vec4(uv01.x,uv01.y,t,1.);}`,
+
+  chain2_a:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform float u_time;uniform vec2 u_resolution;
+void main(){vec2 uv=v_uv;float t=u_time*.7;
+  float a=.5+.5*sin((uv.x*6.+t)*3.14159);float b=.5+.5*sin((uv.y*4.-t)*3.14159);
+  vec3 col=vec3(a,b,.5+.5*sin(t));fragColor=vec4(col,1.);}`,
+
+  chain2_b:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform sampler2D iChannel0;uniform float u_time;
+void main(){vec2 uv=v_uv;float t=u_time*.8;
+  uv.x+=.02*sin(uv.y*20.+t);uv.y+=.02*cos(uv.x*18.-t);
+  vec3 src=texture(iChannel0,uv).rgb;src=pow(src,vec3(1.2));
+  fragColor=vec4(vec3(1.)-src,1.);}`,
+
+  mixer2_bg:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform float u_time;
+void main(){vec2 uv=v_uv;float t=u_time*.7;
+  float a=.5+.5*sin((uv.x*6.+t)*3.14159);float b=.5+.5*sin((uv.y*4.-t)*3.14159);
+  fragColor=vec4(vec3(a,b,.35+.65*sin(t)),1.);}`,
+
+  mixer2_fg:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform float u_time;
+void main(){vec2 p=v_uv*2.-1.;float t=u_time*.9;
+  p.x+=.2*sin(t);p.y+=.15*cos(t*.7);
+  float alpha=smoothstep(.55,.35,length(p));
+  fragColor=vec4(.95,.25,.6,alpha);}`,
+
+  mix4_r:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){float v=.5+.5*sin(v_uv.x*10.+u_time);fragColor=vec4(v,0.,0.,1.);}`,
+  mix4_g:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){float v=.5+.5*sin(v_uv.y*12.-u_time);fragColor=vec4(0.,v,0.,1.);}`,
+  mix4_b:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){float v=.5+.5*cos((v_uv.x+v_uv.y)*8.+u_time);fragColor=vec4(0.,0.,v,1.);}`,
+  mix4_w:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){float v=.5+.5*sin((v_uv.x-v_uv.y)*9.-u_time);fragColor=vec4(v,v,v,1.);}`,
+
+  plasma:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){vec2 uv=v_uv*3.;float v=sin(uv.x+u_time);v+=sin(uv.y+u_time*.7);
+  v+=sin((uv.x+uv.y+u_time*.5));v+=sin(length(uv)+u_time*1.3);
+  vec3 col=vec3(sin(v*3.14),sin(v*3.14+2.09),sin(v*3.14+4.19))*.5+.5;fragColor=vec4(col,1.);}`,
+
+  scanlines:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform sampler2D iChannel0;uniform float u_time;uniform vec2 u_resolution;
+void main(){vec4 c=texture(iChannel0,v_uv);
+  float scan=.85+.15*sin(v_uv.y*u_resolution.y*1.5);fragColor=vec4(c.rgb*scan,1.);}`,
+
+  tunnel:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){vec2 uv=v_uv*2.-1.;float r=length(uv);float a=atan(uv.y,uv.x);float t=u_time*.4;
+  float stripe=.5+.5*sin((.3/r+t)*20.);float ring=.5+.5*sin(a/3.14159*12.+t*4.);
+  vec3 col=vec3(stripe*ring)*vec3(.4+.6*sin(t+r),.5,1.-r*.3);col*=smoothstep(1.5,.2,r);
+  fragColor=vec4(col,1.);}`,
+
+  sdf_gen:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){vec2 uv=v_uv*2.-1.;uv.x*=1.77;float t=u_time*.6;
+  vec2 c1=vec2(.4*cos(t),.3*sin(t));
+  vec2 c2=vec2(.35*cos(t+2.09),.3*sin(t+2.09));
+  vec2 c3=vec2(.38*cos(t+4.19),.3*sin(t+4.19));
+  float d1=length(uv-c1)-.22,d2=length(uv-c2)-.22,d3=length(uv-c3)-.22;
+  vec3 col=vec3(.06,.03,.12);
+  col=mix(vec3(.9,.4,1.),col,smoothstep(-.01,.01,d1));
+  col=mix(vec3(.3,.8,1.),col,smoothstep(-.01,.01,d2));
+  col=mix(vec3(1.,.6,.2),col,smoothstep(-.01,.01,d3));
+  col+=.15*vec3(1.,.5,1.)/(abs(min(min(d1,d2),d3))*8.+.3);
+  fragColor=vec4(col,1.);}`,
+
+  sdf_post:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;uniform float u_time;
+void main(){vec2 off=(v_uv-.5)*.006;
+  float r=texture(iChannel0,v_uv-off).r;
+  float g=texture(iChannel0,v_uv).g;
+  float b=texture(iChannel0,v_uv+off).b;
+  vec3 col=vec3(r,g,b);vec2 vig=v_uv-.5;col*=1.-dot(vig,vig)*1.6;fragColor=vec4(col,1.);}`,
+};
+
+// ── Templates (names match examples/ directory) ─────────────────────────────
+const TEMPLATES={
+  minimal(){clearThen(()=>{
+    addNodes([['src_0','shader_source','Source',60,140],['pass_0','shader_pass','Pass',310,140],['out_0','pixels_out','Output',560,140]]);
+    setTimeout(()=>{addEdges([['src_0','out','pass_0','in'],['pass_0','out','out_0','in']]);
+      setShaders([['src_0',S.minimal_src]],()=>compileThen('graph_minimal ✓'));},150);
+  })},
+
+  chain2(){clearThen(()=>{
+    addNodes([['src_a','shader_source','Source A',40,140],['pass_a','shader_pass','Pass A',260,140],
+      ['pass_b','shader_pass','Pass B (warp+invert)',480,140],['out_0','pixels_out','Output',720,140]]);
+    setTimeout(()=>{addEdges([['src_a','out','pass_a','in'],['pass_a','out','pass_b','in'],['pass_b','out','out_0','in']]);
+      setShaders([['src_a',S.chain2_a],['pass_b',S.chain2_b]],()=>compileThen('graph_chain2 ✓'));},150);
+  })},
+
+  mixer2(){clearThen(()=>{
+    addNodes([['src_bg','shader_source','BG Source',40,60],['pass_bg','shader_pass','BG Pass',250,60],
+      ['src_fg','shader_source','FG Source',40,240],['pass_fg','shader_pass','FG Pass',250,240],
+      ['mix_0','crossfade','Crossfade',480,150],['out_0','pixels_out','Output',690,150]]);
+    setTimeout(()=>{addEdges([['src_bg','out','pass_bg','in'],['src_fg','out','pass_fg','in'],
+      ['pass_bg','out','mix_0','a'],['pass_fg','out','mix_0','b'],['mix_0','out','out_0','in']]);
+      setShaders([['src_bg',S.mixer2_bg],['src_fg',S.mixer2_fg]],
+        ()=>compileThen('graph_mixer2 ✓  adjust Mix on Crossfade node'));},150);
+  })},
+
+  matrix4(){clearThen(()=>{
+    addNodes([['pass_r','shader_pass','Red ch.',40,60],['pass_g','shader_pass','Green ch.',40,180],
+      ['pass_b','shader_pass','Blue ch.',40,300],['pass_w','shader_pass','White ch.',40,420],
+      ['mix_0','matrix_mix4','MatrixMix4',310,230],['out_0','pixels_out','Output',560,230]]);
+    setTimeout(()=>{addEdges([['pass_r','out','mix_0','in0'],['pass_g','out','mix_0','in1'],
+      ['pass_b','out','mix_0','in2'],['pass_w','out','mix_0','in3'],['mix_0','out','out_0','in']]);
+      setShaders([['pass_r',S.mix4_r],['pass_g',S.mix4_g],['pass_b',S.mix4_b],['pass_w',S.mix4_w]],
+        ()=>compileThen('graph_matrix_mix4 ✓'));},150);
+  })},
+
+  single(){clearThen(()=>{
+    addNodes([['pass_0','shader_pass','Colour Wheel',120,140],['out_0','pixels_out','Output',390,140]]);
+    setTimeout(()=>{addEdges([['pass_0','out','out_0','in']]);
+      setShaders([['pass_0',`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){vec3 col=.5+.5*cos(u_time+v_uv.xyx+vec3(0.,2.1,4.2));fragColor=vec4(col,1.);}`]],
+        ()=>compileThen('pure_single_pass ✓  shader direct on pass, no ShaderSource'));},150);
+  })},
+
+  plasma(){clearThen(()=>{
+    addNodes([['pass_0','shader_pass','Plasma',100,140],['pass_1','shader_pass','Scanlines',360,140],
+      ['out_0','pixels_out','Output',610,140]]);
+    setTimeout(()=>{addEdges([['pass_0','out','pass_1','in'],['pass_1','out','out_0','in']]);
+      setShaders([['pass_0',S.plasma],['pass_1',S.scanlines]],()=>compileThen('plasma + scanlines ✓'));},150);
+  })},
+
+  tunnel(){clearThen(()=>{
+    addNodes([['pass_0','shader_pass','UV Tunnel',120,140],['out_0','pixels_out','Output',380,140]]);
+    setTimeout(()=>{addEdges([['pass_0','out','out_0','in']]);
+      setShaders([['pass_0',S.tunnel]],()=>compileThen('UV tunnel ✓'));},150);
+  })},
+
+  sdf(){clearThen(()=>{
+    addNodes([['pass_0','shader_pass','SDF Orbs',100,140],['pass_1','shader_pass','Chroma+Vignette',370,140],
+      ['out_0','pixels_out','Output',630,140]]);
+    setTimeout(()=>{addEdges([['pass_0','out','pass_1','in'],['pass_1','out','out_0','in']]);
+      setShaders([['pass_0',S.sdf_gen],['pass_1',S.sdf_post]],()=>compileThen('SDF + chromatic aberration ✓'));},150);
+  })},
+};
+
+document.querySelectorAll('.tmbtn').forEach(btn=>btn.addEventListener('click',()=>TEMPLATES[btn.dataset.tmpl]?.()));
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+function setDot(cls,txt){document.getElementById('dot').className='dot '+cls;document.getElementById('stxt').textContent=txt;}
+function setNC(v){document.getElementById('nc').classList.toggle('show',v);}
+function log(msg,type=''){
+  const a=document.getElementById('log');
+  const r=document.createElement('div'); r.className='le '+type;
+  const now=new Date();
+  const t=[now.getHours(),now.getMinutes(),now.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');
+  r.innerHTML=`<span class="lt">${t}</span><span class="lm">${msg}</span>`;
+  a.appendChild(r); a.scrollTop=a.scrollHeight;
+  while(a.children.length>500) a.removeChild(a.firstChild);
+}
+
+window.addEventListener('load',()=>{
+  log('scheng editor','ok');
+  log('1. cargo run -p scheng-bridge','');
+  log('2. click connect','');
+  log('3. palette loads from bridge registry','');
+  log('osc udp:57120  midi: scheng-midi.json','');
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,250 @@
+/// scheng-bridge main
+///
+/// Spawns two things:
+///   1. A winit/glutin render window (same setup as graph_minimal) that drives
+///      the real scheng engine each frame.
+///   2. A tokio WebSocket server (ws://127.0.0.1:7777) that the browser editor
+///      connects to for live graph editing.
+///
+/// The BridgeState is shared behind Arc<Mutex<>> between the two.
+///
+/// Usage:
+///   cargo run -p scheng-bridge
+///   SCHENG_BRIDGE_ADDR=0.0.0.0:7777 cargo run -p scheng-bridge
+
+mod protocol;
+mod state;
+mod ws;
+
+use glow::HasContext;
+use raw_window_handle::HasRawWindowHandle;
+use scheng_graph::{Graph, NodeKind};
+use scheng_runtime_glow::{
+    execute_plan_to_sink, EngineError, ExecOutput, FrameCtx, NodeProps, OutputSink, RuntimeState,
+    ShaderSource, FULLSCREEN_VERT,
+};
+use state::BridgeState;
+use std::num::NonZeroU32;
+use std::sync::{Arc, Mutex};
+use std::time::Instant;
+use winit::event::{Event, WindowEvent};
+use winit::event_loop::{ControlFlow, EventLoop};
+use winit::window::WindowBuilder;
+use glutin::display::GetGlDisplay;
+use glutin::prelude::*;
+
+// ---------------------------------------------------------------------------
+// Present sink — blits engine output to window (same as graph_minimal)
+// ---------------------------------------------------------------------------
+
+struct PresentSink { w: i32, h: i32 }
+
+impl OutputSink for PresentSink {
+    fn consume(&mut self, gl: &glow::Context, out: &ExecOutput) {
+        unsafe {
+            gl.bind_framebuffer(glow::READ_FRAMEBUFFER, Some(out.fbo));
+            gl.bind_framebuffer(glow::DRAW_FRAMEBUFFER, None);
+            gl.blit_framebuffer(
+                0, 0, out.width, out.height,
+                0, 0, self.w, self.h,
+                glow::COLOR_BUFFER_BIT,
+                glow::LINEAR,
+            );
+            gl.bind_framebuffer(glow::READ_FRAMEBUFFER, None);
+            gl.bind_framebuffer(glow::DRAW_FRAMEBUFFER, None);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Entry point
+// ---------------------------------------------------------------------------
+
+fn main() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("scheng_bridge=info")),
+        )
+        .init();
+
+    if let Err(e) = run() {
+        eprintln!("[scheng-bridge] fatal: {e}");
+        std::process::exit(1);
+    }
+}
+
+fn run() -> Result<(), EngineError> {
+    // ── Shared bridge state ──────────────────────────────────────────────────
+    let bridge_state: Arc<Mutex<BridgeState>> = Arc::new(Mutex::new(BridgeState::new()));
+
+    // Seed a starter graph so the window renders something on first launch.
+    // This is a ShaderSource → ShaderPass → PixelsOut chain matching graph_minimal.
+    {
+        let mut s = bridge_state.lock().unwrap();
+        s.add_node("src_0".into(), protocol::BridgeNodeKind::ShaderSource, "Source 0".into(), Some(protocol::Pos2 { x: 60.0, y: 100.0 })).ok();
+        s.add_node("pass_0".into(), protocol::BridgeNodeKind::ShaderPass, "Pass 0".into(), Some(protocol::Pos2 { x: 310.0, y: 100.0 })).ok();
+        s.add_node("out_0".into(), protocol::BridgeNodeKind::PixelsOut, "Output".into(), Some(protocol::Pos2 { x: 560.0, y: 100.0 })).ok();
+        s.connect("src_0".into(), "out".into(), "pass_0".into(), "in".into()).ok();
+        s.connect("pass_0".into(), "out".into(), "out_0".into(), "in".into()).ok();
+        s.compile().ok();
+    }
+
+    // ── WebSocket server — runs on a tokio runtime on a background thread ───
+    let ws_state = bridge_state.clone();
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("tokio runtime");
+
+        let addr: std::net::SocketAddr = std::env::var("SCHENG_BRIDGE_ADDR")
+            .unwrap_or_else(|_| "127.0.0.1:7777".to_string())
+            .parse()
+            .expect("invalid SCHENG_BRIDGE_ADDR");
+
+        rt.block_on(ws::run_ws_server(addr, ws_state));
+    });
+
+    // ── Window + GL context (same as graph_minimal) ──────────────────────────
+    let event_loop = EventLoop::new();
+
+    let window_builder = WindowBuilder::new()
+        .with_title("scheng-bridge")
+        .with_inner_size(winit::dpi::LogicalSize::new(960.0, 540.0));
+
+    let template = glutin::config::ConfigTemplateBuilder::new()
+        .with_alpha_size(8)
+        .with_depth_size(0)
+        .with_stencil_size(0)
+        .with_transparency(false);
+
+    let display_builder =
+        glutin_winit::DisplayBuilder::new().with_window_builder(Some(window_builder));
+
+    let (window, gl_config) = display_builder
+        .build(&event_loop, template, |configs| {
+            configs
+                .reduce(|a, b| if b.num_samples() > a.num_samples() { b } else { a })
+                .unwrap()
+        })
+        .map_err(|e| EngineError::GlCreate(format!("DisplayBuilder: {e}")))?;
+
+    let window = window.ok_or_else(|| EngineError::GlCreate("no window".into()))?;
+    let gl_display = gl_config.display();
+    let raw_handle = window.raw_window_handle();
+
+    let ctx_attrs = glutin::context::ContextAttributesBuilder::new()
+        .with_profile(glutin::context::GlProfile::Core)
+        .build(Some(raw_handle));
+    let ctx_fallback = glutin::context::ContextAttributesBuilder::new()
+        .with_profile(glutin::context::GlProfile::Core)
+        .build(None);
+
+    let not_current = unsafe {
+        gl_display
+            .create_context(&gl_config, &ctx_attrs)
+            .or_else(|_| gl_display.create_context(&gl_config, &ctx_fallback))
+            .map_err(|e| EngineError::GlCreate(format!("create_context: {e}")))?
+    };
+
+    let (w0, h0) = { let s = window.inner_size(); (s.width.max(1), s.height.max(1)) };
+
+    let surf_attrs = glutin::surface::SurfaceAttributesBuilder::<glutin::surface::WindowSurface>::new()
+        .build(raw_handle, NonZeroU32::new(w0).unwrap(), NonZeroU32::new(h0).unwrap());
+
+    let gl_surface = unsafe {
+        gl_display
+            .create_window_surface(&gl_config, &surf_attrs)
+            .map_err(|e| EngineError::GlCreate(format!("create_window_surface: {e}")))?
+    };
+
+    let gl_context = not_current
+        .make_current(&gl_surface)
+        .map_err(|e| EngineError::GlCreate(format!("make_current: {e}")))?;
+
+    let gl = unsafe {
+        glow::Context::from_loader_function(|s| {
+            gl_display.get_proc_address(std::ffi::CString::new(s).unwrap().as_c_str()) as *const _
+        })
+    };
+
+    let start = Instant::now();
+    let mut runtime_state = unsafe { RuntimeState::new(&gl)? };
+
+    // ── Event loop (main thread, owns GL) ────────────────────────────────────
+    let render_state = bridge_state.clone();
+
+    event_loop.run(move |event, _, control_flow| {
+        *control_flow = ControlFlow::Poll;
+
+        match event {
+            Event::WindowEvent { event, .. } => match event {
+                WindowEvent::CloseRequested => {
+                    unsafe { runtime_state.destroy(&gl) };
+                    *control_flow = ControlFlow::Exit;
+                }
+                WindowEvent::Resized(size) => {
+                    let w = size.width.max(1);
+                    let h = size.height.max(1);
+                    gl_surface.resize(
+                        &gl_context,
+                        NonZeroU32::new(w).unwrap(),
+                        NonZeroU32::new(h).unwrap(),
+                    );
+                    window.request_redraw();
+                }
+                _ => {}
+            },
+
+            Event::MainEventsCleared => window.request_redraw(),
+
+            Event::RedrawRequested(_) => {
+                let (w, h) = {
+                    let s = window.inner_size();
+                    (s.width.max(1) as i32, s.height.max(1) as i32)
+                };
+
+                // Lock state briefly to snapshot what we need for this frame.
+                // We don't hold the lock during GPU work.
+                let (plan_opt, props, frame_num) = {
+                    let mut s = render_state.lock().unwrap();
+                    s.frame += 1;
+                    (s.plan.clone(), s.props.clone(), s.frame)
+                };
+
+                let frame = FrameCtx {
+                    time: start.elapsed().as_secs_f32(),
+                    width: w,
+                    height: h,
+                    frame: frame_num,
+                };
+
+                if let Some(plan) = &plan_opt {
+                    let graph = render_state.lock().unwrap().graph.clone();
+                    let mut sink = PresentSink { w, h };
+                    let result = unsafe {
+                        execute_plan_to_sink(
+                            &gl, &graph, plan, &mut runtime_state, &props, frame, &mut sink,
+                        )
+                    };
+                    if let Err(e) = result {
+                        eprintln!("[scheng-bridge] frame error: {e}");
+                    }
+                } else {
+                    // No compiled plan yet — clear to black
+                    unsafe {
+                        gl.bind_framebuffer(glow::FRAMEBUFFER, None);
+                        gl.viewport(0, 0, w, h);
+                        gl.clear_color(0.05, 0.05, 0.07, 1.0);
+                        gl.clear(glow::COLOR_BUFFER_BIT);
+                    }
+                }
+
+                gl_surface.swap_buffers(&gl_context).unwrap();
+            }
+
+            _ => {}
+        }
+    });
+}

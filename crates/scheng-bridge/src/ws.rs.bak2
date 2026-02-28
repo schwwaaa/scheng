@@ -182,25 +182,6 @@ fn dispatch(ws_state: &Arc<Mutex<BridgeState>>, bundle: &SharedBundle, raw: &str
             Ok(())  => vec![EngineMsg::NodeMoved { id, position }],
             Err(e)  => vec![EngineMsg::Error { message: e }],
         },
-        ClientMsg::SetUniform { node_id, name, value } => {
-            match s.set_uniform(&node_id, name.clone(), value) {
-                Ok(()) => {
-                    // Hotpatch live bundle — no recompile needed
-                    if let Ok(mut b) = bundle.lock() {
-                        if let Some(ref mut rb) = *b {
-                            if let Some(&eid) = rb.id_map.get(&node_id) {
-                                rb.props.custom_uniforms
-                                    .entry(eid)
-                                    .or_default()
-                                    .insert(name.clone(), value);
-                            }
-                        }
-                    }
-                    vec![EngineMsg::UniformUpdated { node_id, name, value }]
-                }
-                Err(e) => vec![EngineMsg::Error { message: e }],
-            }
-        },
         ClientMsg::GetRegistry => {
             let nodes: Vec<serde_json::Value> = crate::registry::all()
                 .into_iter()
@@ -258,9 +239,6 @@ pub fn compile_bundle(s: &BridgeState) -> Result<RenderBundle, String> {
         }
         if let Some(&p) = s.shaders.matrix.get(bridge_id) {
             props.matrix_params.insert(eid, p);
-        }
-        if let Some(u) = s.shaders.uniforms.get(bridge_id) {
-            props.custom_uniforms.insert(eid, u.clone());
         }
     }
 

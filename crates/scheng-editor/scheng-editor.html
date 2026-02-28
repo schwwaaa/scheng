@@ -2,896 +2,1112 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>scheng editor</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
-
-:root {
-  --bg:       #0c0c0f;
-  --bg1:      #13131a;
-  --bg2:      #1a1a24;
-  --bg3:      #22222f;
-  --border:   #252535;
-  --border-hi:#353550;
-  --accent:   #5b6eff;
-  --accent2:  #ff5f5f;
-  --accent3:  #3fffc8;
-  --yellow:   #ffd166;
-  --text:     #ddddf0;
-  --text2:    #7777a0;
-  --text3:    #44445a;
-  --node-w:   210px;
-  --port-r:   7px;
+:root{
+  --bg:#0c0c0f;--bg1:#13131a;--bg2:#1a1a24;--bg3:#22222f;
+  --border:#252535;--bhi:#353550;
+  --acc:#5b6eff;--red:#ff5f5f;--grn:#3fffc8;--yel:#ffd166;--pur:#a855f7;--org:#ff9a3c;
+  --t:#ddddf0;--t2:#7777a0;--t3:#44445a;
+  --nw:232px;--pr:8px;
 }
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { width: 100%; height: 100%; overflow: hidden; }
-
-body {
-  font-family: 'IBM Plex Mono', monospace;
-  background: var(--bg);
-  color: var(--text);
-  display: grid;
-  grid-template-rows: 42px 1fr;
-  grid-template-columns: 1fr 270px;
-  grid-template-areas: "hdr hdr" "cvs pnl";
-}
-
-/* ── HEADER ─────────────────────────────── */
-header {
-  grid-area: hdr;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 14px;
-  background: var(--bg1);
-  border-bottom: 1px solid var(--border);
-  user-select: none;
-}
-.logo {
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-weight: 600;
-  font-size: 15px;
-  letter-spacing: 0.02em;
-  color: var(--text);
-}
-.logo em { color: var(--accent); font-style: normal; }
-.hdr-gap { flex: 1; }
-.hdr-status {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 10px;
-  color: var(--text2);
-  letter-spacing: 0.06em;
-}
-.dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--text3);
-  transition: background 0.3s, box-shadow 0.3s;
-}
-.dot.on  { background: var(--accent3); box-shadow: 0 0 6px var(--accent3); }
-.dot.err { background: var(--accent2); }
-
-.hbtn {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 5px 12px;
-  border-radius: 3px;
-  border: 1px solid var(--border-hi);
-  background: transparent;
-  color: var(--text2);
-  cursor: pointer;
-  transition: all 0.12s;
-  white-space: nowrap;
-}
-.hbtn:hover { color: var(--text); border-color: var(--accent); background: var(--bg3); }
-.hbtn.hi  { background: var(--accent); color: #fff; border-color: var(--accent); }
-.hbtn.hi:hover { filter: brightness(1.15); }
-.hbtn.warn { border-color: var(--yellow); color: var(--yellow); }
-.hbtn.warn:hover { background: rgba(255,209,102,0.1); }
-
-/* ── CANVAS ─────────────────────────────── */
-#cvs-wrap {
-  grid-area: cvs;
-  position: relative;
-  overflow: hidden;
-  background: var(--bg);
-  background-image:
-    radial-gradient(circle, #252535 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-#cvs { position: absolute; inset: 0; }
-svg#edges {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  pointer-events: none;
-  overflow: visible;
-}
-
-/* ── NODES ──────────────────────────────── */
-.node {
-  position: absolute;
-  width: var(--node-w);
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg2);
-  box-shadow: 0 3px 16px rgba(0,0,0,0.5);
-  user-select: none;
-  z-index: 10;
-  transition: border-color 0.12s, box-shadow 0.12s;
-}
-.node:hover { border-color: var(--border-hi); }
-.node.sel   { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91,110,255,0.2), 0 3px 16px rgba(0,0,0,0.5); }
-
-/* Node kind accent stripe */
-.node-stripe {
-  height: 3px;
-  border-radius: 5px 5px 0 0;
-  background: var(--border-hi);
-}
-.k-shader_source  .node-stripe,
-.k-shader_pass    .node-stripe { background: var(--accent); }
-.k-crossfade      .node-stripe,
-.k-matrix_mix4    .node-stripe,
-.k-add            .node-stripe { background: #a855f7; }
-.k-pixels_out     .node-stripe,
-.k-syphon         .node-stripe { background: var(--accent3); }
-
-.node-hdr {
-  display: flex; align-items: center; gap: 7px;
-  padding: 7px 10px 6px;
-  cursor: grab;
-  border-bottom: 1px solid var(--border);
-}
-.node-hdr:active { cursor: grabbing; }
-.node-badge {
-  font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase;
-  padding: 2px 5px; border-radius: 2px;
-  background: var(--bg3); color: var(--text2);
-  flex-shrink: 0;
-}
-.node-lbl {
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 11px; font-weight: 500;
-  color: var(--text);
-  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.node-x {
-  width: 14px; height: 14px;
-  border: none; background: none;
-  color: var(--text3); cursor: pointer; font-size: 14px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 3px; flex-shrink: 0;
-  transition: color 0.1s, background 0.1s;
-}
-.node-x:hover { color: var(--accent2); background: rgba(255,95,95,0.12); }
-
-.node-ports {
-  display: flex; justify-content: space-between;
-  padding: 5px 0; min-height: 28px;
-}
-.pcol { display: flex; flex-direction: column; gap: 5px; }
-.pcol.ins { align-items: flex-start; }
-.pcol.outs { align-items: flex-end; }
-
-.prow {
-  display: flex; align-items: center; gap: 4px;
-  position: relative; height: 18px;
-}
-.pcol.outs .prow { flex-direction: row-reverse; }
-
-.pdot {
-  width: calc(var(--port-r) * 2); height: calc(var(--port-r) * 2);
-  border-radius: 50%;
-  border: 2px solid var(--border-hi);
-  background: var(--bg);
-  cursor: crosshair; flex-shrink: 0;
-  margin: 0 calc(0px - var(--port-r));
-  transition: border-color 0.1s, background 0.1s, transform 0.1s;
-  position: relative; z-index: 2;
-}
-.pdot:hover, .pdot.wiring { border-color: var(--accent); background: var(--accent); transform: scale(1.4); }
-.pdot.live { border-color: var(--accent3); background: rgba(63,255,200,0.12); }
-.plbl { font-size: 9px; color: var(--text3); padding: 0 8px; }
-
-/* ── EDGES ──────────────────────────────── */
-.edge {
-  fill: none; stroke: var(--accent); stroke-width: 1.5;
-  opacity: 0.55; stroke-linecap: round; pointer-events: none;
-}
-#draft-wire {
-  fill: none; stroke: var(--accent); stroke-width: 1.5; opacity: 0.7;
-  stroke-dasharray: 5 4; pointer-events: none;
-}
-
-/* ── PANEL ──────────────────────────────── */
-#panel {
-  grid-area: pnl;
-  background: var(--bg1);
-  border-left: 1px solid var(--border);
-  display: flex; flex-direction: column; overflow: hidden;
-}
-.psec { border-bottom: 1px solid var(--border); }
-.ptitle {
-  font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--text3); padding: 9px 13px 7px;
-  font-family: 'IBM Plex Sans', sans-serif; font-weight: 500;
-}
-
-/* Add-node grid */
-.node-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 5px; padding: 0 10px 10px;
-}
-.ngbtn {
-  font-family: 'IBM Plex Mono', monospace; font-size: 9px;
-  letter-spacing: 0.05em; padding: 7px 5px; border-radius: 4px;
-  border: 1px solid var(--border); background: var(--bg2);
-  color: var(--text2); cursor: pointer; text-align: center;
-  transition: all 0.12s; line-height: 1.5;
-}
-.ngbtn:hover { color: var(--text); border-color: var(--accent); background: var(--bg3); }
-.ngbtn span { display: block; font-size: 8px; color: var(--text3); }
-
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden}
+body{font-family:'IBM Plex Mono',monospace;background:var(--bg);color:var(--t);
+  display:grid;grid-template-rows:42px 1fr;grid-template-columns:1fr 306px;
+  grid-template-areas:"h h""c p"}
+/* Header */
+header{grid-area:h;display:flex;align-items:center;gap:9px;padding:0 14px;
+  background:var(--bg1);border-bottom:1px solid var(--border);user-select:none}
+.logo{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:15px}
+.logo em{color:var(--acc);font-style:normal}
+.gap{flex:1}
+.hst{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--t2)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--t3);transition:.3s}
+.dot.on{background:var(--grn);box-shadow:0 0 6px var(--grn)}.dot.err{background:var(--red)}
+.hbtn{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+  padding:5px 10px;border-radius:3px;border:1px solid var(--bhi);background:none;
+  color:var(--t2);cursor:pointer;transition:.12s;white-space:nowrap}
+.hbtn:hover{color:var(--t);border-color:var(--acc)}
+.hbtn.w{border-color:var(--yel);color:var(--yel)}.hbtn.w:hover{background:rgba(255,209,102,.1)}
+#nc{font-size:9px;padding:3px 8px;border-radius:3px;background:rgba(255,209,102,.12);
+  color:var(--yel);border:1px solid rgba(255,209,102,.3);display:none}
+#nc.on{display:block}
+/* Canvas */
+#cw{grid-area:c;position:relative;overflow:hidden;background:var(--bg);
+  background-image:radial-gradient(circle,#252535 1px,transparent 1px);background-size:24px 24px}
+#cv{position:absolute;inset:0}
+svg#el{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+/* Nodes */
+.node{position:absolute;width:var(--nw);border-radius:6px;border:1px solid var(--border);
+  background:var(--bg2);box-shadow:0 3px 16px rgba(0,0,0,.5);user-select:none;z-index:10;transition:.12s}
+.node:hover{border-color:var(--bhi)}
+.node.sel{border-color:var(--acc);box-shadow:0 0 0 2px rgba(91,110,255,.18),0 3px 16px rgba(0,0,0,.5)}
+.node.err{border-color:var(--red)!important;box-shadow:0 0 0 2px rgba(255,95,95,.12)!important}
+.stripe{height:3px;border-radius:5px 5px 0 0;background:var(--bhi)}
+.k-shader_source .stripe,.k-shader_pass .stripe{background:var(--acc)}
+.k-crossfade .stripe,.k-matrix_mix4 .stripe,.k-add .stripe{background:var(--pur)}
+.k-pixels_out .stripe,.k-syphon .stripe{background:var(--grn)}
+.nhdr{display:flex;align-items:center;gap:7px;padding:7px 10px 6px;cursor:grab;border-bottom:1px solid var(--border)}
+.nhdr:active{cursor:grabbing}
+.nbg{font-size:7.5px;letter-spacing:.12em;text-transform:uppercase;padding:2px 5px;border-radius:2px;background:var(--bg3);color:var(--t2);flex-shrink:0}
+.nlbl{font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nx{width:16px;height:16px;border:none;background:none;color:var(--t3);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;border-radius:3px;transition:.1s;flex-shrink:0}
+.nx:hover{color:var(--red);background:rgba(255,95,95,.1)}
+.nerr{font-size:8.5px;color:var(--red);padding:3px 10px;background:rgba(255,95,95,.05);border-bottom:1px solid rgba(255,95,95,.1);display:none;line-height:1.5}
+.nerr.on{display:block}
+.nports{display:flex;justify-content:space-between;padding:5px 0;min-height:28px}
+.pcol{display:flex;flex-direction:column;gap:4px}
+.pcol.ins{align-items:flex-start}.pcol.outs{align-items:flex-end}
+.prow{display:flex;align-items:center;gap:3px;height:20px}
+.pcol.outs .prow{flex-direction:row-reverse}
+.pdot{width:calc(var(--pr)*2);height:calc(var(--pr)*2);border-radius:50%;border:2px solid var(--bhi);background:var(--bg);cursor:crosshair;flex-shrink:0;margin:0 calc(0px - var(--pr));transition:.1s;z-index:20;position:relative}
+.pdot:hover{border-color:var(--acc);background:var(--acc);transform:scale(1.35)}
+.pdot.wiring{border-color:var(--yel)!important;background:var(--yel)!important;transform:scale(1.4)}
+.pdot.live{border-color:var(--grn);background:rgba(63,255,200,.15)}
+.pdot.canc{border-color:var(--grn);background:var(--grn);transform:scale(1.35);animation:pp .5s infinite alternate}
+@keyframes pp{from{box-shadow:0 0 0 0 rgba(63,255,200,.5)}to{box-shadow:0 0 0 8px rgba(63,255,200,0)}}
+.plbl{font-size:8.5px;color:var(--t3);padding:0 7px}
+/* Edges */
+.edge{fill:none;stroke:var(--acc);stroke-width:2;opacity:.5;stroke-linecap:round;cursor:pointer}
+.edge:hover{opacity:1;stroke:var(--red);stroke-width:2.5}
+.edge.code{stroke:var(--t3);stroke-dasharray:5 4;opacity:.3}
+.edge.code:hover{stroke:var(--red);opacity:.8}
+#dw{fill:none;stroke:var(--yel);stroke-width:2;opacity:.85;stroke-dasharray:7 4;pointer-events:none}
+/* Panel */
+#panel{grid-area:p;background:var(--bg1);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sec{border-bottom:1px solid var(--border);flex-shrink:0}
+.sttl{font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--t3);
+  padding:8px 13px 6px;font-family:'IBM Plex Sans',sans-serif;font-weight:500;
+  display:flex;align-items:center;cursor:pointer;user-select:none}
+.arr{font-size:8px;margin-left:auto;transition:.15s}
+.coll .arr{transform:rotate(-90deg)}
+.sbdy{overflow:hidden;transition:max-height .18s}
+.sbdy.coll{max-height:0!important}
+/* Palette */
+.ngrid{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:0 10px 10px}
+.ngbtn{font-family:'IBM Plex Mono',monospace;font-size:8.5px;padding:6px 4px;border-radius:4px;
+  border:1px solid var(--border);background:var(--bg2);color:var(--t2);
+  cursor:pointer;text-align:center;transition:.12s;line-height:1.7}
+.ngbtn:hover{color:var(--t);border-color:var(--acc);background:var(--bg3)}
+.ngbtn span{display:block;font-size:7.5px;color:var(--t3)}
+/* Templates */
+.tg{display:flex;flex-direction:column;gap:3px;padding:0 10px 10px}
+.tb{font-family:'IBM Plex Mono',monospace;font-size:8.5px;padding:5px 8px;border-radius:4px;
+  border:1px solid var(--border);background:var(--bg2);color:var(--t2);
+  cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:6px;transition:.12s}
+.tb:hover{color:var(--t);border-color:var(--grn);background:var(--bg3)}
+.tb em{color:var(--t3);font-style:normal;font-size:7.5px}
 /* Props */
-#props { flex: 1; overflow-y: auto; padding: 10px; }
-#props::-webkit-scrollbar { width: 3px; }
-#props::-webkit-scrollbar-thumb { background: var(--border); }
-.pempty { color: var(--text3); font-size: 10px; text-align: center; padding: 20px 0; line-height: 1.9; }
-
-.pf { margin-bottom: 10px; }
-.pf label { display: block; font-size: 9px; color: var(--text2); letter-spacing: 0.08em;
-            text-transform: uppercase; margin-bottom: 3px; }
-.pinput {
-  width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 10px;
-  background: var(--bg2); border: 1px solid var(--border); border-radius: 3px;
-  color: var(--text); padding: 4px 7px; outline: none;
-  transition: border-color 0.12s;
-}
-.pinput:focus { border-color: var(--accent); }
-.pinput[readonly] { opacity: 0.4; }
-
-.prow-slider { display: flex; align-items: center; gap: 6px; }
-.pslider {
-  flex: 1; -webkit-appearance: none; height: 3px;
-  border-radius: 2px; background: var(--border-hi); cursor: pointer; outline: none;
-}
-.pslider::-webkit-slider-thumb {
-  -webkit-appearance: none; width: 10px; height: 10px;
-  border-radius: 50%; background: var(--accent); cursor: pointer;
-}
-.pval { font-size: 9px; color: var(--text3); min-width: 30px; text-align: right; }
-
-.shader-box {
-  font-family: 'IBM Plex Mono', monospace; font-size: 10px; line-height: 1.55;
-  background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
-  color: var(--accent3); padding: 7px; width: 100%; height: 180px;
-  resize: vertical; outline: none; tab-size: 2;
-  transition: border-color 0.12s;
-}
-.shader-box:focus { border-color: var(--accent); }
-.apply-btn {
-  margin-top: 5px; width: 100%; font-family: 'IBM Plex Mono', monospace;
-  font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
-  padding: 6px; border-radius: 3px; border: 1px solid var(--accent);
-  background: rgba(91,110,255,0.08); color: var(--accent);
-  cursor: pointer; transition: all 0.12s;
-}
-.apply-btn:hover { background: var(--accent); color: #fff; }
-
+.psc{flex:1;overflow-y:auto;min-height:0}
+.psc::-webkit-scrollbar{width:3px}
+.psc::-webkit-scrollbar-thumb{background:var(--border)}
+#props{padding:10px}
+.emp{color:var(--t3);font-size:9.5px;text-align:center;padding:16px 0;line-height:2.4}
+.pf{margin-bottom:10px}
+.pf label{display:block;font-size:8.5px;color:var(--t2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.inp{width:100%;font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:3px;color:var(--t);padding:4px 7px;outline:none;transition:.12s}
+.inp:focus{border-color:var(--acc)}.inp[readonly]{opacity:.4}
+.sr{display:flex;align-items:center;gap:6px}
+.sl{flex:1;-webkit-appearance:none;height:3px;border-radius:2px;background:var(--bhi);cursor:pointer;outline:none}
+.sl::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--acc)}
+.sl.live::-webkit-slider-thumb{background:var(--grn)}
+.pv{font-size:8.5px;color:var(--t);min-width:36px;text-align:right}
+.wsl{display:flex;flex-direction:column;gap:4px}
+.wr{display:flex;align-items:center;gap:6px;font-size:8.5px}
+.wl{color:var(--t3);width:18px;flex-shrink:0}
+.sbox{font-family:'IBM Plex Mono',monospace;font-size:9px;line-height:1.55;background:var(--bg);
+  border:1px solid var(--border);border-radius:3px;color:var(--grn);padding:6px;
+  width:100%;height:175px;resize:vertical;outline:none;transition:.12s}
+.sbox:focus{border-color:var(--acc)}.sbox.herr{border-color:var(--red)}
+.serr{margin-top:4px;padding:4px 6px;background:rgba(255,95,95,.05);border:1px solid rgba(255,95,95,.18);
+  border-radius:3px;font-size:8px;color:var(--red);line-height:1.7;white-space:pre-wrap;display:none}
+.serr.on{display:block}
+.abtn{margin-top:5px;width:100%;font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.1em;
+  text-transform:uppercase;padding:5px;border-radius:3px;border:1px solid var(--acc);
+  background:rgba(91,110,255,.07);color:var(--acc);cursor:pointer;transition:.12s}
+.abtn:hover{background:var(--acc);color:#fff}
+.pnote{font-size:8px;color:var(--t3);padding:3px 0 6px;line-height:1.75;font-style:italic}
+/* Uniform editor */
+.urow{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.urow .inp{flex:1;font-size:8.5px}
+.ubtn{font-family:'IBM Plex Mono',monospace;font-size:8px;padding:3px 7px;border-radius:3px;
+  border:1px solid var(--bhi);background:none;color:var(--t2);cursor:pointer;transition:.12s;white-space:nowrap}
+.ubtn:hover{color:var(--t);border-color:var(--grn)}
+.utbl{width:100%;border-collapse:collapse;font-size:8.5px}
+.utbl td{padding:3px 5px;border-bottom:1px solid var(--border);vertical-align:middle}
+.utbl td:first-child{color:var(--t2);width:40%}
+.utbl td:last-child{text-align:right}
+.udel{border:none;background:none;color:var(--t3);cursor:pointer;font-size:12px;transition:.1s}
+.udel:hover{color:var(--red)}
+/* Validate */
+#vp{padding:8px 10px 10px;font-size:8.5px}
+.vr{display:flex;align-items:center;gap:7px;padding:3px 0;border-bottom:1px solid var(--border)}
+.vr:last-child{border:none}
+.vd{width:7px;height:7px;border-radius:50%;background:var(--t3);flex-shrink:0;transition:.3s}
+.vd.p{background:var(--grn)}.vd.f{background:var(--red)}.vd.w{background:var(--yel)}
+.vn{flex:1;color:var(--t2)}
+.vv{color:var(--t3);font-size:7.5px}
+/* OSC/MIDI panel */
+.cmid{padding:0 10px 10px;font-size:8.5px}
+.csec{margin-bottom:8px}
+.csec b{color:var(--t2);display:block;margin-bottom:4px;font-size:9px}
+.ctag{font-size:7.5px;background:var(--bg2);border:1px solid var(--border);border-radius:2px;
+  padding:2px 5px;color:var(--t3);display:inline-block;margin-bottom:3px}
+.cconn{display:flex;gap:5px;margin-top:5px}
+.cconn .inp{flex:1;font-size:8px;padding:3px 6px}
+.cinp{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap}
+.cinp .inp{flex:1;min-width:80px;font-size:8px;padding:3px 5px}
 /* Log */
-#log {
-  height: 110px; overflow-y: auto; padding: 6px 10px;
-  font-size: 9px; line-height: 1.8; color: var(--text3);
-}
-#log::-webkit-scrollbar { width: 2px; }
-#log::-webkit-scrollbar-thumb { background: var(--border); }
-.le { display: flex; gap: 7px; }
-.lt { color: var(--text3); flex-shrink: 0; }
-.lm { color: var(--text2); }
-.le.ok  .lm { color: var(--accent3); }
-.le.err .lm { color: var(--accent2); }
-.le.ev  .lm { color: var(--accent); }
-.le.warn .lm { color: var(--yellow); }
-
+#log{height:90px;overflow-y:auto;padding:4px 10px;font-size:8px;line-height:1.9;flex-shrink:0}
+#log::-webkit-scrollbar{width:2px}
+#log::-webkit-scrollbar-thumb{background:var(--border)}
+.le{display:flex;gap:6px}.lt{color:var(--t3);flex-shrink:0}.lm{color:var(--t2)}
+.le.ok .lm{color:var(--grn)}.le.er .lm{color:var(--red)}
+.le.ev .lm{color:var(--acc)}.le.wa .lm{color:var(--yel)}
 /* Wire hint */
-#wire-hint {
-  position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
-  background: var(--bg3); border: 1px solid var(--accent); border-radius: 20px;
-  padding: 5px 16px; font-size: 10px; color: var(--accent);
-  pointer-events: none; opacity: 0; transition: opacity 0.18s; z-index: 999;
-}
-#wire-hint.show { opacity: 1; }
-
-/* Compile-needed badge */
-#needs-compile {
-  font-size: 9px; letter-spacing: 0.06em;
-  padding: 3px 8px; border-radius: 3px;
-  background: rgba(255,209,102,0.12); color: var(--yellow);
-  border: 1px solid rgba(255,209,102,0.3);
-  display: none;
-}
-#needs-compile.show { display: block; }
+#wh{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--bg3);
+  border:1px solid var(--yel);border-radius:20px;padding:5px 18px;font-size:10px;color:var(--yel);
+  pointer-events:none;opacity:0;transition:.2s;z-index:999;white-space:nowrap}
+#wh.on{opacity:1}
 </style>
 </head>
 <body>
-
 <header>
   <div class="logo">sch<em>eng</em></div>
-  <div class="hdr-gap"></div>
-  <div id="needs-compile">needs compile</div>
-  <div class="hdr-status">
-    <div class="dot" id="dot"></div>
-    <span id="status-txt">disconnected</span>
-  </div>
-  <button class="hbtn" id="btn-connect">connect</button>
-  <button class="hbtn warn" id="btn-compile">compile</button>
-  <button class="hbtn" id="btn-template">load template</button>
+  <div class="gap"></div>
+  <div id="nc">needs compile</div>
+  <div class="hst"><div class="dot" id="dot"></div><span id="stxt">disconnected</span></div>
+  <button class="hbtn" id="btn-conn">connect</button>
+  <button class="hbtn w" id="btn-comp">compile</button>
 </header>
 
-<div id="cvs-wrap">
-  <svg id="edges">
-    <path id="draft-wire" d=""/>
-  </svg>
-  <div id="cvs"></div>
+<div id="cw">
+  <svg id="el"><path id="dw" d=""/></svg>
+  <div id="cv"></div>
 </div>
 
 <aside id="panel">
-  <div class="psec">
-    <div class="ptitle">add node</div>
-    <div class="node-grid">
-      <button class="ngbtn" data-kind="shader_source" data-label="Source">◈ ShaderSource<span>generates pixels</span></button>
-      <button class="ngbtn" data-kind="shader_pass"   data-label="Pass">◧ ShaderPass<span>transforms</span></button>
-      <button class="ngbtn" data-kind="crossfade"     data-label="Mix">◑ Crossfade<span>blend a+b</span></button>
-      <button class="ngbtn" data-kind="matrix_mix4"   data-label="Matrix">⊞ MatrixMix4<span>4-input mix</span></button>
-      <button class="ngbtn" data-kind="pixels_out"    data-label="Output">▣ PixelsOut<span>primary out</span></button>
-      <button class="ngbtn" data-kind="syphon"        data-label="Syphon">⇡ Syphon<span>send frame</span></button>
+  <!-- PALETTE -->
+  <div class="sec" id="s-pal">
+    <div class="sttl" id="h-pal">nodes<span class="arr">▾</span></div>
+    <div class="sbdy" id="b-pal">
+      <div class="ngrid" id="palette">
+        <div style="grid-column:1/-1;font-size:8.5px;color:var(--t3);padding:5px 0">connect bridge to load</div>
+      </div>
     </div>
   </div>
-  <div class="psec">
-    <div class="ptitle">properties</div>
-    <div id="props"><div class="pempty">click a node<br/>to inspect it</div></div>
+
+  <!-- TEMPLATES -->
+  <div class="sec" id="s-tmpl">
+    <div class="sttl" id="h-tmpl">templates<span class="arr">▾</span></div>
+    <div class="sbdy" id="b-tmpl">
+      <div class="tg">
+        <div style="font-size:7.5px;color:var(--t3);padding:0 2px 4px">
+          match examples/ — sliders hotpatch live (no recompile)
+        </div>
+        <button class="tb" data-t="minimal">graph_minimal<em>src→pass→out</em></button>
+        <button class="tb" data-t="chain2">graph_chain2<em>warp+invert</em></button>
+        <button class="tb" data-t="mixer2">graph_mixer2<em>crossfade</em></button>
+        <button class="tb" data-t="mixer_builtin">graph_mixer_builtin<em>slider test ★</em></button>
+        <button class="tb" data-t="matrix4">graph_matrix_mix4<em>4-ch blend</em></button>
+        <button class="tb" data-t="luma">graph_webcam_luma_key<em>keyer adapted</em></button>
+        <button class="tb" data-t="osc_ctrl">osc_minimal<em>u_gain u_speed</em></button>
+        <button class="tb" data-t="feedback">feedback_pingpong<em>spin+decay</em></button>
+        <button class="tb" data-t="slitscan">temporal_slitscan<em>frame history</em></button>
+        <button class="tb" data-t="single">pure_single_pass<em>no ShaderSource</em></button>
+        <button class="tb" data-t="plasma">plasma+scanlines</em></button>
+        <button class="tb" data-t="tunnel">uv_tunnel<em>polar warp</em></button>
+        <button class="tb" data-t="sdf">SDF+chromab</button>
+        <button class="tb" data-t="uniform_demo">uniform_demo ★<em>node-as-object</em></button>
+      </div>
+    </div>
   </div>
-  <div class="psec" style="flex-shrink:0">
-    <div class="ptitle">log</div>
+
+  <!-- PROPERTIES -->
+  <div class="sec" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0">
+    <div class="sttl" style="cursor:default">properties</div>
+    <div class="psc"><div id="props">
+      <div class="emp">click a node<br>to inspect + edit<br><br>
+        <span style="font-size:7.5px;color:var(--t3)">● mix/weight sliders are live<br>
+        ● custom uniforms are live<br>
+        ● shader edits need compile</span>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- VALIDATE -->
+  <div class="sec" id="s-val">
+    <div class="sttl" id="h-val">validate<span class="arr">▾</span></div>
+    <div class="sbdy" id="b-val">
+      <div id="vp">
+        <div class="vr"><div class="vd" id="v-ws"></div><span class="vn">WebSocket</span><span class="vv" id="vv-ws">—</span></div>
+        <div class="vr"><div class="vd" id="v-nd"></div><span class="vn">has nodes</span><span class="vv" id="vv-nd">—</span></div>
+        <div class="vr"><div class="vd" id="v-out"></div><span class="vn">PixelsOut present</span><span class="vv" id="vv-out">—</span></div>
+        <div class="vr"><div class="vd" id="v-dang"></div><span class="vn">no orphan passes</span><span class="vv" id="vv-dang">—</span></div>
+        <div class="vr"><div class="vd" id="v-comp"></div><span class="vn">compiled</span><span class="vv" id="vv-comp">—</span></div>
+        <div class="vr"><div class="vd" id="v-glsl"></div><span class="vn">no GLSL errors</span><span class="vv" id="vv-glsl">—</span></div>
+        <div class="vr"><div class="vd" id="v-sl"></div><span class="vn">slider hotpatch</span><span class="vv" id="vv-sl">move a slider</span></div>
+        <div class="vr"><div class="vd" id="v-un"></div><span class="vn">uniform hotpatch</span><span class="vv" id="vv-un">add a uniform</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OSC / MIDI TEST CONSOLE -->
+  <div class="sec" id="s-ctrl">
+    <div class="sttl" id="h-ctrl">osc / midi control<span class="arr">▾</span></div>
+    <div class="sbdy" id="b-ctrl">
+      <div class="cmid">
+        <div class="csec">
+          <b>send OSC directly</b>
+          <div class="ctag">OSC UDP port 57120 (bridge)</div>
+          <div style="font-size:7.5px;color:var(--t3);margin-top:3px">
+            /scheng/node/{id}/mix  f32<br>
+            /scheng/node/{id}/weights  f32×4<br>
+            /scheng/node/{id}/uniform/{name}  f32<br>
+            /scheng/compile
+          </div>
+          <div style="font-size:8px;color:var(--t2);margin-top:6px">test uniform from editor:</div>
+          <div class="cinp">
+            <input class="inp" id="osc-id" placeholder="node id" value="pass_0"/>
+            <input class="inp" id="osc-un" placeholder="name" value="u_gain"/>
+            <input class="inp" id="osc-val" placeholder="val" value="1.0" style="width:60px;flex:0 0 60px"/>
+          </div>
+          <button class="abtn" style="margin-top:4px" id="btn-send-un">▶ set uniform (live)</button>
+        </div>
+        <div class="csec">
+          <b>MIDI mapping file</b>
+          <div class="ctag">scheng-midi.json (next to binary)</div>
+          <div style="font-size:7.5px;color:var(--t3);margin-top:3px">
+            {"ch":1,"cc":7,"node":"mix_0","param":"mix"}<br>
+            params: mix  weight0–3
+          </div>
+          <div id="midi-log" style="margin-top:6px;font-size:7.5px;color:var(--t3);line-height:1.9">
+            MIDI events appear in log when bridge connects
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div style="border-top:1px solid var(--border);flex-shrink:0">
+    <div class="sttl" style="cursor:default">log</div>
     <div id="log"></div>
   </div>
 </aside>
-
-<div id="wire-hint">click an input port to connect  ·  esc cancels</div>
+<div id="wh">mousedown an INPUT port to finish wire  ·  esc cancels</div>
 
 <script>
-// ═══════════════════════════════════════════════════
-// PROTOCOL CONSTANTS — must match protocol.rs exactly
-// ═══════════════════════════════════════════════════
-// ClientMsg actions: add_node, remove_node, connect, disconnect,
-//                    set_shader, set_mix, set_weights, compile, get_state, move_node
-// EngineMsg events:  state, ok, error, node_added, node_removed,
-//                    edge_added, edge_removed, compiled, shader_updated,
-//                    param_updated, weights_updated, node_moved
+// ══════════════════════════════════════════════════════════════════════════
+// SCHENG ENGINE TOPOLOGY RULES
 //
-// EdgeDesc fields:   from_id, from_port, to_id, to_port   (NOT from_node/to_node)
-// NodeDesc fields:   id, kind, label, position{x,y}, input_ports[], output_ports[],
-//                    frag (nullable), mix (nullable), weights (nullable)
-// SetShader:         { action:"set_shader", node_id, frag, vert? }
-// Connect:           { action:"connect", from_id, from_port, to_id, to_port }
+// ShaderSource → ShaderPass   code edge   (carries frag text, no texture)
+// ShaderPass → ShaderPass     texture edge (upstream FBO → iChannel0)
+// ShaderPass/Mixer → PixelsOut
+//
+// Shader resolution per ShaderPass (in priority order):
+//   Path 1: props.shader_sources[this_id]   ← frag set directly on node
+//   Path 2: builtin op (Crossfade=uMix, MatrixMix4=uWeights)
+//   Path 3: incoming ShaderSource edge
+//
+// Live (NO recompile needed):  mix, weights, custom uniforms
+// Needs compile:               topology, shader source text
+//
+// Auto-injected uniforms: u_time, u_resolution, uTime, iTime, iChannel0..3
+// Custom uniforms: declared in frag as "uniform float u_gain;" then
+//   bridge injects value via props.custom_uniforms each frame.
+//   Max/MSP model: node = (shader_fn + declared_params + current_values)
+// ══════════════════════════════════════════════════════════════════════════
 
-// ═══════════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════════
-const G = {
-  nodes: {},       // id → { el, desc }
-  edges: [],       // [ { from_id, from_port, to_id, to_port, pathEl } ]
-  sel: null,       // selected node id
-  ws: null,
-  connected: false,
-  compiled: false,
-  wiring: null,    // { nodeId, port, x, y } — in-progress wire drag
-  drag: null,      // node drag state
+const G={
+  nodes:{}, edges:[], sel:null,
+  ws:null, ok:false,
+  wiring:null, drag:null,
+  registry:[],
+  errs:{},        // nodeId → glsl error
+  compiled:false,
+  _ni:0,
+  slMoved:false,
+  unMoved:false,
 };
 
-const WS = 'ws://127.0.0.1:7777';
-
-// ═══════════════════════════════════════════════════
-// WEBSOCKET
-// ═══════════════════════════════════════════════════
-function wsConnect() {
-  if (G.ws) G.ws.close();
-  G.ws = new WebSocket(WS);
-  G.ws.onopen = () => {
-    G.connected = true;
-    setDot('on', 'connected');
-    log('connected to scheng-bridge', 'ok');
-    send({ action: 'get_state' });
-  };
-  G.ws.onmessage = e => onMsg(JSON.parse(e.data));
-  G.ws.onclose   = () => { G.connected = false; setDot('', 'disconnected'); log('disconnected', 'err'); };
-  G.ws.onerror   = () => { setDot('err', 'error'); log('cannot reach ws://127.0.0.1:7777 — is scheng-bridge running?', 'err'); };
+// ── WebSocket ──────────────────────────────────────────────────────────
+function wsConn(){
+  if(G.ws) G.ws.close();
+  G.ws=new WebSocket('ws://127.0.0.1:7777');
+  G.ws.onopen=()=>{G.ok=true;dot('on','connected');log('connected','ok');
+    send({action:'get_state'});send({action:'get_registry'});};
+  G.ws.onmessage=e=>msg(JSON.parse(e.data));
+  G.ws.onclose=()=>{G.ok=false;dot('','disconnected');log('disconnected','er');validate();};
+  G.ws.onerror=()=>{dot('err','error');log('ws://127.0.0.1:7777 unreachable','er');};
 }
+function send(o){if(G.ws?.readyState===1)G.ws.send(JSON.stringify(o));else log('not connected','er');}
 
-function send(obj) {
-  if (G.ws && G.ws.readyState === 1) G.ws.send(JSON.stringify(obj));
-  else log('not connected', 'err');
-}
-
-// ═══════════════════════════════════════════════════
-// MESSAGE DISPATCH
-// ═══════════════════════════════════════════════════
-function onMsg(m) {
-  switch (m.event) {
-    case 'state':        hydrate(m); break;
-    case 'node_added':   nodeAdd(m); log(`+ ${m.id} (${m.kind})`, 'ev'); break;
-    case 'node_removed': nodeRemove(m.id); log(`- ${m.id}`, 'ev'); break;
-    case 'edge_added':   edgeAdd(m); break;
-    case 'edge_removed': edgeRemove(m.from_id, m.from_port, m.to_id, m.to_port); break;
+function msg(m){
+  switch(m.event){
+    case 'state':         hydrate(m); break;
+    case 'node_added':    nodeAdd(m); log(`+ ${m.id} (${m.kind})`,'ev'); validate(); break;
+    case 'node_removed':  nodeRm(m.id); validate(); break;
+    case 'edge_added':    edgeAdd(m); validate(); break;
+    case 'edge_removed':  edgeRm(m.from_id,m.from_port,m.to_id,m.to_port); validate(); break;
     case 'compiled':
-      G.compiled = true;
-      setNeedsCompile(false);
-      log(`compiled ✓  ${m.node_count} nodes · ${m.edge_count} edges`, 'ok');
-      break;
-    case 'shader_updated':  log(`shader → ${m.node_id}`, 'ev'); break;
-    case 'param_updated':   log(`${m.node_id}.${m.param} = ${m.value.toFixed(3)}`, 'ev'); break;
-    case 'weights_updated': log(`${m.node_id} weights updated`, 'ev'); break;
-    case 'error':  log(`error: ${m.message}`, 'err'); break;
-    case 'ok':     log(m.ack, 'ok'); break;
+      G.compiled=true; G.errs={}; nc(false);
+      document.querySelectorAll('.node.err').forEach(n=>n.classList.remove('err'));
+      document.querySelectorAll('.nerr').forEach(n=>{n.textContent='';n.classList.remove('on');});
+      log(`compiled ✓  ${m.node_count}n ${m.edge_count}e`,'ok'); validate(); break;
+    case 'shader_error':
+      G.errs[m.node_id]=m.error; glslErr(m.node_id,m.error);
+      log(`✗ GLSL ${m.node_id}: ${m.error.split('\n')[0]}`,'er'); validate(); break;
+    case 'shader_updated': log(`shader → ${m.node_id}`,'ev'); break;
+    case 'param_updated':
+      G.slMoved=true;
+      log(`${m.node_id}.${m.param}=${m.value.toFixed(3)}`,'ev'); validate(); break;
+    case 'weights_updated':
+      G.slMoved=true;
+      log(`${m.node_id}.weights updated`,'ev'); validate(); break;
+    case 'uniform_updated':
+      G.unMoved=true;
+      log(`${m.node_id}.${m.name}=${m.value.toFixed(3)} (uniform)`,'ev'); validate(); break;
+    case 'error':   log(`✗ ${m.message}`,'er'); break;
+    case 'registry': buildPalette(m.nodes); break;
   }
 }
 
-function hydrate(snap) {
-  // Clear DOM completely
-  document.getElementById('cvs').innerHTML = '';
-  G.edges.forEach(e => e.pathEl?.remove());
-  G.nodes = {}; G.edges = [];
-  G.sel = null;
-  G.compiled = snap.compiled;
-  setNeedsCompile(!snap.compiled);
-  snap.nodes.forEach(nodeAdd);
-  // Small delay so DOM is painted before we measure port positions
-  setTimeout(() => snap.edges.forEach(edgeAdd), 30);
-  log(`state: ${snap.nodes.length} nodes · ${snap.edges.length} edges`, 'ok');
+function hydrate(s){
+  document.getElementById('cv').innerHTML='';
+  G.edges.forEach(e=>e.el?.remove());
+  G.nodes={}; G.edges=[]; G.sel=null; G.errs={};
+  G.compiled=s.compiled; nc(!s.compiled);
+  s.nodes.forEach(nodeAdd);
+  setTimeout(()=>s.edges.forEach(edgeAdd),40);
+  log(`state ${s.nodes.length}n ${s.edges.length}e`,'ok');
+  validate();
 }
 
-// ═══════════════════════════════════════════════════
-// NODE DOM
-// ═══════════════════════════════════════════════════
-function nodeAdd(d) {
-  if (G.nodes[d.id]) return;
-
-  const el = document.createElement('div');
-  el.className = `node k-${d.kind}`;
-  el.id = 'n-' + d.id;
-  el.style.left = (d.position?.x ?? 60) + 'px';
-  el.style.top  = (d.position?.y ?? 60) + 'px';
-
-  // Stripe
-  const stripe = document.createElement('div');
-  stripe.className = 'node-stripe';
-  el.appendChild(stripe);
-
-  // Header
-  const hdr = document.createElement('div');
-  hdr.className = 'node-hdr';
-  hdr.innerHTML = `
-    <span class="node-badge">${kindBadge(d.kind)}</span>
-    <span class="node-lbl">${d.label}</span>
-    <button class="node-x" title="delete">×</button>`;
-  el.appendChild(hdr);
-
-  // Ports row
-  const ports = document.createElement('div');
-  ports.className = 'node-ports';
-  const ins  = document.createElement('div'); ins.className  = 'pcol ins';
-  const outs = document.createElement('div'); outs.className = 'pcol outs';
-
-  (d.input_ports  || []).forEach(p => ins.appendChild(makePortRow(d.id, p, 'in')));
-  (d.output_ports || []).forEach(p => outs.appendChild(makePortRow(d.id, p, 'out')));
-
-  ports.appendChild(ins);
-  ports.appendChild(outs);
-  el.appendChild(ports);
-
-  // Events
-  hdr.addEventListener('mousedown', startDrag);
-  el.addEventListener('click', ev => { if (!ev.defaultPrevented) selectNode(d.id); });
-  hdr.querySelector('.node-x').addEventListener('click', ev => {
-    ev.preventDefault();
-    send({ action: 'remove_node', id: d.id });
-    setNeedsCompile(true);
+// ── Registry → palette ────────────────────────────────────────────────
+function buildPalette(defs){
+  G.registry=defs;
+  const g=document.getElementById('palette'); g.innerHTML='';
+  const ico={source:'◈',processor:'◧',mixer:'◑',output:'▣'};
+  ['source','processor','mixer','output'].forEach(cat=>{
+    defs.filter(d=>d.category===cat).forEach(d=>{
+      const b=document.createElement('button');
+      b.className='ngbtn'; b.title=d.description;
+      b.innerHTML=`${ico[cat]} ${d.label}<span>${cat}</span>`;
+      b.onclick=()=>{const id=`${d.kind}_${++G._ni}`;
+        send({action:'add_node',id,kind:d.kind,label:`${d.label} ${G._ni}`,
+          position:{x:80+Math.random()*240,y:60+Math.random()*200}});
+        nc(true);};
+      g.appendChild(b);
+    });
   });
-
-  document.getElementById('cvs').appendChild(el);
-  G.nodes[d.id] = { el, desc: d };
-  updateLivePorts();
+  log(`registry: ${defs.length} types`,'ok');
 }
 
-function makePortRow(nodeId, portName, dir) {
-  const row = document.createElement('div');
-  row.className = 'prow';
-  const dot = document.createElement('div');
-  dot.className = 'pdot';
-  dot.dataset.node = nodeId;
-  dot.dataset.port = portName;
-  dot.dataset.dir  = dir;
-  dot.title = portName;
-  const lbl = document.createElement('span');
-  lbl.className = 'plbl';
-  lbl.textContent = portName;
-  if (dir === 'in') { row.appendChild(dot); row.appendChild(lbl); }
-  else              { row.appendChild(lbl); row.appendChild(dot); }
-  dot.addEventListener('mousedown', portMouseDown);
-  return row;
+// ── Nodes ─────────────────────────────────────────────────────────────
+function nodeAdd(d){
+  if(G.nodes[d.id]) return;
+  const el=document.createElement('div');
+  el.className=`node k-${d.kind}`; el.id='n-'+d.id;
+  el.style.left=(d.position?.x??80)+'px'; el.style.top=(d.position?.y??80)+'px';
+  const reg=G.registry.find(r=>r.kind===d.kind);
+  const ins=d.input_ports||[], outs=d.output_ports||[];
+  el.innerHTML=`<div class="stripe"></div>
+    <div class="nhdr"><span class="nbg">${bdg(d.kind)}</span><span class="nlbl">${esc(d.label)}</span><button class="nx" title="remove">×</button></div>
+    <div class="nerr" id="ne-${d.id}"></div>
+    <div class="nports">
+      <div class="pcol ins">${ins.map(p=>ph(d.id,p,'in',reg)).join('')}</div>
+      <div class="pcol outs">${outs.map(p=>ph(d.id,p,'out',reg)).join('')}</div>
+    </div>`;
+  el.querySelector('.nhdr').addEventListener('mousedown',startDrag);
+  el.querySelector('.nx').addEventListener('click',ev=>{ev.stopPropagation();send({action:'remove_node',id:d.id});nc(true);});
+  el.addEventListener('click',ev=>{if(!ev.target.closest('.pdot,.nx'))selNode(d.id);});
+  el.querySelectorAll('.pdot').forEach(dot=>dot.addEventListener('mousedown',portMD));
+  document.getElementById('cv').appendChild(el);
+  G.nodes[d.id]={el,desc:d,uniforms:{}};
+  if(G.errs[d.id]) glslErr(d.id,G.errs[d.id]);
+  liveDots();
 }
 
-function nodeRemove(id) {
+function ph(nid,port,dir,reg){
+  const pd=reg?.ports?.find(p=>p.name===port&&p.dir===dir);
+  const tip=pd?`${dir}:${port} — ${pd.description}`:port;
+  const dot=`<div class="pdot" data-node="${nid}" data-port="${port}" data-dir="${dir}" title="${esc(tip)}"></div>`;
+  const lbl=`<span class="plbl">${port}</span>`;
+  return `<div class="prow">${dir==='in'?dot+lbl:lbl+dot}</div>`;
+}
+
+function glslErr(id,err){
+  const e=G.nodes[id]; if(!e) return;
+  e.el.classList.add('err');
+  const b=e.el.querySelector('.nerr');
+  if(b){b.textContent=err.split('\n')[0];b.classList.add('on');}
+  if(G.sel===id) renderProps(id);
+}
+
+function nodeRm(id){
   G.nodes[id]?.el.remove();
-  G.edges = G.edges.filter(e => {
-    if (e.from_id === id || e.to_id === id) { e.pathEl?.remove(); return false; }
-    return true;
-  });
-  delete G.nodes[id];
-  if (G.sel === id) { G.sel = null; renderProps(null); }
-  updateLivePorts();
+  G.edges=G.edges.filter(e=>{if(e.from_id===id||e.to_id===id){e.el?.remove();return false;}return true;});
+  delete G.nodes[id]; delete G.errs[id];
+  if(G.sel===id){G.sel=null;renderProps(null);}
+  liveDots();
 }
 
-function kindBadge(k) {
-  return {
-    shader_source:'SRC', shader_pass:'SHD', crossfade:'MIX',
-    matrix_mix4:'MTX', pixels_out:'OUT', syphon:'SYP',
-    color_correct:'CLR', blur:'BLR', keyer:'KEY', add:'ADD',
-    noise_source:'NSE', texture_input_pass:'TEX', video_decode_source:'VID',
-  }[k] ?? k.slice(0,3).toUpperCase();
-}
+function bdg(k){return{shader_source:'SRC',shader_pass:'SHD',crossfade:'MIX',matrix_mix4:'MTX',pixels_out:'OUT',syphon:'SYP',add:'ADD'}[k]??k.slice(0,3).toUpperCase();}
 
-// ═══════════════════════════════════════════════════
-// EDGE DOM
-// ═══════════════════════════════════════════════════
-function edgeAdd(d) {
-  // Deduplicate
-  if (G.edges.find(e => e.from_id===d.from_id && e.from_port===d.from_port
-                     && e.to_id===d.to_id   && e.to_port===d.to_port)) return;
-  const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+// ── Edges ─────────────────────────────────────────────────────────────
+function edgeAdd(d){
+  if(G.edges.find(e=>e.from_id===d.from_id&&e.from_port===d.from_port&&e.to_id===d.to_id&&e.to_port===d.to_port)) return;
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');
   path.classList.add('edge');
-  document.getElementById('edges').insertBefore(path, document.getElementById('draft-wire'));
-  const edge = { ...d, pathEl: path };
-  G.edges.push(edge);
-  drawEdge(edge);
-  updateLivePorts();
+  const fk=G.nodes[d.from_id]?.desc?.kind, tk=G.nodes[d.to_id]?.desc?.kind;
+  if(fk==='shader_source'&&tk==='shader_pass') path.classList.add('code');
+  document.getElementById('el').insertBefore(path,document.getElementById('dw'));
+  const edge={...d,el:path}; G.edges.push(edge); drawE(edge);
+  path.addEventListener('click',()=>{
+    if(confirm(`Disconnect ${d.from_id}.${d.from_port} → ${d.to_id}.${d.to_port}?`)){
+      send({action:'disconnect',from_id:d.from_id,from_port:d.from_port,to_id:d.to_id,to_port:d.to_port}); nc(true);
+    }
+  });
+  liveDots();
 }
-
-function edgeRemove(fi, fp, ti, tp) {
-  const i = G.edges.findIndex(e => e.from_id===fi && e.from_port===fp && e.to_id===ti && e.to_port===tp);
-  if (i >= 0) { G.edges[i].pathEl?.remove(); G.edges.splice(i,1); }
-  updateLivePorts();
+function edgeRm(fi,fp,ti,tp){
+  const i=G.edges.findIndex(e=>e.from_id===fi&&e.from_port===fp&&e.to_id===ti&&e.to_port===tp);
+  if(i>=0){G.edges[i].el?.remove();G.edges.splice(i,1);}
+  liveDots();
 }
-
-function drawEdge(e) {
-  const a = portPos(e.from_id, e.from_port, 'out');
-  const b = portPos(e.to_id,   e.to_port,   'in');
-  if (!a || !b) return;
-  e.pathEl.setAttribute('d', bez(a.x, a.y, b.x, b.y));
+function drawE(e){
+  const a=ppos(e.from_id,e.from_port,'out'),b=ppos(e.to_id,e.to_port,'in');
+  if(!a||!b){e.el.setAttribute('d','');return;}
+  e.el.setAttribute('d',bz(a.x,a.y,b.x,b.y));
 }
-
-function redrawEdges() { G.edges.forEach(drawEdge); }
-
-function bez(x1,y1,x2,y2) {
-  const dx = Math.abs(x2-x1)*0.55 + 30;
-  return `M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`;
+function redrawE(){G.edges.forEach(drawE);}
+function bz(x1,y1,x2,y2){const d=Math.abs(x2-x1)*.55+40;return`M${x1},${y1} C${x1+d},${y1} ${x2-d},${y2} ${x2},${y2}`;}
+function ppos(nid,port,dir){
+  const e=G.nodes[nid]; if(!e) return null;
+  const dot=e.el.querySelector(`.pdot[data-port="${port}"][data-dir="${dir}"]`); if(!dot) return null;
+  const r=dot.getBoundingClientRect(),wr=document.getElementById('cw').getBoundingClientRect();
+  return{x:r.left-wr.left+r.width/2,y:r.top-wr.top+r.height/2};
 }
-
-function portPos(nodeId, port, dir) {
-  const entry = G.nodes[nodeId]; if (!entry) return null;
-  const dot = entry.el.querySelector(`.pdot[data-port="${port}"][data-dir="${dir}"]`);
-  if (!dot) return null;
-  const r  = dot.getBoundingClientRect();
-  const wr = document.getElementById('cvs-wrap').getBoundingClientRect();
-  return { x: r.left - wr.left + r.width/2, y: r.top - wr.top + r.height/2 };
-}
-
-function updateLivePorts() {
-  document.querySelectorAll('.pdot').forEach(d => d.classList.remove('live'));
-  G.edges.forEach(e => {
+function liveDots(){
+  document.querySelectorAll('.pdot').forEach(d=>d.classList.remove('live'));
+  G.edges.forEach(e=>{
     G.nodes[e.from_id]?.el.querySelector(`.pdot[data-port="${e.from_port}"][data-dir="out"]`)?.classList.add('live');
-    G.nodes[e.to_id  ]?.el.querySelector(`.pdot[data-port="${e.to_port}"][data-dir="in"]`)   ?.classList.add('live');
+    G.nodes[e.to_id]?.el.querySelector(`.pdot[data-port="${e.to_port}"][data-dir="in"]`)?.classList.add('live');
   });
 }
 
-// ═══════════════════════════════════════════════════
-// WIRING (drag from output → click input)
-// ═══════════════════════════════════════════════════
-function portMouseDown(ev) {
-  ev.stopPropagation(); ev.preventDefault();
-  const dot  = ev.currentTarget;
-  const dir  = dot.dataset.dir;
-
-  // If already wiring, try to finish
-  if (G.wiring) { finishWire(dot.dataset.node, dot.dataset.port, dir); return; }
-
-  if (dir !== 'out') { log('start wires from output ports (right side)', 'warn'); return; }
-
-  const wr = document.getElementById('cvs-wrap').getBoundingClientRect();
-  const r  = dot.getBoundingClientRect();
-  G.wiring = {
-    nodeId: dot.dataset.node, port: dot.dataset.port,
-    x: r.left - wr.left + r.width/2,
-    y: r.top  - wr.top  + r.height/2,
-  };
+// ── Wiring ────────────────────────────────────────────────────────────
+function portMD(ev){
+  ev.stopPropagation();ev.preventDefault();
+  const {node:nid,port,dir}=ev.currentTarget.dataset;
+  if(G.wiring){
+    if(dir==='in') finW(nid,port);
+    else{cancelW();beginW(ev.currentTarget,nid,port);}
+    return;
+  }
+  if(dir==='out') beginW(ev.currentTarget,nid,port);
+  else log('start from OUTPUT port (right side)','wa');
+}
+function beginW(dot,nid,port){
+  const wr=document.getElementById('cw').getBoundingClientRect(),r=dot.getBoundingClientRect();
+  G.wiring={nid,port,x:r.left-wr.left+r.width/2,y:r.top-wr.top+r.height/2};
   dot.classList.add('wiring');
-  document.getElementById('wire-hint').classList.add('show');
+  document.querySelectorAll('.pdot[data-dir="in"]').forEach(d=>{if(d.dataset.node!==nid)d.classList.add('canc');});
+  document.getElementById('wh').classList.add('on');
 }
-
-function finishWire(toId, toPort, toDir) {
-  const from = G.wiring;
-  cancelWire();
-  if (toDir !== 'in')      { log('connect to an input port (left side)', 'warn'); return; }
-  if (from.nodeId === toId){ log('cannot connect a node to itself', 'warn'); return; }
-  send({ action:'connect', from_id: from.nodeId, from_port: from.port, to_id: toId, to_port: toPort });
-  setNeedsCompile(true);
+function finW(tid,tp){
+  const f=G.wiring; cancelW();
+  if(f.nid===tid){log('cannot self-connect','wa');return;}
+  send({action:'connect',from_id:f.nid,from_port:f.port,to_id:tid,to_port:tp}); nc(true);
 }
-
-function cancelWire() {
-  if (!G.wiring) return;
-  document.querySelectorAll('.pdot.wiring').forEach(d => d.classList.remove('wiring'));
-  G.wiring = null;
-  document.getElementById('draft-wire').setAttribute('d','');
-  document.getElementById('wire-hint').classList.remove('show');
+function cancelW(){
+  if(!G.wiring) return;
+  document.querySelectorAll('.pdot.wiring,.pdot.canc').forEach(d=>d.classList.remove('wiring','canc'));
+  G.wiring=null; document.getElementById('dw').setAttribute('d','');
+  document.getElementById('wh').classList.remove('on');
 }
-
-// While wiring: track mouse for live draft wire
-document.addEventListener('mousemove', ev => {
-  if (G.wiring) {
-    const wr = document.getElementById('cvs-wrap').getBoundingClientRect();
-    const mx = ev.clientX - wr.left, my = ev.clientY - wr.top;
-    document.getElementById('draft-wire').setAttribute('d', bez(G.wiring.x, G.wiring.y, mx, my));
-  }
-  if (G.drag) {
-    const dx = ev.clientX - G.drag.sx, dy = ev.clientY - G.drag.sy;
-    const entry = G.nodes[G.drag.id];
-    if (entry) {
-      entry.el.style.left = (G.drag.nx + dx) + 'px';
-      entry.el.style.top  = (G.drag.ny + dy) + 'px';
-      redrawEdges();
-    }
-  }
+document.addEventListener('mousemove',ev=>{
+  if(G.wiring){const wr=document.getElementById('cw').getBoundingClientRect();document.getElementById('dw').setAttribute('d',bz(G.wiring.x,G.wiring.y,ev.clientX-wr.left,ev.clientY-wr.top));}
+  if(G.drag){const dx=ev.clientX-G.drag.sx,dy=ev.clientY-G.drag.sy;const e=G.nodes[G.drag.id];if(e){e.el.style.left=(G.drag.nx+dx)+'px';e.el.style.top=(G.drag.ny+dy)+'px';redrawE();}}
 });
-
-document.addEventListener('mouseup', ev => {
-  if (G.drag) {
-    const entry = G.nodes[G.drag.id];
-    if (entry) send({ action:'move_node', id: G.drag.id, position:{
-      x: parseInt(entry.el.style.left), y: parseInt(entry.el.style.top) }});
-    G.drag = null;
-  }
+document.addEventListener('mouseup',()=>{
+  if(G.drag){const e=G.nodes[G.drag.id];if(e)send({action:'move_node',id:G.drag.id,position:{x:parseInt(e.el.style.left),y:parseInt(e.el.style.top)}});G.drag=null;}
 });
-
-// Click on an input port while wiring
-document.addEventListener('click', ev => {
-  if (!G.wiring) return;
-  const dot = ev.target.closest('.pdot');
-  if (dot) finishWire(dot.dataset.node, dot.dataset.port, dot.dataset.dir);
-}, true);
-
-// Click on canvas background: cancel wire, deselect
-document.getElementById('cvs-wrap').addEventListener('click', ev => {
-  if (!ev.target.closest('.node')) { cancelWire(); selectNode(null); }
-});
-
-document.addEventListener('keydown', ev => { if (ev.key==='Escape') cancelWire(); });
-
-// ═══════════════════════════════════════════════════
-// NODE DRAG
-// ═══════════════════════════════════════════════════
-function startDrag(ev) {
-  if (ev.target.closest('.node-x') || ev.target.closest('.pdot')) return;
-  ev.preventDefault();
-  const nodeEl = ev.currentTarget.closest('.node');
-  const id = nodeEl.id.replace('n-','');
-  G.drag = {
-    id, sx: ev.clientX, sy: ev.clientY,
-    nx: parseInt(nodeEl.style.left), ny: parseInt(nodeEl.style.top),
-  };
+document.getElementById('cw').addEventListener('mousedown',ev=>{if(!ev.target.closest('.node,.pdot')){cancelW();selNode(null);}});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape')cancelW();});
+function startDrag(ev){
+  if(ev.target.closest('.nx,.pdot')) return; ev.preventDefault();
+  const ne=ev.currentTarget.closest('.node'),id=ne.id.replace('n-','');
+  G.drag={id,sx:ev.clientX,sy:ev.clientY,nx:parseInt(ne.style.left),ny:parseInt(ne.style.top)};
 }
 
-// ═══════════════════════════════════════════════════
-// SELECTION + PROPERTIES PANEL
-// ═══════════════════════════════════════════════════
-function selectNode(id) {
-  document.querySelectorAll('.node.sel').forEach(n => n.classList.remove('sel'));
-  G.sel = id;
-  if (id && G.nodes[id]) { G.nodes[id].el.classList.add('sel'); renderProps(id); }
+// ── Properties ─────────────────────────────────────────────────────────
+function selNode(id){
+  document.querySelectorAll('.node.sel').forEach(n=>n.classList.remove('sel'));
+  G.sel=id;
+  if(id&&G.nodes[id]){G.nodes[id].el.classList.add('sel');renderProps(id);}
   else renderProps(null);
 }
 
-function renderProps(id) {
-  const panel = document.getElementById('props');
-  if (!id || !G.nodes[id]) {
-    panel.innerHTML = '<div class="pempty">click a node<br/>to inspect it</div>';
+function renderProps(id){
+  const panel=document.getElementById('props');
+  if(!id||!G.nodes[id]){
+    panel.innerHTML='<div class="emp">click a node<br>to inspect + edit<br><br><span style="font-size:7.5px;color:var(--t3)">● mix/weight sliders live<br>● custom uniforms live<br>● shader text needs compile</span></div>';
     return;
   }
-  const d = G.nodes[id].desc;
-  let h = `
-    <div class="pf"><label>label</label><input class="pinput" id="p-lbl" value="${d.label}"/></div>
-    <div class="pf"><label>id</label><input class="pinput" value="${d.id}" readonly/></div>
-    <div class="pf"><label>kind</label><input class="pinput" value="${d.kind}" readonly/></div>`;
+  const d=G.nodes[id].desc;
+  const nd=G.nodes[id];
+  const reg=G.registry.find(r=>r.kind===d.kind);
+  const glslE=G.errs[id];
+  let h=`<div class="pf"><label>id / kind</label>
+    <div style="font-size:8.5px;color:var(--t3)">${esc(d.id)} <span style="color:var(--acc)">${esc(d.kind)}</span></div></div>`;
+  if(reg?.description) h+=`<div class="pnote">${esc(reg.description)}</div>`;
 
-  if (d.mix != null) {
-    h += `<div class="pf"><label>mix (0–1)</label>
-      <div class="prow-slider">
-        <input type="range" class="pslider" id="p-mix" min="0" max="1" step="0.01" value="${d.mix}"/>
-        <span class="pval" id="p-mix-val">${d.mix.toFixed(2)}</span>
-      </div></div>`;
+  // Mix — live
+  if(d.mix!=null)
+    h+=`<div class="pf"><label>mix <span style="font-size:7.5px;color:var(--grn)">● live  OSC …/mix  MIDI cc7</span></label>
+    <div class="sr"><input type="range" class="sl live" id="p-mix" min="0" max="1" step="0.005" value="${d.mix}"/><span class="pv" id="pmv">${d.mix.toFixed(3)}</span></div></div>`;
+
+  // Weights — live
+  if(d.weights){
+    const ls=['ch0','ch1','ch2','ch3'];
+    h+=`<div class="pf"><label>weights <span style="font-size:7.5px;color:var(--grn)">● live  OSC …/weights</span></label><div class="wsl">
+    ${d.weights.map((w,i)=>`<div class="wr"><span class="wl">${ls[i]}</span>
+      <input type="range" class="sl live" data-wi="${i}" min="0" max="1" step="0.005" value="${w}"/>
+      <span class="pv" id="wv${i}">${w.toFixed(3)}</span></div>`).join('')}</div></div>`;
   }
 
-  if (d.frag != null) {
-    h += `<div class="pf"><label>fragment shader</label>
-      <textarea class="shader-box" id="p-frag">${escHtml(d.frag)}</textarea>
-      <button class="apply-btn" id="p-apply">▶ apply shader</button></div>`;
-  }
+  // Custom uniforms — live, node-as-object model
+  const uniforms=nd.uniforms||{};
+  const uList=Object.entries(uniforms);
+  h+=`<div class="pf"><label>custom uniforms <span style="font-size:7.5px;color:var(--grn)">● live  OSC …/uniform/{name}</span></label>
+    ${uList.length?`<table class="utbl">${uList.map(([n,v])=>`<tr>
+      <td>${esc(n)}</td>
+      <td><div class="sr"><input type="range" class="sl live" data-un="${esc(n)}" min="0" max="2" step="0.01" value="${v}"/><span class="pv" id="uv-${esc(n)}">${v.toFixed(3)}</span></div></td>
+      <td><button class="udel" data-un="${esc(n)}" title="remove">×</button></td></tr>`).join('')}</table>`:'<div style="font-size:7.5px;color:var(--t3)">none — add below</div>'}
+    <div class="urow" style="margin-top:6px">
+      <input class="inp" id="un-name" placeholder="name e.g. u_gain" value="u_gain"/>
+      <input class="inp" id="un-val" placeholder="val" value="1.0" style="width:55px;flex:0 0 55px"/>
+      <button class="ubtn" id="btn-uadd">+ add</button>
+    </div>
+    <div style="font-size:7px;color:var(--t3);margin-top:3px">
+      Declare in shader: <span style="color:var(--grn)">uniform float u_gain;</span><br>
+      Bridge injects value each frame — no recompile needed.
+    </div>
+  </div>`;
 
-  panel.innerHTML = h;
+  // Shader — needs compile
+  if(d.frag!=null)
+    h+=`<div class="pf"><label>fragment shader <span style="font-size:7.5px;color:var(--yel)">needs compile</span></label>
+    <textarea class="sbox${glslE?' herr':''}" id="p-frag" spellcheck="false">${esc(d.frag)}</textarea>
+    <div class="serr${glslE?' on':''}">${glslE?esc(glslE):''}</div>
+    <button class="abtn" id="p-apply">▶ apply + compile</button></div>`;
 
-  // Wire mix slider
-  const mixEl = panel.querySelector('#p-mix');
-  if (mixEl) {
-    mixEl.addEventListener('input', () => {
-      const v = parseFloat(mixEl.value);
-      panel.querySelector('#p-mix-val').textContent = v.toFixed(2);
-      d.mix = v;
-      send({ action:'set_mix', node_id: id, mix: v });
+  panel.innerHTML=h;
+
+  // Mix handler
+  panel.querySelector('#p-mix')?.addEventListener('input',e=>{
+    const v=parseFloat(e.target.value);
+    panel.querySelector('#pmv').textContent=v.toFixed(3);
+    d.mix=v; send({action:'set_mix',node_id:id,mix:v});
+  });
+
+  // Weight handlers
+  if(d.weights){
+    panel.querySelectorAll('.sl[data-wi]').forEach(sl=>{
+      sl.addEventListener('input',e=>{
+        const i=parseInt(e.target.dataset.wi),v=parseFloat(e.target.value);
+        document.getElementById(`wv${i}`).textContent=v.toFixed(3);
+        d.weights[i]=v; send({action:'set_weights',node_id:id,weights:[...d.weights]});
+      });
     });
   }
 
-  // Wire shader apply
-  panel.querySelector('#p-apply')?.addEventListener('click', () => {
-    const frag = panel.querySelector('#p-frag').value;
-    d.frag = frag;
-    send({ action:'set_shader', node_id: id, frag });
-    // Shader change does NOT need recompile — runtime picks it up next frame
-    log(`shader sent to ${id}`, 'ok');
+  // Uniform slider handlers
+  panel.querySelectorAll('.sl[data-un]').forEach(sl=>{
+    sl.addEventListener('input',e=>{
+      const n=e.target.dataset.un, v=parseFloat(e.target.value);
+      const span=document.getElementById('uv-'+n);
+      if(span) span.textContent=v.toFixed(3);
+      nd.uniforms[n]=v;
+      send({action:'set_uniform',node_id:id,name:n,value:v});
+    });
+  });
+
+  // Delete uniform
+  panel.querySelectorAll('.udel').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const n=btn.dataset.un;
+      delete nd.uniforms[n];
+      // Set to 0 to remove its effect (or could track deletions separately)
+      send({action:'set_uniform',node_id:id,name:n,value:0.0});
+      renderProps(id);
+    });
+  });
+
+  // Add uniform
+  panel.querySelector('#btn-uadd')?.addEventListener('click',()=>{
+    const n=(panel.querySelector('#un-name').value||'').trim();
+    const v=parseFloat(panel.querySelector('#un-val').value)||0;
+    if(!n){log('uniform name required','wa');return;}
+    nd.uniforms[n]=v;
+    send({action:'set_uniform',node_id:id,name:n,value:v});
+    log(`uniform ${id}.${n}=${v} (live)`,'ok');
+    renderProps(id);
+  });
+
+  // Shader apply
+  panel.querySelector('#p-apply')?.addEventListener('click',()=>{
+    const frag=panel.querySelector('#p-frag').value;
+    d.frag=frag; send({action:'set_shader',node_id:id,frag}); send({action:'compile'});
+    log(`shader → ${id} + compile`,'ok');
   });
 }
 
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── Control panel - send uniform directly ──────────────────────────────
+document.getElementById('btn-send-un').addEventListener('click',()=>{
+  const nodeId=document.getElementById('osc-id').value.trim();
+  const name=document.getElementById('osc-un').value.trim();
+  const value=parseFloat(document.getElementById('osc-val').value);
+  if(!nodeId||!name){log('fill node id and name','wa');return;}
+  if(!G.nodes[nodeId]){log(`node ${nodeId} not in graph`,'wa');return;}
+  G.nodes[nodeId].uniforms[name]=value;
+  send({action:'set_uniform',node_id:nodeId,name,value});
+  log(`set_uniform ${nodeId}.${name}=${value}`,'ok');
+  if(G.sel===nodeId) renderProps(nodeId);
+});
+
+// ── Validate ──────────────────────────────────────────────────────────
+function validate(){
+  const nk=Object.keys(G.nodes);
+  const hasOut=nk.some(id=>G.nodes[id].desc?.kind==='pixels_out');
+  const dangling=nk.filter(id=>{
+    const d=G.nodes[id].desc;
+    if(d?.kind!=='shader_pass') return false;
+    return !G.edges.some(e=>e.to_id===id) && !G.edges.some(e=>e.from_id===id);
+  });
+  const noErr=Object.keys(G.errs).length===0;
+  vset('v-ws',  G.ok,       G.ok?'connected':'disconnected',    'vv-ws');
+  vset('v-nd',  nk.length>0, `${nk.length} nodes`,              'vv-nd');
+  vset('v-out', hasOut,     hasOut?'ok':'missing',               'vv-out');
+  vset('v-dang',dangling.length===0, dangling.length===0?'ok':`${dangling.length} orphan`, 'vv-dang');
+  vset('v-comp',G.compiled, G.compiled?'ok':'not yet',           'vv-comp');
+  vset('v-glsl',noErr,      noErr?'ok':`${Object.keys(G.errs).length} error`, 'vv-glsl');
+  const sd=document.getElementById('v-sl'),sv=document.getElementById('vv-sl');
+  if(sd){sd.className='vd '+(G.slMoved?'p':G.ok&&G.compiled?'w':'');sv.textContent=G.slMoved?'hotpatched ✓':G.ok&&G.compiled?'move a mix slider':'compile first';}
+  const ud=document.getElementById('v-un'),uv=document.getElementById('vv-un');
+  if(ud){ud.className='vd '+(G.unMoved?'p':G.ok&&G.compiled?'w':'');uv.textContent=G.unMoved?'hotpatched ✓':G.ok&&G.compiled?'add + move slider':'compile first';}
+}
+function vset(di,pass,val,vi){
+  const d=document.getElementById(di),v=document.getElementById(vi);
+  if(d) d.className='vd '+(pass?'p':'f');
+  if(v) v.textContent=val;
 }
 
-// ═══════════════════════════════════════════════════
-// ADD NODE PALETTE
-// ═══════════════════════════════════════════════════
-let _nidx = 0;
-document.querySelectorAll('.ngbtn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const kind  = btn.dataset.kind;
-    const label = btn.dataset.label;
-    const idx   = ++_nidx;
-    const id    = `${kind}_${idx}`;
-    const x = 80 + Math.random() * 260;
-    const y = 60 + Math.random() * 180;
-    send({ action:'add_node', id, kind, label: `${label} ${idx}`, position:{x,y} });
-    setNeedsCompile(true);
+// ── Collapsible sections ──────────────────────────────────────────────
+['pal','tmpl','val','ctrl'].forEach(name=>{
+  const hdr=document.getElementById(`h-${name}`);
+  const bdy=document.getElementById(`b-${name}`);
+  if(!hdr||!bdy) return;
+  bdy.style.maxHeight=bdy.scrollHeight+'px';
+  hdr.addEventListener('click',()=>{
+    const c=bdy.classList.toggle('coll'); hdr.classList.toggle('coll',c);
+    if(!c) bdy.style.maxHeight=bdy.scrollHeight+'px';
   });
+  if(name==='ctrl'){bdy.classList.add('coll');hdr.classList.add('coll');bdy.style.maxHeight='0';}
+  if(name==='tmpl'){bdy.classList.add('coll');hdr.classList.add('coll');bdy.style.maxHeight='0';}
 });
 
-// ═══════════════════════════════════════════════════
-// HEADER BUTTONS
-// ═══════════════════════════════════════════════════
-document.getElementById('btn-connect').addEventListener('click', wsConnect);
+document.getElementById('btn-conn').addEventListener('click',wsConn);
+document.getElementById('btn-comp').addEventListener('click',()=>send({action:'compile'}));
 
-document.getElementById('btn-compile').addEventListener('click', () => {
-  send({ action:'compile' });
-});
+// ── Template helpers ──────────────────────────────────────────────────
+function clr(fn){
+  if(!G.ok){log('connect first','wa');return;}
+  Object.keys(G.nodes).forEach(id=>send({action:'remove_node',id}));
+  setTimeout(fn,280);
+}
+function ns(arr){arr.forEach(([id,kind,label,x,y])=>send({action:'add_node',id,kind,label,position:{x,y}}));}
+function es(arr){arr.forEach(([a,b,c,d])=>send({action:'connect',from_id:a,from_port:b,to_id:c,to_port:d}));}
+function ss(arr,cb){arr.forEach(([id,frag])=>send({action:'set_shader',node_id:id,frag}));setTimeout(cb,130);}
+function us(arr){arr.forEach(([id,name,val])=>send({action:'set_uniform',node_id:id,name,value:val}));}
+function compile(msg){send({action:'compile'});G.slMoved=false;G.unMoved=false;log(msg,'ok');}
 
-document.getElementById('btn-template').addEventListener('click', loadTemplate);
+// ══════════════════════════════════════════════════════════════════════
+// ALL SHADERS — taken verbatim from examples/ folder
+// ══════════════════════════════════════════════════════════════════════
+const S={
+minimal:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform float u_time;uniform vec2 u_resolution;
+void main(){vec2 uv=clamp(v_uv*.5,0.,1.);
+  float t=.5+.5*sin(u_time);fragColor=vec4(uv.x,uv.y,t,1.);}`,
 
-// ═══════════════════════════════════════════════════
-// TEMPLATE — proves the pipeline works end-to-end
-// Mirrors the starter graph seeded in main.rs:
-//   ShaderSource → ShaderPass → PixelsOut
-// ═══════════════════════════════════════════════════
-function loadTemplate() {
-  if (!G.connected) {
-    log('connect first, then load template', 'warn');
-    return;
-  }
+chain2_a:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){float t=u_time*.7;
+  float a=.5+.5*sin((v_uv.x*6.+t)*3.14159);
+  float b=.5+.5*sin((v_uv.y*4.-t)*3.14159);
+  fragColor=vec4(a,b,.5+.5*sin(t),1.);}`,
 
-  // HOW THE ENGINE WORKS:
-  // - ShaderSource provides shader CODE only, not a texture.
-  //   Its frag shader runs on a ShaderPass that has it as an incoming edge.
-  //   The ShaderPass gets the shader via "path 3" (back-compat edge resolution).
-  // - ShaderPass → ShaderPass: the first pass renders to an FBO,
-  //   the second reads it as iChannel0 (bound automatically by the engine).
-  // - So a two-stage setup is: ShaderSource → PassA → PassB → PixelsOut
-  //   PassA gets its shader from ShaderSource (path 3), runs it, produces a texture.
-  //   PassB has its own shader set directly (path 1), reads PassA's output as iChannel0.
+chain2_b:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform sampler2D iChannel0;uniform float u_time;
+void main(){vec2 uv=v_uv;float t=u_time*.8;
+  uv.x+=.02*sin(uv.y*20.+t);uv.y+=.02*cos(uv.x*18.-t);
+  fragColor=vec4(vec3(1.)-pow(texture(iChannel0,uv).rgb,vec3(1.2)),1.);}`,
 
-  Object.keys(G.nodes).forEach(id => send({ action:'remove_node', id }));
+mixer2_bg:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){float t=u_time*.7;
+  float a=.5+.5*sin((v_uv.x*6.+t)*3.14159);
+  float b=.5+.5*sin((v_uv.y*4.-t)*3.14159);
+  fragColor=vec4(a,b,.35+.65*sin(t),1.);}`,
 
-  setTimeout(() => {
-    send({ action:'add_node', id:'src_0',  kind:'shader_source', label:'Source',   position:{x:60,  y:120} });
-    send({ action:'add_node', id:'pass_0', kind:'shader_pass',   label:'Stage A',  position:{x:290, y:120} });
-    send({ action:'add_node', id:'pass_1', kind:'shader_pass',   label:'Stage B',  position:{x:520, y:120} });
-    send({ action:'add_node', id:'out_0',  kind:'pixels_out',    label:'Output',   position:{x:750, y:120} });
+mixer2_fg:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){vec2 p=v_uv*2.-1.;float t=u_time*.9;
+  p.x+=.2*sin(t);p.y+=.15*cos(t*.7);
+  fragColor=vec4(.95,.25,.6,smoothstep(.55,.35,length(p)));}`,
 
-    setTimeout(() => {
-      // ShaderSource → PassA (shader code flows here, not texture)
-      send({ action:'connect', from_id:'src_0',  from_port:'out', to_id:'pass_0', to_port:'in' });
-      // PassA → PassB (texture flows here — PassA's FBO output becomes iChannel0 in PassB)
-      send({ action:'connect', from_id:'pass_0', from_port:'out', to_id:'pass_1', to_port:'in' });
-      // PassB → Output
-      send({ action:'connect', from_id:'pass_1', from_port:'out', to_id:'out_0',  to_port:'in' });
+mixer_a:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){fragColor=vec4(.5+.5*sin(v_uv.x*10.+u_time*1.3),.1,.2,1.);}`,
 
-      setTimeout(() => {
-        // Shader for Stage A — attached to ShaderSource, resolved via path 3
-        // This shader GENERATES pixels (no iChannel0 needed)
-        send({ action:'set_shader', node_id:'src_0', frag: `#version 330 core
-in vec2 v_uv;
-out vec4 fragColor;
+mixer_b:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){fragColor=vec4(.1,.5+.5*cos(v_uv.y*12.-u_time*.9),.8,1.);}`,
+
+mix4_r:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){fragColor=vec4(.5+.5*sin(v_uv.x*10.+u_time),0.,0.,1.);}`,
+mix4_g:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){fragColor=vec4(0.,.5+.5*sin(v_uv.y*12.-u_time),0.,1.);}`,
+mix4_b:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){fragColor=vec4(0.,0.,.5+.5*cos((v_uv.x+v_uv.y)*8.+u_time),1.);}`,
+mix4_w:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){float v=.5+.5*sin((v_uv.x-v_uv.y)*9.-u_time);fragColor=vec4(v,v,v,1.);}`,
+
+luma_a:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){float v=.5+.5*sin(v_uv.x*10.+u_time*.7);
+  fragColor=vec4(v,.2*v,.1+.3*v,1.);}`,
+luma_b:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){float v=.5+.5*sin((v_uv.y*12.-v_uv.x*3.)-u_time*.9);
+  fragColor=vec4(.1+.4*v,.3+.5*v,.2,1.);}`,
+luma_c:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){vec2 p=v_uv-.5;float r=length(p);
+  float ba=.5+.5*cos(20.*r-u_time*1.3);float sw=.5+.5*sin(8.*(p.x+p.y)+u_time*.6);
+  fragColor=vec4(ba*.8,sw*.6,(1.-r)*.7,1.);}`,
+luma_mix:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform sampler2D iChannel0,iChannel1,iChannel2,iChannel3;uniform vec4 uWeights;
+void main(){vec4 a=texture(iChannel0,v_uv),b=texture(iChannel1,v_uv),c=texture(iChannel2,v_uv),d=texture(iChannel3,v_uv);
+  vec4 bg=(b+c+d)/3.;float luma=dot(a.rgb,vec3(.299,.587,.114));float alpha=smoothstep(uWeights.x,uWeights.y,luma);
+  fragColor=mix(bg*uWeights.w,a*uWeights.z,alpha);}`,
+
+// osc_minimal: u_gain + u_speed as controllable uniforms
+osc_ctrl:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform float u_time;uniform vec2 u_resolution;
+uniform float u_gain;  // brightness (default 1.0)
+uniform float u_speed; // time scale  (default 1.0)
+void main(){
+  vec2 p=(v_uv-.5)*2.; p.x*=u_resolution.x/max(u_resolution.y,1.);
+  float t=u_time*u_speed;
+  float r=length(p),a=atan(p.y,p.x);
+  float bands=.5+.5*sin(8.*r-t*2.);
+  float spin=.5+.5*sin(a*3.+t);
+  fragColor=vec4(vec3(bands,spin,1.-bands)*u_gain,1.);}`,
+
+// feedback_pingpong: u_decay u_gain u_inject u_spin — all live
+feedback_src:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
 uniform float u_time;
-void main() {
-  vec3 col = 0.5 + 0.5 * cos(u_time + v_uv.xyx + vec3(0.0, 2.1, 4.2));
-  fragColor = vec4(col, 1.0);
-}` });
+uniform float u_orb_x; // 0..1
+uniform float u_orb_y; // 0..1
+uniform float u_orb_r; // 0..0.5
+void main(){
+  vec2 uv=clamp(v_uv*.5,0.,1.);
+  vec2 c=vec2(u_orb_x,u_orb_y);
+  float d=length(uv-c);
+  float blob=smoothstep(u_orb_r,0.,d);
+  float bars=smoothstep(.49,.5,abs(sin(uv.y*280.+u_time*2.)))*.18;
+  fragColor=vec4(vec3(.2,.7,1.)*blob+vec3(1.,.35,.2)*bars,1.);}`,
 
-        // Shader for Stage B — set directly on pass_1, reads Stage A output as iChannel0
-        send({ action:'set_shader', node_id:'pass_1', frag: `#version 330 core
-in vec2 v_uv;
-out vec4 fragColor;
+feedback_fb:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
 uniform sampler2D iChannel0;
+uniform float u_time;uniform vec2 u_resolution;
+uniform float u_decay;  // 0.995
+uniform float u_gain;   // 1.02
+uniform float u_inject; // 1.0
+uniform float u_spin;   // 0.35 rad/s
+void main(){
+  vec2 uv=clamp(v_uv*.5,0.,1.);
+  vec2 p=uv-.5;float a=u_spin*u_time;
+  mat2 R=mat2(cos(a),-sin(a),sin(a),cos(a));
+  vec2 off=vec2(sin(u_time*.9),cos(u_time*1.1))*(2./max(u_resolution,vec2(1.)));
+  vec4 prev=texture(iChannel0,clamp(R*p+.5+off,0.,1.));
+  prev*=u_decay*u_gain;
+  vec2 ci=vec2(.5+.25*sin(u_time*.7),.5+.25*cos(u_time*.8));
+  float dot=smoothstep(.08,0.,length(uv-ci))*u_inject;
+  fragColor=max(prev,vec4(dot,dot*.8,dot,1.));}`,
+
+// temporal_slitscan source — animated blob
+slitscan_src:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform vec2 u_resolution;uniform float u_time;
+float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+void main(){
+  vec2 uv=clamp(v_uv*.5,0.,1.);
+  vec2 c=vec2(.5+.18*sin(u_time*.9),.5+.12*cos(u_time*1.1));
+  float d=length(uv-c);
+  float blob=smoothstep(.24,0.,d);
+  float bars=smoothstep(.49,.5,abs(sin(uv.y*280.+u_time*2.)))*.18;
+  float n=(hash(floor(uv*u_resolution*.25))-.5)*.07;
+  fragColor=vec4(clamp(vec3(.2,.7,1.)*blob+vec3(1.,.35,.2)*bars+n,0.,1.),1.);}`,
+
+// slitscan pass — simplified (single previous frame, not ring buffer)
+slitscan_pass:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform sampler2D iChannel0;uniform float u_time;
+uniform float u_axis;   // 0=x 1=y
+uniform float u_speed;  // scroll speed
+uniform float u_mix;    // blend ratio
+void main(){
+  vec2 uv=clamp(v_uv*.5,0.,1.);
+  float axisv=(u_axis<.5)?uv.x:uv.y;
+  // offset UV to create trailing echo
+  vec2 echo=uv; echo.x-=(u_axis<.5)?(u_speed*.02):0.;echo.y-=(u_axis>=.5)?(u_speed*.02):0.;
+  echo=clamp(echo,0.,1.);
+  vec3 cur=texture(iChannel0,uv).rgb;
+  vec3 prev=texture(iChannel0,echo).rgb;
+  fragColor=vec4(mix(cur,prev,u_mix),1.);}`,
+
+single:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){fragColor=vec4(.5+.5*cos(u_time+v_uv.xyx+vec3(0.,2.1,4.2)),1.);}`,
+
+plasma:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){vec2 uv=v_uv*3.;float v=sin(uv.x+u_time)+sin(uv.y+u_time*.7)+sin((uv.x+uv.y+u_time*.5))+sin(length(uv)+u_time*1.3);
+  fragColor=vec4(.5+.5*sin(v*3.14+vec3(0.,2.09,4.19)),1.);}`,
+
+scanlines:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform sampler2D iChannel0;uniform vec2 u_resolution;
+void main(){vec4 c=texture(iChannel0,v_uv);fragColor=vec4(c.rgb*(.85+.15*sin(v_uv.y*u_resolution.y*1.5)),1.);}`,
+
+tunnel:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){vec2 uv=v_uv*2.-1.;float r=length(uv),a=atan(uv.y,uv.x),t=u_time*.4;
+  float s=.5+.5*sin((.3/r+t)*20.);float rg=.5+.5*sin(a/3.14159*12.+t*4.);
+  fragColor=vec4(vec3(s*rg)*vec3(.4+.6*sin(t+r),.5,1.-r*.3)*smoothstep(1.5,.2,r),1.);}`,
+
+sdf_gen:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){vec2 uv=v_uv*2.-1.;uv.x*=1.77;float t=u_time*.6;
+  vec2 c1=vec2(.4*cos(t),.3*sin(t)),c2=vec2(.35*cos(t+2.09),.3*sin(t+2.09)),c3=vec2(.38*cos(t+4.19),.3*sin(t+4.19));
+  float d1=length(uv-c1)-.22,d2=length(uv-c2)-.22,d3=length(uv-c3)-.22;
+  vec3 col=vec3(.06,.03,.12);
+  col=mix(vec3(.9,.4,1.),col,smoothstep(-.01,.01,d1));
+  col=mix(vec3(.3,.8,1.),col,smoothstep(-.01,.01,d2));
+  col=mix(vec3(1.,.6,.2),col,smoothstep(-.01,.01,d3));
+  col+=.15/(abs(min(min(d1,d2),d3))*8.+.3);
+  fragColor=vec4(col,1.);}`,
+
+sdf_post:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+void main(){vec2 off=(v_uv-.5)*.006;
+  vec3 col=vec3(texture(iChannel0,v_uv-off).r,texture(iChannel0,v_uv).g,texture(iChannel0,v_uv+off).b);
+  col*=1.-dot(v_uv-.5,v_uv-.5)*1.6;fragColor=vec4(col,1.);}`,
+
+// Uniform demo — shows node-as-object model clearly
+// u_freq, u_amp, u_speed, u_hue all declared and live-controllable
+uniform_demo:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
 uniform float u_time;
-void main() {
-  vec4 c = texture(iChannel0, v_uv);
-  vec2 uv = v_uv - 0.5;
-  float vig = 1.0 - dot(uv, uv) * 1.6;
-  fragColor = vec4(c.rgb * vig, 1.0);
-}` });
+// These are node parameters — declare them, then add via the Properties panel:
+uniform float u_freq;   // wave frequency (try 3..20)
+uniform float u_amp;    // amplitude     (try 0..1)
+uniform float u_speed;  // time scale    (try 0..3)
+uniform float u_hue;    // colour offset (try 0..6)
+void main(){
+  float t=u_time*u_speed;
+  float wave=sin(v_uv.x*u_freq+t)*u_amp;
+  float wave2=sin(v_uv.y*u_freq*.7-t*.6)*u_amp;
+  float v=.5+(wave+wave2)*.5;
+  vec3 col=.5+.5*cos(u_hue+vec3(0.,2.1,4.2)*v+t*.3);
+  fragColor=vec4(col*v+col*(1.-v)*.2,1.);}`,
+};
 
-        setTimeout(() => {
-          send({ action:'compile' });
-          log('template loaded — Stage A: colour wheel  ·  Stage B: vignette', 'ok');
-        }, 100);
-      }, 150);
-    }, 150);
-  }, 200);
+// ══════════════════════════════════════════════════════════════════════
+// TEMPLATES
+// ══════════════════════════════════════════════════════════════════════
+const T={
+minimal(){clr(()=>{
+  ns([['src_0','shader_source','Source',60,140],['pass_0','shader_pass','Pass',300,140],['out_0','pixels_out','Out',540,140]]);
+  setTimeout(()=>{es([['src_0','out','pass_0','in'],['pass_0','out','out_0','in']]);
+    ss([['src_0',S.minimal]],()=>compile('graph_minimal ✓'));},160);
+})},
+
+chain2(){clr(()=>{
+  ns([['src_a','shader_source','Source A',40,140],['pass_a','shader_pass','Pass A',260,140],
+      ['pass_b','shader_pass','Pass B warp+invert',490,140],['out_0','pixels_out','Out',730,140]]);
+  setTimeout(()=>{es([['src_a','out','pass_a','in'],['pass_a','out','pass_b','in'],['pass_b','out','out_0','in']]);
+    ss([['src_a',S.chain2_a],['pass_b',S.chain2_b]],()=>compile('graph_chain2 ✓'));},160);
+})},
+
+mixer2(){clr(()=>{
+  ns([['sbg','shader_source','BG Src',40,60],['pbg','shader_pass','BG Pass',250,60],
+      ['sfg','shader_source','FG Src',40,250],['pfg','shader_pass','FG Pass',250,250],
+      ['mix_0','crossfade','Crossfade',480,155],['out_0','pixels_out','Out',690,155]]);
+  setTimeout(()=>{
+    es([['sbg','out','pbg','in'],['sfg','out','pfg','in'],
+        ['pbg','out','mix_0','a'],['pfg','out','mix_0','b'],['mix_0','out','out_0','in']]);
+    ss([['sbg',S.mixer2_bg],['sfg',S.mixer2_fg]],()=>{
+      send({action:'set_mix',node_id:'mix_0',mix:0.35});
+      compile('graph_mixer2 ✓  click mix_0 → move Mix slider');});},160);
+})},
+
+mixer_builtin(){clr(()=>{
+  ns([['pa','shader_pass','Pass A red',50,140],['pb','shader_pass','Pass B blue',50,300],
+      ['mix_0','crossfade','Crossfade',300,220],['out_0','pixels_out','Out',530,220]]);
+  setTimeout(()=>{
+    es([['pa','out','mix_0','a'],['pb','out','mix_0','b'],['mix_0','out','out_0','in']]);
+    ss([['pa',S.mixer_a],['pb',S.mixer_b]],()=>{
+      send({action:'set_mix',node_id:'mix_0',mix:0.35});
+      compile('graph_mixer_builtin ✓  CLICK mix_0 → slide Mix → updates live without recompile ★');});},160);
+})},
+
+matrix4(){clr(()=>{
+  ns([['pr','shader_pass','Red',40,50],['pg','shader_pass','Green',40,170],
+      ['pb2','shader_pass','Blue',40,290],['pw','shader_pass','White',40,410],
+      ['mtx','matrix_mix4','MatrixMix4',300,230],['out_0','pixels_out','Out',550,230]]);
+  setTimeout(()=>{
+    es([['pr','out','mtx','in0'],['pg','out','mtx','in1'],['pb2','out','mtx','in2'],['pw','out','mtx','in3'],['mtx','out','out_0','in']]);
+    ss([['pr',S.mix4_r],['pg',S.mix4_g],['pb2',S.mix4_b],['pw',S.mix4_w]],
+      ()=>compile('graph_matrix_mix4 ✓  click mtx → 4 weight sliders (live)'));},160);
+})},
+
+luma(){clr(()=>{
+  ns([['la','shader_pass','Layer A',40,50],['lb','shader_pass','Layer B',40,170],
+      ['lc','shader_pass','Layer C',40,290],['ld','shader_pass','Layer D orbs',40,410],
+      ['mtx','matrix_mix4','LumaKey Mix',300,230],['out_0','pixels_out','Out',550,230]]);
+  setTimeout(()=>{
+    es([['la','out','mtx','in0'],['lb','out','mtx','in1'],['lc','out','mtx','in2'],['ld','out','mtx','in3'],['mtx','out','out_0','in']]);
+    ss([['la',S.luma_a],['lb',S.luma_b],['lc',S.luma_c],['ld',S.sdf_gen],['mtx',S.luma_mix]],()=>{
+      send({action:'set_weights',node_id:'mtx',weights:[0.2,0.8,1.0,1.0]});
+      compile('graph_webcam_luma_key adapted ✓  click mtx → adjust key_low/high weights');});},160);
+})},
+
+osc_ctrl(){clr(()=>{
+  ns([['pass_0','shader_pass','OSC Polar',120,140],['out_0','pixels_out','Out',390,140]]);
+  setTimeout(()=>{es([['pass_0','out','out_0','in']]);
+    ss([['pass_0',S.osc_ctrl]],()=>{
+      G.nodes['pass_0'].uniforms={u_gain:1.0,u_speed:1.0};
+      send({action:'set_uniform',node_id:'pass_0',name:'u_gain',value:1.0});
+      send({action:'set_uniform',node_id:'pass_0',name:'u_speed',value:1.0});
+      compile('osc_minimal ✓  click pass_0 → u_gain and u_speed sliders (live)\n  OSC: /scheng/node/pass_0/uniform/u_gain f32');});},160);
+})},
+
+feedback(){clr(()=>{
+  ns([['gen','shader_pass','Orb Generator',80,140],
+      ['fb','shader_pass','Feedback spin+decay',350,140],['out_0','pixels_out','Out',620,140]]);
+  setTimeout(()=>{es([['gen','out','fb','in'],['fb','out','out_0','in']]);
+    ss([['gen',S.feedback_src],['fb',S.feedback_fb]],()=>{
+      G.nodes['gen'].uniforms={u_orb_x:0.5,u_orb_y:0.5,u_orb_r:0.18};
+      G.nodes['fb'].uniforms={u_decay:0.9985,u_gain:1.02,u_inject:1.0,u_spin:0.35};
+      [['gen','u_orb_x',0.5],['gen','u_orb_y',0.5],['gen','u_orb_r',0.18],
+       ['fb','u_decay',0.9985],['fb','u_gain',1.02],['fb','u_inject',1.0],['fb','u_spin',0.35]
+      ].forEach(([id,n,v])=>send({action:'set_uniform',node_id:id,name:n,value:v}));
+      compile('feedback_pingpong ✓  click fb → decay/gain/spin sliders (live)');});},160);
+})},
+
+slitscan(){clr(()=>{
+  ns([['src','shader_pass','Slitscan Source',80,140],
+      ['scan','shader_pass','Slitscan Effect',360,140],['out_0','pixels_out','Out',630,140]]);
+  setTimeout(()=>{es([['src','out','scan','in'],['scan','out','out_0','in']]);
+    ss([['src',S.slitscan_src],['scan',S.slitscan_pass]],()=>{
+      G.nodes['scan'].uniforms={u_axis:0.0,u_speed:1.0,u_mix:0.85};
+      [['scan','u_axis',0.0],['scan','u_speed',1.0],['scan','u_mix',0.85]
+      ].forEach(([id,n,v])=>send({action:'set_uniform',node_id:id,name:n,value:v}));
+      compile('temporal_slitscan adapted ✓  click scan → axis/speed/mix sliders (live)');});},160);
+})},
+
+single(){clr(()=>{
+  ns([['pass_0','shader_pass','Colour Wheel',120,140],['out_0','pixels_out','Out',380,140]]);
+  setTimeout(()=>{es([['pass_0','out','out_0','in']]);
+    ss([['pass_0',S.single]],()=>compile('pure_single_pass ✓  shader direct on pass (path 1 — no ShaderSource)'));},160);
+})},
+
+plasma(){clr(()=>{
+  ns([['pass_0','shader_pass','Plasma',100,140],['pass_1','shader_pass','Scanlines',360,140],['out_0','pixels_out','Out',610,140]]);
+  setTimeout(()=>{es([['pass_0','out','pass_1','in'],['pass_1','out','out_0','in']]);
+    ss([['pass_0',S.plasma],['pass_1',S.scanlines]],()=>compile('plasma+scanlines ✓'));},160);
+})},
+
+tunnel(){clr(()=>{
+  ns([['pass_0','shader_pass','UV Tunnel',120,140],['out_0','pixels_out','Out',380,140]]);
+  setTimeout(()=>{es([['pass_0','out','out_0','in']]);
+    ss([['pass_0',S.tunnel]],()=>compile('uv_tunnel ✓'));},160);
+})},
+
+sdf(){clr(()=>{
+  ns([['pass_0','shader_pass','SDF Orbs',100,140],['pass_1','shader_pass','Chroma+Vignette',370,140],['out_0','pixels_out','Out',630,140]]);
+  setTimeout(()=>{es([['pass_0','out','pass_1','in'],['pass_1','out','out_0','in']]);
+    ss([['pass_0',S.sdf_gen],['pass_1',S.sdf_post]],()=>compile('SDF+chromab ✓'));},160);
+})},
+
+// uniform_demo: shows the node-as-object pattern clearly
+// u_freq, u_amp, u_speed, u_hue are node "inlet parameters" — declared in shader,
+// set live via Properties panel or OSC — no recompile needed.
+// This is directly analogous to Max/MSP object inlets.
+uniform_demo(){clr(()=>{
+  ns([['obj_0','shader_pass','Wave Oscillator',120,140],['out_0','pixels_out','Out',400,140]]);
+  setTimeout(()=>{es([['obj_0','out','out_0','in']]);
+    ss([['obj_0',S.uniform_demo]],()=>{
+      G.nodes['obj_0'].uniforms={u_freq:8.0,u_amp:0.5,u_speed:1.0,u_hue:0.0};
+      [['obj_0','u_freq',8.0],['obj_0','u_amp',0.5],['obj_0','u_speed',1.0],['obj_0','u_hue',0.0]
+      ].forEach(([id,n,v])=>send({action:'set_uniform',node_id:id,name:n,value:v}));
+      compile('uniform_demo ✓  CLICK obj_0 → u_freq u_amp u_speed u_hue all live\nThis is the Max/MSP node-as-object model:\n  shader = function body\n  uniform declarations = typed inlets\n  OSC /scheng/node/obj_0/uniform/u_freq = live patch value');});},160);
+})},
+};
+
+document.querySelectorAll('.tb').forEach(b=>b.addEventListener('click',()=>T[b.dataset.t]?.()));
+
+// ── Utilities ─────────────────────────────────────────────────────────
+function dot(cls,txt){document.getElementById('dot').className='dot '+cls;document.getElementById('stxt').textContent=txt;}
+function nc(v){G.compiled=!v;document.getElementById('nc').classList.toggle('on',v);validate();}
+function log(msg,type=''){
+  const a=document.getElementById('log');
+  const r=document.createElement('div');r.className='le '+type;
+  const n=new Date(),t=[n.getHours(),n.getMinutes(),n.getSeconds()].map(v=>String(v).padStart(2,'0')).join(':');
+  r.innerHTML=`<span class="lt">${t}</span><span class="lm">${msg}</span>`;
+  a.appendChild(r);a.scrollTop=a.scrollHeight;
+  while(a.children.length>600)a.removeChild(a.firstChild);
 }
 
-// ═══════════════════════════════════════════════════
-// UTILITIES
-// ═══════════════════════════════════════════════════
-function setDot(cls, txt) {
-  document.getElementById('dot').className = 'dot ' + cls;
-  document.getElementById('status-txt').textContent = txt;
-}
-
-function setNeedsCompile(v) {
-  G.compiled = !v;
-  document.getElementById('needs-compile').classList.toggle('show', v);
-}
-
-function log(msg, type='') {
-  const area = document.getElementById('log');
-  const row  = document.createElement('div');
-  row.className = 'le ' + type;
-  const now = new Date();
-  const t = [now.getHours(), now.getMinutes(), now.getSeconds()]
-    .map(n => String(n).padStart(2,'0')).join(':');
-  row.innerHTML = `<span class="lt">${t}</span><span class="lm">${msg}</span>`;
-  area.appendChild(row);
-  area.scrollTop = area.scrollHeight;
-  while (area.children.length > 300) area.removeChild(area.firstChild);
-}
-
-// ═══════════════════════════════════════════════════
-// BOOT
-// ═══════════════════════════════════════════════════
-window.addEventListener('load', () => {
-  log('scheng editor ready', 'ok');
-  log('1. run  cargo run -p scheng-bridge', '');
-  log('2. click connect', '');
-  log('3. click load template to validate the pipeline', '');
+window.addEventListener('load',()=>{
+  log('scheng editor  v10.1','ok');
+  log('1. cargo run -p scheng-bridge','');
+  log('2. click connect','');
+  log('3. load template → compile','');
+  log('mix/weight/uniform sliders are live (no recompile)','');
+  log('node-as-object: declare uniform float X; then add via props ★','');
+  validate();
 });
 </script>
 </body>

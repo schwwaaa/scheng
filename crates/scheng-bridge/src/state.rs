@@ -27,6 +27,9 @@ pub struct NodeShaders {
     pub vert:    HashMap<String, String>,
     pub mix:     HashMap<String, scheng_runtime::MixerParams>,
     pub matrix:  HashMap<String, scheng_runtime::MatrixMixParams>,
+    /// Custom f32 uniforms per node — hotpatchable without recompile.
+    /// bridge_id → (uniform_name → value)
+    pub uniforms: HashMap<String, HashMap<String, f32>>,
 }
 
 // ---------------------------------------------------------------------------
@@ -164,6 +167,17 @@ impl BridgeState {
     pub fn set_weights(&mut self, node_id: &str, weights: [f32; 4]) -> Result<(), String> {
         if !self.nodes.contains_key(node_id) { return Err(format!("node '{}' not found", node_id)); }
         self.shaders.matrix.insert(node_id.to_string(), scheng_runtime::MatrixMixParams { weights });
+        Ok(())
+    }
+
+    // ── Set custom uniform ─────────────────────────────────────────────────────
+
+    pub fn set_uniform(&mut self, node_id: &str, name: String, value: f32) -> Result<(), String> {
+        if !self.nodes.contains_key(node_id) { return Err(format!("node '{}' not found", node_id)); }
+        self.shaders.uniforms
+            .entry(node_id.to_string())
+            .or_default()
+            .insert(name, value);
         Ok(())
     }
 

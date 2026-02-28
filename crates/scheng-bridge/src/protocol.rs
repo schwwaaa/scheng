@@ -138,6 +138,14 @@ pub enum ClientMsg {
 
     /// Update only the UI position of a node (not forwarded to engine). Returns NodeMoved.
     MoveNode { id: String, position: Pos2 },
+
+    /// Request the node registry (self-describing node type catalog). Returns Registry.
+    GetRegistry,
+
+    /// Set a named f32 uniform on a ShaderPass node.
+    /// Hotpatched directly into the live bundle — no recompile needed.
+    /// The shader must declare: uniform float {name};
+    SetUniform { node_id: String, name: String, value: f32 },
 }
 
 // ---------------------------------------------------------------------------
@@ -167,6 +175,16 @@ pub enum EngineMsg {
     ParamUpdated { node_id: String, param: String, value: f32 },
     WeightsUpdated { node_id: String, weights: [f32; 4] },
     NodeMoved { id: String, position: Pos2 },
+
+    UniformUpdated { node_id: String, name: String, value: f32 },
+
+    /// GLSL compilation failed on a specific node's shader.
+    /// Surfaced back to the editor so errors show inline, not just in terminal.
+    ShaderError { node_id: String, error: String },
+
+    /// Full node registry — self-describing catalog of all available node types.
+    /// Sent in response to GetRegistry. Editor uses this to build its palette.
+    Registry { nodes: Vec<serde_json::Value> },
 
     /// Emitted each frame when the engine is running (bridge is headless here,
     /// so this is informational — the render window is separate).
@@ -213,3 +231,7 @@ pub struct EdgeDesc {
     pub to_id: String,
     pub to_port: String,
 }
+
+// ── Added: custom uniform control ──────────────────────────────────────────
+// Appended to ClientMsg via a separate impl block below. The serde tag dispatch
+// reads all variants from the same enum so this extension works correctly.

@@ -1,6 +1,9 @@
 mod protocol;
+mod registry;
 mod state;
 mod ws;
+mod osc;
+mod midi;
 
 use glow::HasContext;
 use raw_window_handle::HasRawWindowHandle;
@@ -56,7 +59,10 @@ void main() {
 "#.to_string(),
         origin: Some("startup".into()),
     });
-    Ok(RenderBundle { graph, plan, props })
+    // Startup bundle has no bridge nodes — empty id_map is correct.
+    // Gets replaced on first Compile from the editor.
+    let id_map = std::collections::HashMap::new();
+    Ok(RenderBundle { id_map, graph, plan, props })
 }
 
 fn main() {
@@ -80,7 +86,27 @@ fn run() -> Result<(), EngineError> {
                 .unwrap_or_else(|_| "127.0.0.1:7777".into())
                 .parse().unwrap();
             eprintln!("[bridge] ws on {addr}");
-            rt.block_on(ws::run_ws_server(addr, ws_state, b));
+            rt.block_on(async move {
+                let (tx, _) = tokio::sync::broadcast::channel::<String>(256);
+
+                // OSC — runs in a blocking thread (UDP recv loop)
+                {
+                    let ws2 = ws_state.clone();
+                    let b2  = b.clone();
+                    let tx2 = tx.clone();
+                    std::thread::spawn(move || osc::run_osc(ws2, b2, tx2));
+                }
+
+                // MIDI — runs in a blocking thread (midir callback thread)
+                {
+                    let ws3 = ws_state.clone();
+                    let b3  = b.clone();
+                    let tx3 = tx.clone();
+                    std::thread::spawn(move || midi::run_midi(ws3, b3, tx3));
+                }
+
+                ws::run_ws_server(addr, ws_state, b, tx).await;
+            });
         });
     }
 

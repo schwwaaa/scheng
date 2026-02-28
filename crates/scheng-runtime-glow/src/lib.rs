@@ -325,6 +325,12 @@ pub struct NodeProps {
     /// Per-node video decode source configuration provided directly.
     pub video_decode_cfg: std::collections::HashMap<scheng_graph::NodeId, input_video::VideoConfig>,
 
+    /// Per-node arbitrary f32 uniforms injected each frame.
+    /// Key = uniform name as declared in the shader (e.g. "u_gain").
+    /// These are injected after the standard uniforms (u_time, uMix etc.).
+    /// Uniforms not present in the shader are silently ignored.
+    /// Hotpatchable without recompile — same as mixer_params.
+    pub custom_uniforms: HashMap<NodeId, HashMap<String, f32>>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -1381,6 +1387,15 @@ let timeline_index = if vn.fps > 0.0 {
             }
         }
 
+        // Custom per-node f32 uniforms (bridge-controlled, hotpatchable without recompile).
+        if let Some(uniforms) = props.custom_uniforms.get(&node.id) {
+            for (name, &value) in uniforms {
+                if let Some(loc) = gl.get_uniform_location(prog, name) {
+                    gl.uniform_1_f32(Some(&loc), value);
+                }
+            }
+        }
+        
         state.fs_tri.draw(gl);
 
         // Record output.

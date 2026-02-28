@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>scheng editor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+:root{
+  --bg:#0c0c0f;--bg1:#13131a;--bg2:#1a1a24;--bg3:#22222f;
+  --border:#252535;--border-hi:#353550;
+  --accent:#5b6eff;--accent2:#ff5f5f;--accent3:#3fffc8;--yellow:#ffd166;--purple:#a855f7;
+  --text:#ddddf0;--text2:#7777a0;--text3:#44445a;
+  --nw:228px;--pr:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden}
+body{font-family:'IBM Plex Mono',monospace;background:var(--bg);color:var(--text);
+  display:grid;grid-template-rows:42px 1fr;grid-template-columns:1fr 300px;
+  grid-template-areas:"hdr hdr""cvs pnl"}
+/* ── Header ─────────────────── */
+header{grid-area:hdr;display:flex;align-items:center;gap:10px;padding:0 14px;
+  background:var(--bg1);border-bottom:1px solid var(--border);user-select:none}
+.logo{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:15px}
+.logo em{color:var(--accent);font-style:normal}
+.hgap{flex:1}
+.hstat{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--text2)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--text3);transition:background .3s,box-shadow .3s}
+.dot.on{background:var(--accent3);box-shadow:0 0 6px var(--accent3)}.dot.err{background:var(--accent2)}
+.hbtn{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  padding:5px 11px;border-radius:3px;border:1px solid var(--border-hi);background:transparent;
+  color:var(--text2);cursor:pointer;transition:all .12s;white-space:nowrap}
+.hbtn:hover{color:var(--text);border-color:var(--accent);background:var(--bg3)}
+.hbtn.warn{border-color:var(--yellow);color:var(--yellow)}.hbtn.warn:hover{background:rgba(255,209,102,.1)}
+#nc{font-size:9px;padding:3px 8px;border-radius:3px;background:rgba(255,209,102,.12);
+  color:var(--yellow);border:1px solid rgba(255,209,102,.3);display:none}
+#nc.show{display:block}
+/* ── Canvas ─────────────────── */
+#cw{grid-area:cvs;position:relative;overflow:hidden;background:var(--bg);
+  background-image:radial-gradient(circle,#252535 1px,transparent 1px);background-size:24px 24px}
+#cv{position:absolute;inset:0}
+svg#el{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+/* ── Nodes ─────────────────── */
+.node{position:absolute;width:var(--nw);border-radius:6px;border:1px solid var(--border);
+  background:var(--bg2);box-shadow:0 3px 16px rgba(0,0,0,.5);user-select:none;z-index:10;
+  transition:border-color .12s,box-shadow .12s}
+.node:hover{border-color:var(--border-hi)}
+.node.sel{border-color:var(--accent);box-shadow:0 0 0 2px rgba(91,110,255,.2),0 3px 16px rgba(0,0,0,.5)}
+.node.has-error{border-color:var(--accent2)!important;box-shadow:0 0 0 2px rgba(255,95,95,.15)!important}
+.stripe{height:3px;border-radius:5px 5px 0 0;background:var(--border-hi)}
+.k-shader_source .stripe,.k-shader_pass .stripe{background:var(--accent)}
+.k-crossfade .stripe,.k-matrix_mix4 .stripe,.k-add .stripe{background:var(--purple)}
+.k-pixels_out .stripe,.k-syphon .stripe{background:var(--accent3)}
+.nhdr{display:flex;align-items:center;gap:7px;padding:7px 10px 6px;cursor:grab;border-bottom:1px solid var(--border)}
+.nhdr:active{cursor:grabbing}
+.nbadge{font-size:8px;letter-spacing:.12em;text-transform:uppercase;padding:2px 5px;border-radius:2px;background:var(--bg3);color:var(--text2);flex-shrink:0}
+.nlbl{font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nx{width:16px;height:16px;border:none;background:none;color:var(--text3);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;border-radius:3px;transition:color .1s,background .1s}
+.nx:hover{color:var(--accent2);background:rgba(255,95,95,.12)}
+.nerr{font-size:9px;color:var(--accent2);padding:3px 10px;background:rgba(255,95,95,.06);border-bottom:1px solid rgba(255,95,95,.1);display:none;line-height:1.5}
+.nerr.show{display:block}
+.nports{display:flex;justify-content:space-between;padding:6px 0;min-height:30px}
+.pcol{display:flex;flex-direction:column;gap:5px}
+.pcol.ins{align-items:flex-start}.pcol.outs{align-items:flex-end}
+.prow{display:flex;align-items:center;gap:4px;height:20px}
+.pcol.outs .prow{flex-direction:row-reverse}
+.pdot{width:calc(var(--pr)*2);height:calc(var(--pr)*2);border-radius:50%;
+  border:2px solid var(--border-hi);background:var(--bg);cursor:crosshair;flex-shrink:0;
+  margin:0 calc(0px - var(--pr));transition:border-color .1s,background .1s,transform .1s;position:relative;z-index:20}
+.pdot:hover{border-color:var(--accent);background:var(--accent);transform:scale(1.3)}
+.pdot.wiring{border-color:var(--yellow)!important;background:var(--yellow)!important;transform:scale(1.4)}
+.pdot.live{border-color:var(--accent3);background:rgba(63,255,200,.15)}
+.pdot.can-connect{border-color:var(--accent3);background:var(--accent3);transform:scale(1.35);animation:pulse .5s infinite alternate}
+@keyframes pulse{from{box-shadow:0 0 0 0 rgba(63,255,200,.5)}to{box-shadow:0 0 0 8px rgba(63,255,200,0)}}
+.plbl{font-size:9px;color:var(--text3);padding:0 8px}
+/* ── Edges ─────────────────── */
+.edge{fill:none;stroke:var(--accent);stroke-width:2;opacity:.55;stroke-linecap:round;cursor:pointer}
+.edge:hover{opacity:1;stroke:var(--accent2);stroke-width:2.5}
+.edge.code-edge{stroke:var(--text3);stroke-dasharray:5 4;opacity:.3}
+.edge.code-edge:hover{stroke:var(--accent2);opacity:.8}
+#dw{fill:none;stroke:var(--yellow);stroke-width:2;opacity:.85;stroke-dasharray:7 4;pointer-events:none}
+/* ── Panel ─────────────────── */
+#panel{grid-area:pnl;background:var(--bg1);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.psec{border-bottom:1px solid var(--border);flex-shrink:0}
+.ptitle{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);
+  padding:8px 13px 6px;font-family:'IBM Plex Sans',sans-serif;font-weight:500;
+  display:flex;align-items:center;cursor:pointer;user-select:none}
+.ptitle .arr{font-size:8px;margin-left:auto;transition:transform .15s}
+.ptitle.coll .arr{transform:rotate(-90deg)}
+.sbody{overflow:hidden}
+.sbody.coll{max-height:0!important}
+/* Palette */
+.ngrid{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:0 10px 10px}
+.ngbtn{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:6px 4px;border-radius:4px;
+  border:1px solid var(--border);background:var(--bg2);color:var(--text2);
+  cursor:pointer;text-align:center;transition:all .12s;line-height:1.6}
+.ngbtn:hover{color:var(--text);border-color:var(--accent);background:var(--bg3)}
+.ngbtn span{display:block;font-size:7.5px;color:var(--text3)}
+/* Templates */
+.tg{display:flex;flex-direction:column;gap:3px;padding:0 10px 10px}
+.tb{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:5px 8px;border-radius:4px;
+  border:1px solid var(--border);background:var(--bg2);color:var(--text2);
+  cursor:pointer;text-align:left;transition:all .12s;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.tb:hover{color:var(--text);border-color:var(--accent3);background:var(--bg3)}
+.tb em{color:var(--text3);font-style:normal;font-size:7.5px;text-align:right;flex-shrink:0}
+.tb.validated:after{content:"✓";color:var(--accent3);font-size:8px;margin-left:4px}
+/* Props */
+.pscroll{flex:1;overflow-y:auto;min-height:0}
+.pscroll::-webkit-scrollbar{width:3px}
+.pscroll::-webkit-scrollbar-thumb{background:var(--border)}
+#props{padding:10px}
+.pempty{color:var(--text3);font-size:10px;text-align:center;padding:20px 0;line-height:2.2}
+.pf{margin-bottom:10px}
+.pf label{display:block;font-size:9px;color:var(--text2);letter-spacing:.07em;text-transform:uppercase;margin-bottom:3px}
+.pinput{width:100%;font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:3px;color:var(--text);padding:4px 7px;outline:none;transition:border-color .12s}
+.pinput:focus{border-color:var(--accent)}.pinput[readonly]{opacity:.4}
+.prow-s{display:flex;align-items:center;gap:6px}
+.pslider{flex:1;-webkit-appearance:none;height:3px;border-radius:2px;background:var(--border-hi);cursor:pointer;outline:none}
+.pslider::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer}
+.pval{font-size:9px;color:var(--text);min-width:34px;text-align:right}
+.wsliders{display:flex;flex-direction:column;gap:4px}
+.wrow{display:flex;align-items:center;gap:6px;font-size:9px}
+.wlbl{color:var(--text3);width:18px;flex-shrink:0}
+.sbox{font-family:'IBM Plex Mono',monospace;font-size:9.5px;line-height:1.55;background:var(--bg);
+  border:1px solid var(--border);border-radius:3px;color:var(--accent3);padding:6px;
+  width:100%;height:180px;resize:vertical;outline:none;tab-size:2;transition:border-color .12s}
+.sbox:focus{border-color:var(--accent)}.sbox.has-error{border-color:var(--accent2)}
+.serr{margin-top:4px;padding:4px 6px;background:rgba(255,95,95,.06);border:1px solid rgba(255,95,95,.2);
+  border-radius:3px;font-size:8.5px;color:var(--accent2);line-height:1.6;white-space:pre-wrap;display:none}
+.serr.show{display:block}
+.abtn{margin-top:5px;width:100%;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;
+  text-transform:uppercase;padding:6px;border-radius:3px;border:1px solid var(--accent);
+  background:rgba(91,110,255,.08);color:var(--accent);cursor:pointer;transition:all .12s}
+.abtn:hover{background:var(--accent);color:#fff}
+.pnote{font-size:8.5px;color:var(--text3);padding:3px 0;line-height:1.7;font-style:italic}
+/* Validate panel */
+#vp{padding:8px 10px 10px;font-size:9px}
+.vtest{display:flex;align-items:center;gap:7px;padding:3px 0;border-bottom:1px solid var(--border)}
+.vtest:last-child{border:none}
+.vdot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0}
+.vdot.pass{background:var(--accent3)}.vdot.fail{background:var(--accent2)}.vdot.warn{background:var(--yellow)}
+.vname{flex:1;color:var(--text2)}
+.vval{color:var(--text3);font-size:8px}
+/* OSC ref */
+.oscref{padding:0 10px 10px;font-size:8.5px;color:var(--text3);line-height:1.9}
+.oscref code{color:var(--accent3);font-size:8px}
+.oscref b{color:var(--text2)}
+/* Log */
+#log{height:96px;overflow-y:auto;padding:5px 10px;font-size:8.5px;line-height:1.9;color:var(--text3)}
+#log::-webkit-scrollbar{width:2px}
+#log::-webkit-scrollbar-thumb{background:var(--border)}
+.le{display:flex;gap:7px}.lt{color:var(--text3);flex-shrink:0;font-size:8px}.lm{color:var(--text2)}
+.le.ok .lm{color:var(--accent3)}.le.err .lm{color:var(--accent2)}
+.le.ev .lm{color:var(--accent)}.le.warn .lm{color:var(--yellow)}
+/* Wire hint */
+#wh{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
+  background:var(--bg3);border:1px solid var(--yellow);border-radius:20px;
+  padding:5px 18px;font-size:10px;color:var(--yellow);pointer-events:none;
+  opacity:0;transition:opacity .2s;z-index:999;white-space:nowrap}
+#wh.show{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">sch<em>eng</em></div>
+  <div class="hgap"></div>
+  <div id="nc">needs compile</div>
+  <div class="hstat"><div class="dot" id="dot"></div><span id="stxt">disconnected</span></div>
+  <button class="hbtn" id="btn-connect">connect</button>
+  <button class="hbtn warn" id="btn-compile">compile</button>
+</header>
+<div id="cw">
+  <svg id="el"><path id="dw" d=""/></svg>
+  <div id="cv"></div>
+</div>
+<aside id="panel">
+
+  <!-- PALETTE -->
+  <div class="psec"><div class="ptitle" id="hdr-pal">nodes<span class="arr">▾</span></div>
+  <div class="sbody" id="body-pal">
+    <div class="ngrid" id="palette">
+      <div style="grid-column:1/-1;color:var(--text3);font-size:9px;padding:5px 2px">connect to load palette</div>
+    </div>
+  </div></div>
+
+  <!-- TEMPLATES — named after examples/ dir -->
+  <div class="psec"><div class="ptitle" id="hdr-tmpl">templates<span class="arr">▾</span></div>
+  <div class="sbody" id="body-tmpl">
+    <div class="tg">
+      <div style="font-size:8px;color:var(--text3);padding:0 2px 4px">
+        names match examples/ — sliders work without recompile
+      </div>
+      <button class="tb" data-t="minimal">graph_minimal<em>src→pass→out</em></button>
+      <button class="tb" data-t="chain2">graph_chain2<em>warp+invert fx</em></button>
+      <button class="tb" data-t="mixer2">graph_mixer2<em>crossfade composite</em></button>
+      <button class="tb" data-t="mixer_builtin">graph_mixer_builtin<em>mix slider demo</em></button>
+      <button class="tb" data-t="matrix4">graph_matrix_mix4<em>4-ch blend</em></button>
+      <button class="tb" data-t="luma_key">graph_webcam_luma_key<em>keyer layers</em></button>
+      <button class="tb" data-t="osc_control">osc_minimal<em>OSC u_gain u_speed</em></button>
+      <button class="tb" data-t="single">pure_single_pass<em>no src needed</em></button>
+      <button class="tb" data-t="plasma">plasma+scanlines<em>2-pass gen</em></button>
+      <button class="tb" data-t="tunnel">uv tunnel<em>polar warp</em></button>
+      <button class="tb" data-t="sdf">SDF+chromab<em>distance fields</em></button>
+      <button class="tb" data-t="feedback">feedback pingpong<em>frame history</em></button>
+    </div>
+  </div></div>
+
+  <!-- PROPERTIES -->
+  <div class="psec" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0">
+    <div class="ptitle" style="cursor:default">properties</div>
+    <div class="pscroll"><div id="props"><div class="pempty">click a node<br>to inspect and edit<br><br>
+      <span style="font-size:8px;color:var(--text3)">sliders update live<br>no recompile needed</span>
+    </div></div></div>
+  </div>
+
+  <!-- VALIDATE -->
+  <div class="psec"><div class="ptitle" id="hdr-val">validate<span class="arr">▾</span></div>
+  <div class="sbody" id="body-val">
+    <div id="vp">
+      <div class="vtest"><div class="vdot" id="v-ws"></div><span class="vname">WebSocket connected</span><span class="vval" id="vv-ws">—</span></div>
+      <div class="vtest"><div class="vdot" id="v-nodes"></div><span class="vname">graph has nodes</span><span class="vval" id="vv-nodes">—</span></div>
+      <div class="vtest"><div class="vdot" id="v-out"></div><span class="vname">has PixelsOut</span><span class="vval" id="vv-out">—</span></div>
+      <div class="vtest"><div class="vdot" id="v-dangling"></div><span class="vname">no dangling passes</span><span class="vval" id="vv-dangling">—</span></div>
+      <div class="vtest"><div class="vdot" id="v-compiled"></div><span class="vname">compiled</span><span class="vval" id="vv-compiled">—</span></div>
+      <div class="vtest"><div class="vdot" id="v-shader"></div><span class="vname">no shader errors</span><span class="vval" id="vv-shader">—</span></div>
+      <div class="vtest"><div class="vdot" id="v-slider"></div><span class="vname">slider hotpatch works</span><span class="vval" id="vv-slider">move a mix slider</span></div>
+    </div>
+  </div></div>
+
+  <!-- OSC/MIDI -->
+  <div class="psec"><div class="ptitle" id="hdr-osc">osc / midi<span class="arr">▾</span></div>
+  <div class="sbody" id="body-osc">
+    <div class="oscref">
+      <b>OSC</b> UDP port 57120<br>
+      <code>/scheng/node/{id}/mix</code>  f32<br>
+      <code>/scheng/node/{id}/weights</code>  f32×4<br>
+      <code>/scheng/node/{id}/shader</code>  string<br>
+      <code>/scheng/compile</code><br><br>
+      <b>MIDI</b> scheng-midi.json<br>
+      <code>{"ch":1,"cc":7,"node":"mix_0","param":"mix"}</code><br>
+      params: mix  weight0–weight3<br>
+      CC 0–127 → 0.0–1.0
+    </div>
+  </div></div>
+
+  <!-- LOG -->
+  <div style="border-top:1px solid var(--border);flex-shrink:0">
+    <div class="ptitle" style="cursor:default">log</div>
+    <div id="log"></div>
+  </div>
+</aside>
+<div id="wh">mousedown an INPUT port to complete wire  ·  esc cancels</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// ENGINE TOPOLOGY RULES (from reading runtime source)
+//
+//  ShaderSource → ShaderPass   code edge   carries frag, no texture output
+//  ShaderPass   → ShaderPass   texture edge  upstream FBO → iChannel0
+//  ShaderPass/Mixer → PixelsOut  present to window
+//
+//  Shader resolution per ShaderPass:
+//    Path 1: props.shader_sources[this_node_id]     ← wins always
+//    Path 2: builtin (Crossfade, MatrixMix4)
+//    Path 3: incoming ShaderSource edge              ← back-compat
+//
+//  Live params (NO RECOMPILE):  mix, weights
+//  Needs recompile:  graph topology, shader source text
+//
+//  Uniforms injected every frame: u_time, u_resolution, iChannel0..3
+// ══════════════════════════════════════════════════════════════════════════════
+
+const G = {
+  nodes:{}, edges:[], sel:null,
+  ws:null, connected:false,
+  wiring:null, drag:null,
+  registry:[],
+  shaderErrors:{},
+  compiled:false,
+  _ni:0,
+  // validation
+  sliderMoved:false,
+};
+
+// ── WebSocket ─────────────────────────────────────────────────────────────
+function wsConnect() {
+  if (G.ws) G.ws.close();
+  G.ws = new WebSocket('ws://127.0.0.1:7777');
+  G.ws.onopen    = () => { G.connected=true; setDot('on','connected');
+    log('connected','ok'); send({action:'get_state'}); send({action:'get_registry'}); };
+  G.ws.onmessage = e => onMsg(JSON.parse(e.data));
+  G.ws.onclose   = () => { G.connected=false; setDot('','disconnected'); log('disconnected','err'); validate(); };
+  G.ws.onerror   = () => { setDot('err','error'); log('cannot reach ws://127.0.0.1:7777 — is the bridge running?','err'); };
+}
+function send(o){ if(G.ws?.readyState===1) G.ws.send(JSON.stringify(o)); else log('not connected','err'); }
+
+function onMsg(m) {
+  switch(m.event) {
+    case 'state':
+      hydrate(m); break;
+    case 'node_added':
+      nodeAdd(m); log(`+ ${m.id} (${m.kind})`,'ev'); validate(); break;
+    case 'node_removed':
+      nodeRemove(m.id); validate(); break;
+    case 'edge_added':
+      edgeAdd(m); validate(); break;
+    case 'edge_removed':
+      edgeRemove(m.from_id,m.from_port,m.to_id,m.to_port); validate(); break;
+    case 'compiled':
+      G.compiled=true; setNC(false);
+      G.shaderErrors={};
+      document.querySelectorAll('.node.has-error').forEach(n=>n.classList.remove('has-error'));
+      document.querySelectorAll('.nerr').forEach(n=>{n.textContent='';n.classList.remove('show');});
+      log(`compiled ✓  ${m.node_count} nodes · ${m.edge_count} edges`,'ok');
+      validate(); break;
+    case 'shader_error':
+      G.shaderErrors[m.node_id]=m.error;
+      showShaderError(m.node_id, m.error);
+      log(`✗ GLSL on ${m.node_id}: ${m.error.split('\n')[0]}`,'err');
+      validate(); break;
+    case 'shader_updated':
+      log(`shader → ${m.node_id}`,'ev'); break;
+    case 'param_updated':
+      // Slider hotpatch confirmed working by this event
+      G.sliderMoved=true;
+      log(`${m.node_id}.${m.param} = ${m.value.toFixed(3)}`,'ev');
+      validate(); break;
+    case 'weights_updated':
+      G.sliderMoved=true;
+      log(`${m.node_id}.weights updated`,'ev');
+      validate(); break;
+    case 'error':
+      log(`✗ ${m.message}`,'err'); break;
+    case 'registry':
+      buildPalette(m.nodes); break;
+  }
+}
+
+function hydrate(snap) {
+  document.getElementById('cv').innerHTML='';
+  G.edges.forEach(e=>e.el?.remove());
+  G.nodes={}; G.edges=[]; G.sel=null; G.shaderErrors={};
+  G.compiled=snap.compiled;
+  setNC(!snap.compiled);
+  snap.nodes.forEach(nodeAdd);
+  setTimeout(()=>snap.edges.forEach(edgeAdd), 40);
+  log(`state: ${snap.nodes.length} nodes · ${snap.edges.length} edges`,'ok');
+  validate();
+}
+
+// ── Registry → palette ───────────────────────────────────────────────────
+function buildPalette(defs) {
+  G.registry=defs;
+  const grid=document.getElementById('palette');
+  grid.innerHTML='';
+  const order=['source','processor','mixer','output'];
+  const icon={source:'◈',processor:'◧',mixer:'◑',output:'▣'};
+  order.forEach(cat=>{
+    defs.filter(d=>d.category===cat).forEach(d=>{
+      const btn=document.createElement('button');
+      btn.className='ngbtn';
+      btn.title=d.description;
+      btn.innerHTML=`${icon[cat]||'·'} ${d.label}<span>${cat}</span>`;
+      btn.onclick=()=>{
+        const id=`${d.kind}_${++G._ni}`;
+        send({action:'add_node',id,kind:d.kind,label:`${d.label} ${G._ni}`,
+          position:{x:80+Math.random()*240,y:60+Math.random()*200}});
+        setNC(true);
+      };
+      grid.appendChild(btn);
+    });
+  });
+  log(`registry: ${defs.length} node types`,'ok');
+}
+
+// ── Node DOM ─────────────────────────────────────────────────────────────
+function nodeAdd(d) {
+  if(G.nodes[d.id]) return;
+  const el=document.createElement('div');
+  el.className=`node k-${d.kind}`; el.id='n-'+d.id;
+  el.style.left=(d.position?.x??80)+'px'; el.style.top=(d.position?.y??80)+'px';
+  const reg=G.registry.find(r=>r.kind===d.kind);
+  const ins=d.input_ports||[];
+  const outs=d.output_ports||[];
+  el.innerHTML=`<div class="stripe"></div>
+    <div class="nhdr">
+      <span class="nbadge">${badge(d.kind)}</span>
+      <span class="nlbl">${esc(d.label)}</span>
+      <button class="nx" title="remove">×</button>
+    </div>
+    <div class="nerr" id="nerr-${d.id}"></div>
+    <div class="nports">
+      <div class="pcol ins">${ins.map(p=>portHTML(d.id,p,'in',reg)).join('')}</div>
+      <div class="pcol outs">${outs.map(p=>portHTML(d.id,p,'out',reg)).join('')}</div>
+    </div>`;
+  el.querySelector('.nhdr').addEventListener('mousedown',startDrag);
+  el.querySelector('.nx').addEventListener('click',ev=>{ev.stopPropagation();send({action:'remove_node',id:d.id});setNC(true);});
+  el.addEventListener('click',ev=>{if(!ev.target.closest('.pdot,.nx'))selectNode(d.id);});
+  el.querySelectorAll('.pdot').forEach(dot=>dot.addEventListener('mousedown',portMD));
+  document.getElementById('cv').appendChild(el);
+  G.nodes[d.id]={el,desc:d};
+  if(G.shaderErrors[d.id]) showShaderError(d.id, G.shaderErrors[d.id]);
+  updateLive();
+}
+
+function portHTML(nid,port,dir,reg) {
+  const pd=reg?.ports?.find(p=>p.name===port&&p.dir===dir);
+  const tip=pd?`${dir}: ${port} — ${pd.description}`:port;
+  const kind=pd?.kind||'any';
+  const dot=`<div class="pdot" data-node="${nid}" data-port="${port}" data-dir="${dir}" data-kind="${kind}" title="${esc(tip)}"></div>`;
+  const lbl=`<span class="plbl">${port}</span>`;
+  return `<div class="prow">${dir==='in'?dot+lbl:lbl+dot}</div>`;
+}
+
+function showShaderError(id,err) {
+  const e=G.nodes[id]; if(!e) return;
+  e.el.classList.add('has-error');
+  const box=e.el.querySelector('.nerr');
+  if(box){box.textContent=err.split('\n')[0];box.classList.add('show');}
+  if(G.sel===id) renderProps(id);
+}
+
+function nodeRemove(id) {
+  G.nodes[id]?.el.remove();
+  G.edges=G.edges.filter(e=>{if(e.from_id===id||e.to_id===id){e.el?.remove();return false;}return true;});
+  delete G.nodes[id]; delete G.shaderErrors[id];
+  if(G.sel===id){G.sel=null;renderProps(null);}
+  updateLive();
+}
+
+function badge(k){return{shader_source:'SRC',shader_pass:'SHD',crossfade:'MIX',matrix_mix4:'MTX',pixels_out:'OUT',syphon:'SYP',add:'ADD'}[k]??k.slice(0,3).toUpperCase();}
+
+// ── Edges ─────────────────────────────────────────────────────────────────
+function edgeAdd(d) {
+  if(G.edges.find(e=>e.from_id===d.from_id&&e.from_port===d.from_port&&e.to_id===d.to_id&&e.to_port===d.to_port)) return;
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.classList.add('edge');
+  const fk=G.nodes[d.from_id]?.desc?.kind, tk=G.nodes[d.to_id]?.desc?.kind;
+  if(fk==='shader_source'&&tk==='shader_pass') path.classList.add('code-edge');
+  document.getElementById('el').insertBefore(path,document.getElementById('dw'));
+  const edge={...d,el:path};
+  G.edges.push(edge); drawEdge(edge);
+  path.addEventListener('click',()=>{
+    if(confirm(`Disconnect ${d.from_id}.${d.from_port} → ${d.to_id}.${d.to_port}?`)){
+      send({action:'disconnect',from_id:d.from_id,from_port:d.from_port,to_id:d.to_id,to_port:d.to_port});
+      setNC(true);
+    }
+  });
+  updateLive();
+}
+
+function edgeRemove(fi,fp,ti,tp) {
+  const i=G.edges.findIndex(e=>e.from_id===fi&&e.from_port===fp&&e.to_id===ti&&e.to_port===tp);
+  if(i>=0){G.edges[i].el?.remove();G.edges.splice(i,1);}
+  updateLive();
+}
+
+function drawEdge(e) {
+  const a=portPos(e.from_id,e.from_port,'out'),b=portPos(e.to_id,e.to_port,'in');
+  if(!a||!b){e.el.setAttribute('d','');return;}
+  e.el.setAttribute('d',bez(a.x,a.y,b.x,b.y));
+}
+function redrawEdges(){G.edges.forEach(drawEdge);}
+function bez(x1,y1,x2,y2){const d=Math.abs(x2-x1)*.55+40;return `M${x1},${y1} C${x1+d},${y1} ${x2-d},${y2} ${x2},${y2}`;}
+
+function portPos(nid,port,dir) {
+  const e=G.nodes[nid]; if(!e) return null;
+  const dot=e.el.querySelector(`.pdot[data-port="${port}"][data-dir="${dir}"]`);
+  if(!dot) return null;
+  const r=dot.getBoundingClientRect(),wr=document.getElementById('cw').getBoundingClientRect();
+  return{x:r.left-wr.left+r.width/2,y:r.top-wr.top+r.height/2};
+}
+
+function updateLive() {
+  document.querySelectorAll('.pdot').forEach(d=>d.classList.remove('live'));
+  G.edges.forEach(e=>{
+    G.nodes[e.from_id]?.el.querySelector(`.pdot[data-port="${e.from_port}"][data-dir="out"]`)?.classList.add('live');
+    G.nodes[e.to_id]?.el.querySelector(`.pdot[data-port="${e.to_port}"][data-dir="in"]`)?.classList.add('live');
+  });
+}
+
+// ── Wiring ────────────────────────────────────────────────────────────────
+function portMD(ev) {
+  ev.stopPropagation(); ev.preventDefault();
+  const dot=ev.currentTarget, {node:nid,port,dir}=dot.dataset;
+  if(G.wiring) {
+    if(dir==='in') finishWire(nid,port);
+    else { cancelWire(); beginWire(dot,nid,port); }
+    return;
+  }
+  if(dir==='out') beginWire(dot,nid,port);
+  else log('start from an OUTPUT port (right side of node)','warn');
+}
+function beginWire(dot,nid,port) {
+  const wr=document.getElementById('cw').getBoundingClientRect(),r=dot.getBoundingClientRect();
+  G.wiring={nid,port,x:r.left-wr.left+r.width/2,y:r.top-wr.top+r.height/2};
+  dot.classList.add('wiring');
+  document.querySelectorAll('.pdot[data-dir="in"]').forEach(d=>{if(d.dataset.node!==nid)d.classList.add('can-connect');});
+  document.getElementById('wh').classList.add('show');
+}
+function finishWire(tid,tp) {
+  const f=G.wiring; cancelWire();
+  if(f.nid===tid){log('cannot self-connect','warn');return;}
+  send({action:'connect',from_id:f.nid,from_port:f.port,to_id:tid,to_port:tp});
+  setNC(true);
+}
+function cancelWire() {
+  if(!G.wiring) return;
+  document.querySelectorAll('.pdot.wiring,.pdot.can-connect').forEach(d=>d.classList.remove('wiring','can-connect'));
+  G.wiring=null;
+  document.getElementById('dw').setAttribute('d','');
+  document.getElementById('wh').classList.remove('show');
+}
+document.addEventListener('mousemove',ev=>{
+  if(G.wiring){const wr=document.getElementById('cw').getBoundingClientRect();document.getElementById('dw').setAttribute('d',bez(G.wiring.x,G.wiring.y,ev.clientX-wr.left,ev.clientY-wr.top));}
+  if(G.drag){const dx=ev.clientX-G.drag.sx,dy=ev.clientY-G.drag.sy;const e=G.nodes[G.drag.id];if(e){e.el.style.left=(G.drag.nx+dx)+'px';e.el.style.top=(G.drag.ny+dy)+'px';redrawEdges();}}
+});
+document.addEventListener('mouseup',ev=>{
+  if(G.drag){const e=G.nodes[G.drag.id];if(e)send({action:'move_node',id:G.drag.id,position:{x:parseInt(e.el.style.left),y:parseInt(e.el.style.top)}});G.drag=null;}
+});
+document.getElementById('cw').addEventListener('mousedown',ev=>{if(!ev.target.closest('.node,.pdot')){cancelWire();selectNode(null);}});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape')cancelWire();});
+function startDrag(ev) {
+  if(ev.target.closest('.nx,.pdot')) return;
+  ev.preventDefault();
+  const ne=ev.currentTarget.closest('.node'),id=ne.id.replace('n-','');
+  G.drag={id,sx:ev.clientX,sy:ev.clientY,nx:parseInt(ne.style.left),ny:parseInt(ne.style.top)};
+}
+
+// ── Properties ───────────────────────────────────────────────────────────
+function selectNode(id) {
+  document.querySelectorAll('.node.sel').forEach(n=>n.classList.remove('sel'));
+  G.sel=id;
+  if(id&&G.nodes[id]){G.nodes[id].el.classList.add('sel');renderProps(id);}
+  else renderProps(null);
+}
+
+function renderProps(id) {
+  const panel=document.getElementById('props');
+  if(!id||!G.nodes[id]){panel.innerHTML='<div class="pempty">click a node<br>to inspect and edit<br><br><span style="font-size:8px;color:var(--text3)">sliders update live<br>no recompile needed</span></div>';return;}
+  const d=G.nodes[id].desc;
+  const reg=G.registry.find(r=>r.kind===d.kind);
+  const glslErr=G.shaderErrors[id];
+  let h=`<div class="pf"><label>id</label><input class="pinput" value="${esc(d.id)}" readonly/></div>`;
+  if(reg?.description)
+    h+=`<div class="pnote" style="margin-bottom:8px">${esc(reg.description)}</div>`;
+
+  // Mix slider (Crossfade) — live, no recompile
+  if(d.mix!=null)
+    h+=`<div class="pf">
+      <label>mix  <span style="font-size:7.5px;color:var(--accent3)">● live — no recompile</span><br>
+        <span style="font-size:7.5px;color:var(--text3)">OSC: /scheng/node/${esc(d.id)}/mix  MIDI: cc7</span>
+      </label>
+      <div class="prow-s">
+        <input type="range" class="pslider" id="p-mix" min="0" max="1" step="0.005" value="${d.mix}"/>
+        <span class="pval" id="p-mv">${d.mix.toFixed(3)}</span>
+      </div></div>`;
+
+  // Weight sliders (MatrixMix4) — live, no recompile
+  if(d.weights) {
+    const labels=['ch0','ch1','ch2','ch3'];
+    h+=`<div class="pf"><label>weights  <span style="font-size:7.5px;color:var(--accent3)">● live</span><br>
+      <span style="font-size:7.5px;color:var(--text3)">OSC: /scheng/node/${esc(d.id)}/weights f32×4</span></label>
+      <div class="wsliders">
+      ${d.weights.map((w,i)=>`
+        <div class="wrow">
+          <span class="wlbl">${labels[i]}</span>
+          <input type="range" class="pslider" data-wi="${i}" min="0" max="1" step="0.005" value="${w}"/>
+          <span class="pval" id="wv-${i}">${w.toFixed(3)}</span>
+        </div>`).join('')}
+      </div></div>`;
+  }
+
+  // Shader editor — needs recompile
+  if(d.frag!=null)
+    h+=`<div class="pf">
+      <label>frag shader  <span style="font-size:7.5px;color:var(--yellow)">needs compile after edit</span></label>
+      <textarea class="sbox${glslErr?' has-error':''}" id="p-frag" spellcheck="false">${esc(d.frag)}</textarea>
+      <div class="serr${glslErr?' show':''}">${glslErr?esc(glslErr):''}</div>
+      <button class="abtn" id="p-apply">▶ apply + compile</button>
+    </div>`;
+
+  panel.innerHTML=h;
+
+  // Mix slider handler
+  panel.querySelector('#p-mix')?.addEventListener('input',e=>{
+    const v=parseFloat(e.target.value);
+    panel.querySelector('#p-mv').textContent=v.toFixed(3);
+    d.mix=v; send({action:'set_mix',node_id:id,mix:v});
+    // Visual feedback that hotpatch is in effect
+    document.getElementById('v-slider')?.classList.remove('warn');
+  });
+
+  // Weight slider handlers
+  if(d.weights) {
+    panel.querySelectorAll('.pslider[data-wi]').forEach(sl=>{
+      sl.addEventListener('input',e=>{
+        const i=parseInt(e.target.dataset.wi),v=parseFloat(e.target.value);
+        document.getElementById(`wv-${i}`).textContent=v.toFixed(3);
+        d.weights[i]=v;
+        send({action:'set_weights',node_id:id,weights:[...d.weights]});
+      });
+    });
+  }
+
+  // Shader apply
+  panel.querySelector('#p-apply')?.addEventListener('click',()=>{
+    const frag=panel.querySelector('#p-frag').value;
+    d.frag=frag;
+    send({action:'set_shader',node_id:id,frag});
+    send({action:'compile'});
+    log(`shader → ${id}  +compile`,'ok');
+  });
+}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── Validate panel ────────────────────────────────────────────────────────
+function validate() {
+  const nk=Object.keys(G.nodes);
+  const hasOut=nk.some(id=>G.nodes[id].desc?.kind==='pixels_out');
+  const hasNodes=nk.length>0;
+  // Dangling: ShaderPass with no incoming edge (not connected to anything)
+  const danglingPasses=nk.filter(id=>{
+    const d=G.nodes[id].desc;
+    if(d?.kind!=='shader_pass') return false;
+    const hasIn=G.edges.some(e=>e.to_id===id);
+    const hasOut=G.edges.some(e=>e.from_id===id);
+    return !hasIn&&!hasOut;
+  });
+  const noShaderErrors=Object.keys(G.shaderErrors).length===0;
+
+  set('v-ws',  G.connected,   G.connected?'connected':'disconnected',  'vv-ws');
+  set('v-nodes', hasNodes,    `${nk.length} nodes`,                     'vv-nodes');
+  set('v-out',   hasOut,      hasOut?'ok':'missing PixelsOut',          'vv-out');
+  set('v-dangling', danglingPasses.length===0,
+    danglingPasses.length===0?'ok':`${danglingPasses.length} unconnected pass`,  'vv-dangling');
+  set('v-compiled', G.compiled, G.compiled?'ok':'not yet',             'vv-compiled');
+  set('v-shader',   noShaderErrors,
+    noShaderErrors?'ok':`${Object.keys(G.shaderErrors).length} error`,  'vv-shader');
+  // Slider test: set to warn until user moves one
+  const sd=document.getElementById('v-slider');
+  const sv=document.getElementById('vv-slider');
+  if(sd){
+    if(G.sliderMoved){sd.className='vdot pass';sv.textContent='hotpatched ✓';}
+    else if(!G.connected||!G.compiled){sd.className='vdot';sv.textContent='compile first';}
+    else{sd.className='vdot warn';sv.textContent='move a mix slider';}
+  }
+}
+
+function set(dotId,pass,val,valId) {
+  const d=document.getElementById(dotId);
+  const v=document.getElementById(valId);
+  if(d) d.className='vdot '+(pass?'pass':'fail');
+  if(v) v.textContent=val;
+}
+
+// ── Collapsible sections ──────────────────────────────────────────────────
+['pal','tmpl','val','osc'].forEach(name=>{
+  const hdr=document.getElementById(`hdr-${name}`);
+  const body=document.getElementById(`body-${name}`);
+  if(!hdr||!body) return;
+  body.style.maxHeight=body.scrollHeight+'px';
+  hdr.addEventListener('click',()=>{
+    const c=body.classList.toggle('coll');
+    hdr.classList.toggle('coll',c);
+    if(!c) body.style.maxHeight=body.scrollHeight+'px';
+  });
+  // Templates default collapsed to save space
+  if(name==='tmpl'||name==='osc'){
+    body.classList.add('coll'); hdr.classList.add('coll');
+    body.style.maxHeight='0';
+  }
+});
+
+document.getElementById('btn-connect').addEventListener('click',wsConnect);
+document.getElementById('btn-compile').addEventListener('click',()=>send({action:'compile'}));
+
+// ── Template helpers ──────────────────────────────────────────────────────
+function clearThen(fn){
+  if(!G.connected){log('connect first','warn');return;}
+  Object.keys(G.nodes).forEach(id=>send({action:'remove_node',id}));
+  setTimeout(fn,280);
+}
+function ns(nodes){nodes.forEach(([id,kind,label,x,y])=>send({action:'add_node',id,kind,label,position:{x,y}}));}
+function es(edges){edges.forEach(([a,b,c,d])=>send({action:'connect',from_id:a,from_port:b,to_id:c,to_port:d}));}
+function ss(shaders,cb){shaders.forEach(([id,frag])=>send({action:'set_shader',node_id:id,frag}));setTimeout(cb,130);}
+function compile(msg){send({action:'compile'});log(msg,'ok');}
+function tmplDone(msg){G.sliderMoved=false;compile(msg);}
+
+// ── ALL SHADER SOURCES — taken directly from examples/ ───────────────────
+const S = {
+// graph_minimal
+minimal:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform float u_time;uniform vec2 u_resolution;
+void main(){
+  vec2 uv=clamp(v_uv*.5,0.,1.);
+  float t=.5+.5*sin(u_time);
+  fragColor=vec4(uv.x,uv.y,t,1.);
+}`,
+
+// graph_chain2 shader_a
+chain2_a:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform float u_time;
+void main(){
+  float t=u_time*.7;
+  float a=.5+.5*sin((v_uv.x*6.+t)*3.14159);
+  float b=.5+.5*sin((v_uv.y*4.-t)*3.14159);
+  fragColor=vec4(a,b,.5+.5*sin(t),1.);
+}`,
+
+// graph_chain2 shader_b — warp + invert
+chain2_b:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform sampler2D iChannel0;uniform float u_time;
+void main(){
+  vec2 uv=v_uv;float t=u_time*.8;
+  uv.x+=.02*sin(uv.y*20.+t);
+  uv.y+=.02*cos(uv.x*18.-t);
+  vec3 src=texture(iChannel0,uv).rgb;
+  fragColor=vec4(vec3(1.)-pow(src,vec3(1.2)),1.);
+}`,
+
+// graph_mixer2 bg
+mixer2_bg:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){
+  float t=u_time*.7;
+  float a=.5+.5*sin((v_uv.x*6.+t)*3.14159);
+  float b=.5+.5*sin((v_uv.y*4.-t)*3.14159);
+  fragColor=vec4(a,b,.35+.65*sin(t),1.);
+}`,
+
+// graph_mixer2 fg
+mixer2_fg:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){
+  vec2 p=v_uv*2.-1.;float t=u_time*.9;
+  p.x+=.2*sin(t);p.y+=.15*cos(t*.7);
+  float alpha=smoothstep(.55,.35,length(p));
+  fragColor=vec4(.95,.25,.6,alpha);
+}`,
+
+// graph_mixer_builtin FRAG_A
+mixer_a:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){
+  float v=.5+.5*sin(v_uv.x*10.+u_time*1.3);
+  fragColor=vec4(v,.1,.2,1.);
+}`,
+
+// graph_mixer_builtin FRAG_B
+mixer_b:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){
+  float v=.5+.5*cos(v_uv.y*12.-u_time*.9);
+  fragColor=vec4(.1,v,.8,1.);
+}`,
+
+// graph_matrix_mix4 channels
+mix4_r:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){fragColor=vec4(.5+.5*sin(v_uv.x*10.+u_time),0.,0.,1.);}`,
+mix4_g:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){fragColor=vec4(0.,.5+.5*sin(v_uv.y*12.-u_time),0.,1.);}`,
+mix4_b:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){fragColor=vec4(0.,0.,.5+.5*cos((v_uv.x+v_uv.y)*8.+u_time),1.);}`,
+mix4_w:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){float v=.5+.5*sin((v_uv.x-v_uv.y)*9.-u_time);fragColor=vec4(v,v,v,1.);}`,
+
+// graph_webcam_luma_key layers (no webcam — using generated content)
+// layer_a.frag from examples
+luma_a:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){
+  float v=.5+.5*sin(v_uv.x*10.+u_time*.7);
+  fragColor=vec4(v,.2*v,.1+.3*v,1.);
+}`,
+
+// layer_b.frag
+luma_b:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){
+  float v=.5+.5*sin((v_uv.y*12.-v_uv.x*3.)-u_time*.9);
+  fragColor=vec4(.1+.4*v,.3+.5*v,.2,1.);
+}`,
+
+// layer_c.frag
+luma_c:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){
+  vec2 p=v_uv-.5;float r=length(p);
+  float bands=.5+.5*cos(20.*r-u_time*1.3);
+  float swirl=.5+.5*sin(8.*(p.x+p.y)+u_time*.6);
+  fragColor=vec4(bands*.8,swirl*.6,(1.-r)*.7,1.);
+}`,
+
+// luma key mix shader from examples/graph_webcam_luma_key/shaders/webcam_luma_key_mix4.frag
+// adapted: using iChannel0..3 instead of uInput0..3
+luma_mix:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform sampler2D iChannel0;
+uniform sampler2D iChannel1;
+uniform sampler2D iChannel2;
+uniform sampler2D iChannel3;
+uniform vec4 uWeights;
+void main(){
+  vec4 a=texture(iChannel0,v_uv);
+  vec4 b=texture(iChannel1,v_uv);
+  vec4 c=texture(iChannel2,v_uv);
+  vec4 d=texture(iChannel3,v_uv);
+  vec4 bg=(b+c+d)/3.;
+  float luma=dot(a.rgb,vec3(.299,.587,.114));
+  float alpha=smoothstep(uWeights.x,uWeights.y,luma);
+  fragColor=mix(bg*uWeights.w,a*uWeights.z,alpha);
+}`,
+
+// osc_minimal shader — exposes u_gain and u_speed as live uniforms
+osc_ctrl:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform float u_time;uniform vec2 u_resolution;
+uniform float u_gain;uniform float u_speed;
+void main(){
+  vec2 p=(v_uv-.5)*2.;
+  p.x*=u_resolution.x/u_resolution.y;
+  float t=u_time*u_speed;
+  float r=length(p),a=atan(p.y,p.x);
+  float bands=.5+.5*sin(8.*r-t*2.);
+  float spin=.5+.5*sin(a*3.+t);
+  fragColor=vec4(vec3(bands,spin,1.-bands)*u_gain,1.);
+}`,
+
+// pure_single_pass
+single:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){
+  vec3 col=.5+.5*cos(u_time+v_uv.xyx+vec3(0.,2.1,4.2));
+  fragColor=vec4(col,1.);
+}`,
+
+// plasma
+plasma:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){
+  vec2 uv=v_uv*3.;
+  float v=sin(uv.x+u_time)+sin(uv.y+u_time*.7)+sin((uv.x+uv.y+u_time*.5))+sin(length(uv)+u_time*1.3);
+  fragColor=vec4(.5+.5*sin(v*3.14+vec3(0.,2.09,4.19)),1.);
+}`,
+
+scanlines:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform sampler2D iChannel0;uniform vec2 u_resolution;
+void main(){
+  vec4 c=texture(iChannel0,v_uv);
+  float s=.85+.15*sin(v_uv.y*u_resolution.y*1.5);
+  fragColor=vec4(c.rgb*s,1.);
+}`,
+
+tunnel:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){
+  vec2 uv=v_uv*2.-1.;float r=length(uv),a=atan(uv.y,uv.x),t=u_time*.4;
+  float stripe=.5+.5*sin((.3/r+t)*20.);
+  float ring=.5+.5*sin(a/3.14159*12.+t*4.);
+  vec3 col=vec3(stripe*ring)*vec3(.4+.6*sin(t+r),.5,1.-r*.3);
+  fragColor=vec4(col*smoothstep(1.5,.2,r),1.);
+}`,
+
+sdf_gen:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+void main(){
+  vec2 uv=v_uv*2.-1.;uv.x*=1.77;float t=u_time*.6;
+  vec2 c1=vec2(.4*cos(t),.3*sin(t));
+  vec2 c2=vec2(.35*cos(t+2.09),.3*sin(t+2.09));
+  vec2 c3=vec2(.38*cos(t+4.19),.3*sin(t+4.19));
+  float d1=length(uv-c1)-.22,d2=length(uv-c2)-.22,d3=length(uv-c3)-.22;
+  vec3 col=vec3(.06,.03,.12);
+  col=mix(vec3(.9,.4,1.),col,smoothstep(-.01,.01,d1));
+  col=mix(vec3(.3,.8,1.),col,smoothstep(-.01,.01,d2));
+  col=mix(vec3(1.,.6,.2),col,smoothstep(-.01,.01,d3));
+  col+=.15*vec3(1.,.5,1.)/(abs(min(min(d1,d2),d3))*8.+.3);
+  fragColor=vec4(col,1.);
+}`,
+
+sdf_post:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform sampler2D iChannel0;
+void main(){
+  vec2 off=(v_uv-.5)*.006;
+  vec3 col=vec3(texture(iChannel0,v_uv-off).r,texture(iChannel0,v_uv).g,texture(iChannel0,v_uv+off).b);
+  col*=1.-dot(v_uv-.5,v_uv-.5)*1.6;
+  fragColor=vec4(col,1.);
+}`,
+
+// feedback pingpong — simplified; true ping-pong needs bridge support for history textures
+// this fakes it with self-referential decay using a single pass
+feedback:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform sampler2D iChannel0;uniform float u_time;
+void main(){
+  vec2 uv=v_uv;
+  float t=u_time*.4;
+  vec2 p=uv-.5;
+  float a=.35*t;
+  mat2 R=mat2(cos(a),-sin(a),sin(a),cos(a));
+  p=R*p*.998;uv=p+.5;
+  vec3 prev=texture(iChannel0,uv).rgb*.9985*1.02;
+  vec2 orb=vec2(.5+.2*sin(u_time*.7),.5+.15*cos(u_time*.9));
+  float blob=smoothstep(.18,0.,length(v_uv-orb));
+  fragColor=vec4(prev+vec3(.2,.7,1.)*blob,1.);
+}`,
+};
+
+// ── Templates ─────────────────────────────────────────────────────────────
+const T = {
+
+// graph_minimal — simplest working pipeline
+minimal(){clearThen(()=>{
+  ns([['src_0','shader_source','Source',60,140],['pass_0','shader_pass','Pass',310,140],['out_0','pixels_out','Output',560,140]]);
+  setTimeout(()=>{es([['src_0','out','pass_0','in'],['pass_0','out','out_0','in']]);
+    ss([['src_0',S.minimal]],()=>tmplDone('graph_minimal ✓'));},160);
+})},
+
+// graph_chain2 — two-pass warp+invert
+chain2(){clearThen(()=>{
+  ns([['src_a','shader_source','Source A',40,140],['pass_a','shader_pass','Pass A',260,140],
+      ['pass_b','shader_pass','Pass B (warp+invert)',490,140],['out_0','pixels_out','Out',730,140]]);
+  setTimeout(()=>{
+    es([['src_a','out','pass_a','in'],['pass_a','out','pass_b','in'],['pass_b','out','out_0','in']]);
+    ss([['src_a',S.chain2_a],['pass_b',S.chain2_b]],()=>tmplDone('graph_chain2 ✓'));},160);
+})},
+
+// graph_mixer2 — alpha composite two sources
+mixer2(){clearThen(()=>{
+  ns([['src_bg','shader_source','BG Src',40,60],['pass_bg','shader_pass','BG Pass',250,60],
+      ['src_fg','shader_source','FG Src',40,240],['pass_fg','shader_pass','FG Pass',250,240],
+      ['mix_0','crossfade','Crossfade',480,150],['out_0','pixels_out','Out',690,150]]);
+  setTimeout(()=>{
+    es([['src_bg','out','pass_bg','in'],['src_fg','out','pass_fg','in'],
+        ['pass_bg','out','mix_0','a'],['pass_fg','out','mix_0','b'],['mix_0','out','out_0','in']]);
+    ss([['src_bg',S.mixer2_bg],['src_fg',S.mixer2_fg]],()=>{
+      send({action:'set_mix',node_id:'mix_0',mix:0.35});
+      tmplDone('graph_mixer2 ✓  move Mix slider on mix_0 — updates without recompile');
+    });},160);
+})},
+
+// graph_mixer_builtin — explicitly tests that mix slider works live
+mixer_builtin(){clearThen(()=>{
+  ns([['pass_a','shader_pass','Pass A (red wave)',60,140],
+      ['pass_b','shader_pass','Pass B (blue wave)',60,300],
+      ['mix_0','crossfade','Crossfade',320,220],['out_0','pixels_out','Out',540,220]]);
+  setTimeout(()=>{
+    es([['pass_a','out','mix_0','a'],['pass_b','out','mix_0','b'],['mix_0','out','out_0','in']]);
+    ss([['pass_a',S.mixer_a],['pass_b',S.mixer_b]],()=>{
+      send({action:'set_mix',node_id:'mix_0',mix:0.35});
+      tmplDone('graph_mixer_builtin ✓  CLICK mix_0 → move Mix slider → should update live');
+    });},160);
+})},
+
+// graph_matrix_mix4 — four channels
+matrix4(){clearThen(()=>{
+  ns([['pr','shader_pass','Red',40,50],['pg','shader_pass','Green',40,170],
+      ['pb','shader_pass','Blue',40,290],['pw','shader_pass','White',40,410],
+      ['mtx','matrix_mix4','MatrixMix4',310,230],['out_0','pixels_out','Out',560,230]]);
+  setTimeout(()=>{
+    es([['pr','out','mtx','in0'],['pg','out','mtx','in1'],
+        ['pb','out','mtx','in2'],['pw','out','mtx','in3'],['mtx','out','out_0','in']]);
+    ss([['pr',S.mix4_r],['pg',S.mix4_g],['pb',S.mix4_b],['pw',S.mix4_w]],
+      ()=>tmplDone('graph_matrix_mix4 ✓  click mtx → 4 weight sliders update live'));},160);
+})},
+
+// graph_webcam_luma_key adapted — no webcam, using generated layers + luma key shader
+luma_key(){clearThen(()=>{
+  ns([['la','shader_pass','Layer A',40,60],['lb','shader_pass','Layer B',40,180],
+      ['lc','shader_pass','Layer C',40,300],['ld','shader_pass','Layer D (orbs)',40,420],
+      ['mtx','matrix_mix4','LumaKey Mix4',310,240],['out_0','pixels_out','Out',560,240]]);
+  setTimeout(()=>{
+    es([['la','out','mtx','in0'],['lb','out','mtx','in1'],
+        ['lc','out','mtx','in2'],['ld','out','mtx','in3'],['mtx','out','out_0','in']]);
+    ss([['la',S.luma_a],['lb',S.luma_b],['lc',S.luma_c],['ld',S.sdf_gen],['mtx',S.luma_mix]],()=>{
+      send({action:'set_weights',node_id:'mtx',weights:[0.2,0.8,1.0,1.0]});
+      tmplDone('graph_webcam_luma_key adapted ✓  click mtx → adjust key_low/high weights');
+    });},160);
+})},
+
+// osc_minimal — shows u_gain + u_speed uniforms for OSC control
+osc_control(){clearThen(()=>{
+  ns([['pass_0','shader_pass','OSC Polar (gain+speed)',120,140],['out_0','pixels_out','Out',400,140]]);
+  setTimeout(()=>{
+    es([['pass_0','out','out_0','in']]);
+    ss([['pass_0',S.osc_ctrl]],()=>tmplDone('osc_minimal ✓  send /scheng/node/pass_0/shader to swap, OSC /param/u_gain and /param/u_speed on port 57120'));},160);
+})},
+
+// pure_single_pass
+single(){clearThen(()=>{
+  ns([['pass_0','shader_pass','Colour Wheel',120,140],['out_0','pixels_out','Out',380,140]]);
+  setTimeout(()=>{es([['pass_0','out','out_0','in']]);
+    ss([['pass_0',S.single]],()=>tmplDone('pure_single_pass ✓  no ShaderSource — frag direct on pass (path 1)'));},160);
+})},
+
+// plasma + scanlines
+plasma(){clearThen(()=>{
+  ns([['pass_0','shader_pass','Plasma',100,140],['pass_1','shader_pass','Scanlines',360,140],['out_0','pixels_out','Out',610,140]]);
+  setTimeout(()=>{es([['pass_0','out','pass_1','in'],['pass_1','out','out_0','in']]);
+    ss([['pass_0',S.plasma],['pass_1',S.scanlines]],()=>tmplDone('plasma+scanlines ✓'));},160);
+})},
+
+// uv tunnel
+tunnel(){clearThen(()=>{
+  ns([['pass_0','shader_pass','UV Tunnel',120,140],['out_0','pixels_out','Out',380,140]]);
+  setTimeout(()=>{es([['pass_0','out','out_0','in']]);
+    ss([['pass_0',S.tunnel]],()=>tmplDone('UV tunnel ✓'));},160);
+})},
+
+// SDF + chromatic aberration
+sdf(){clearThen(()=>{
+  ns([['pass_0','shader_pass','SDF Orbs',100,140],['pass_1','shader_pass','Chroma+Vignette',380,140],['out_0','pixels_out','Out',640,140]]);
+  setTimeout(()=>{es([['pass_0','out','pass_1','in'],['pass_1','out','out_0','in']]);
+    ss([['pass_0',S.sdf_gen],['pass_1',S.sdf_post]],()=>tmplDone('SDF+chromab ✓'));},160);
+})},
+
+// feedback pingpong
+feedback(){clearThen(()=>{
+  ns([['gen_0','shader_pass','Orb Generator',80,140],['fb_0','shader_pass','Feedback (reads gen_0)',340,140],['out_0','pixels_out','Out',600,140]]);
+  setTimeout(()=>{es([['gen_0','out','fb_0','in'],['fb_0','out','out_0','in']]);
+    ss([['gen_0',S.single],['fb_0',S.feedback]],()=>tmplDone('feedback pingpong ✓  (simplified — true ping-pong needs bridge history texture support)'));},160);
+})},
+
+};
+
+document.querySelectorAll('.tb').forEach(btn=>btn.addEventListener('click',()=>T[btn.dataset.t]?.()));
+
+// ── Utilities ─────────────────────────────────────────────────────────────
+function setDot(cls,txt){document.getElementById('dot').className='dot '+cls;document.getElementById('stxt').textContent=txt;}
+function setNC(v){G.compiled=!v;document.getElementById('nc').classList.toggle('show',v);validate();}
+function log(msg,type=''){
+  const a=document.getElementById('log');
+  const r=document.createElement('div');r.className='le '+type;
+  const n=new Date(),t=[n.getHours(),n.getMinutes(),n.getSeconds()].map(v=>String(v).padStart(2,'0')).join(':');
+  r.innerHTML=`<span class="lt">${t}</span><span class="lm">${msg}</span>`;
+  a.appendChild(r);a.scrollTop=a.scrollHeight;
+  while(a.children.length>600)a.removeChild(a.firstChild);
+}
+
+window.addEventListener('load',()=>{
+  log('scheng editor  v10','ok');
+  log('1. cargo run -p scheng-bridge','');
+  log('2. click connect','');
+  log('3. load a template → compile → use validate panel','');
+  log('sliders update live — no recompile needed','');
+  validate();
+});
+</script>
+</body>
+</html>
