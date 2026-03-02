@@ -1,0 +1,2519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><title>scheng editor — v11</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+:root{
+  --bg:#0c0c0f;--bg1:#13131a;--bg2:#1a1a24;--bg3:#22222f;
+  --border:#252535;--bhi:#353550;
+  --acc:#5b6eff;--red:#ff5f5f;--grn:#3fffc8;--yel:#ffd166;--pur:#a855f7;--org:#ff9a3c;
+  --t:#ddddf0;--t2:#7777a0;--t3:#44445a;
+  --nw:232px;--pr:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden}
+body{font-family:'IBM Plex Mono',monospace;background:var(--bg);color:var(--t);
+  display:grid;grid-template-rows:42px 1fr;grid-template-columns:1fr 306px;
+  grid-template-areas:"h h""c p"}
+header{grid-area:h;display:flex;align-items:center;gap:9px;padding:0 14px;
+  background:var(--bg1);border-bottom:1px solid var(--border);user-select:none;z-index:100}
+.logo{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:15px}
+.logo em{color:var(--acc);font-style:normal}
+.vsn{font-size:8px;color:var(--t3);margin-left:-4px}
+.gap{flex:1}
+.hst{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--t2)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--t3);transition:.3s}
+.dot.on{background:var(--grn);box-shadow:0 0 6px var(--grn)}.dot.err{background:var(--red)}
+.hbtn{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+  padding:5px 10px;border-radius:3px;border:1px solid var(--bhi);background:none;
+  color:var(--t2);cursor:pointer;transition:.12s;white-space:nowrap}
+.hbtn:hover{color:var(--t);border-color:var(--acc)}
+.hbtn.w{border-color:var(--yel);color:var(--yel)}.hbtn.w:hover{background:rgba(255,209,102,.1)}
+.hbtn.g{border-color:var(--grn);color:var(--grn)}.hbtn.g:hover{background:rgba(63,255,200,.1)}
+.hbtn.b{border-color:var(--pur);color:var(--pur)}.hbtn.b:hover{background:rgba(168,85,247,.1)}
+#nc{font-size:8.5px;padding:3px 8px;border-radius:3px;background:rgba(255,209,102,.1);
+  color:var(--yel);border:1px solid rgba(255,209,102,.25);display:none}
+#nc.on{display:block}
+#cw{grid-area:c;position:relative;overflow:hidden;background:var(--bg);
+  background-image:radial-gradient(circle,#252535 1px,transparent 1px);background-size:24px 24px}
+#cv{position:absolute;inset:0}
+svg#el{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.node{position:absolute;width:var(--nw);border-radius:6px;border:1px solid var(--border);
+  background:var(--bg2);box-shadow:0 3px 16px rgba(0,0,0,.5);user-select:none;z-index:10;transition:.12s}
+.node:hover{border-color:var(--bhi)}
+.node.sel{border-color:var(--acc);box-shadow:0 0 0 2px rgba(91,110,255,.18),0 3px 16px rgba(0,0,0,.5)}
+.node.nerror{border-color:var(--red)!important;box-shadow:0 0 0 2px rgba(255,95,95,.12)!important}
+.stripe{height:3px;border-radius:5px 5px 0 0;background:var(--bhi)}
+.k-shader_source .stripe,.k-shader_pass .stripe{background:var(--acc)}
+.k-crossfade .stripe,.k-matrix_mix4 .stripe,.k-add .stripe{background:var(--pur)}
+.k-pixels_out .stripe,.k-syphon .stripe{background:var(--grn)}
+.nhdr{display:flex;align-items:center;gap:7px;padding:7px 10px 6px;cursor:grab;border-bottom:1px solid var(--border)}
+.nhdr:active{cursor:grabbing}
+.nbg{font-size:7.5px;letter-spacing:.12em;text-transform:uppercase;padding:2px 5px;border-radius:2px;background:var(--bg3);color:var(--t2);flex-shrink:0}
+.nlbl{font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nx{width:16px;height:16px;border:none;background:none;color:var(--t3);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;border-radius:3px;transition:.1s;flex-shrink:0}
+.nx:hover{color:var(--red);background:rgba(255,95,95,.1)}
+.nerrmsg{font-size:8px;color:var(--red);padding:3px 10px;background:rgba(255,95,95,.05);border-bottom:1px solid rgba(255,95,95,.08);display:none;line-height:1.5}
+.nerrmsg.on{display:block}
+.nports{display:flex;justify-content:space-between;padding:5px 0;min-height:28px}
+.pcol{display:flex;flex-direction:column;gap:4px}
+.pcol.ins{align-items:flex-start}.pcol.outs{align-items:flex-end}
+.prow{display:flex;align-items:center;gap:3px;height:20px}
+.pcol.outs .prow{flex-direction:row-reverse}
+.pdot{width:calc(var(--pr)*2);height:calc(var(--pr)*2);border-radius:50%;border:2px solid var(--bhi);background:var(--bg);cursor:crosshair;flex-shrink:0;margin:0 calc(0px - var(--pr));transition:.1s;z-index:20;position:relative}
+.pdot:hover{border-color:var(--acc);background:var(--acc);transform:scale(1.35)}
+.pdot.wiring{border-color:var(--yel)!important;background:var(--yel)!important;transform:scale(1.4)}
+.pdot.live{border-color:var(--grn);background:rgba(63,255,200,.15)}
+.pdot.canc{border-color:var(--grn);background:var(--grn);transform:scale(1.35);animation:pp .5s infinite alternate}
+@keyframes pp{from{box-shadow:0 0 0 0 rgba(63,255,200,.5)}to{box-shadow:0 0 0 8px rgba(63,255,200,0)}}
+.plbl{font-size:8.5px;color:var(--t3);padding:0 7px}
+.edge{fill:none;stroke:var(--acc);stroke-width:2;opacity:.5;stroke-linecap:round;cursor:pointer}
+.edge:hover{opacity:1;stroke:var(--red);stroke-width:2.5}
+.edge.code{stroke:var(--t3);stroke-dasharray:5 4;opacity:.28}
+.edge.code:hover{stroke:var(--red);opacity:.8}
+#dw{fill:none;stroke:var(--yel);stroke-width:2;opacity:.85;stroke-dasharray:7 4;pointer-events:none}
+#panel{grid-area:p;background:var(--bg1);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sec{border-bottom:1px solid var(--border);flex-shrink:0}
+.sttl{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);
+  padding:8px 13px 6px;font-family:'IBM Plex Sans',sans-serif;font-weight:500;
+  display:flex;align-items:center;cursor:pointer;user-select:none}
+.arr{font-size:8px;margin-left:auto;transition:.15s}
+.coll .arr{transform:rotate(-90deg)}
+.sbdy{overflow:hidden}
+.sbdy.coll{max-height:0!important}
+.ptabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.ptab{flex:1;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.06em;text-transform:uppercase;
+  padding:6px 4px;text-align:center;cursor:pointer;color:var(--t3);border:none;background:none;
+  border-bottom:2px solid transparent;transition:.12s}
+.ptab:hover{color:var(--t2)}
+.ptab.act{color:var(--acc);border-bottom-color:var(--acc)}
+.pcat{display:none;padding:0 10px 10px}
+.pcat.act{display:block}
+.ngrid{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding-top:8px}
+.ngbtn{font-family:'IBM Plex Mono',monospace;font-size:8px;padding:5px 4px;border-radius:4px;
+  border:1px solid var(--border);background:var(--bg2);color:var(--t2);
+  cursor:pointer;text-align:center;transition:.12s;line-height:1.7}
+.ngbtn:hover{color:var(--t);border-color:var(--acc);background:var(--bg3)}
+.ngbtn span{display:block;font-size:7px;color:var(--t3)}
+.fxcat{margin-bottom:8px}
+.fxcat-hdr{font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--pur);padding:6px 0 3px;display:flex;align-items:center;gap:5px}
+.fxcat-hdr::after{content:'';flex:1;height:1px;background:var(--border)}
+.fxbtn{width:100%;font-family:'IBM Plex Mono',monospace;font-size:8px;padding:4px 8px;border-radius:3px;
+  border:1px solid var(--border);background:var(--bg2);color:var(--t2);
+  cursor:pointer;text-align:left;transition:.12s;display:flex;align-items:center;gap:6px;margin-bottom:2px}
+.fxbtn:hover{color:var(--t);border-color:var(--pur);background:var(--bg3)}
+.fxbtn .fxi{font-size:7px;color:var(--t3);margin-left:auto;text-align:right;flex-shrink:0}
+.tg{display:flex;flex-direction:column;gap:2px;padding:8px 0 10px}
+.tsec{font-size:7.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);padding:5px 0 3px;display:flex;align-items:center;gap:5px}
+.tsec::after{content:'';flex:1;height:1px;background:var(--border)}
+.tb{font-family:'IBM Plex Mono',monospace;font-size:8px;padding:5px 8px;border-radius:3px;
+  border:1px solid var(--border);background:var(--bg2);color:var(--t2);
+  cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:6px;transition:.12s}
+.tb:hover{color:var(--t);border-color:var(--grn);background:var(--bg3)}
+.tb em{color:var(--t3);font-style:normal;font-size:7px;text-align:right;flex-shrink:0}
+.tb.hist{border-left:2px solid var(--org)}
+.psc{flex:1;overflow-y:auto;min-height:0}
+.psc::-webkit-scrollbar{width:3px}
+.psc::-webkit-scrollbar-thumb{background:var(--border)}
+#props{padding:10px}
+.emp{color:var(--t3);font-size:9px;text-align:center;padding:16px 0;line-height:2.5}
+.pf{margin-bottom:10px}
+.pf label{display:block;font-size:8.5px;color:var(--t2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px;line-height:1.7}
+.inp{width:100%;font-family:'IBM Plex Mono',monospace;font-size:9px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:3px;color:var(--t);padding:4px 7px;outline:none;transition:.12s}
+.inp:focus{border-color:var(--acc)}.inp[readonly]{opacity:.4}
+.sr{display:flex;align-items:center;gap:6px}
+.sl{flex:1;-webkit-appearance:none;height:3px;border-radius:2px;background:var(--bhi);cursor:pointer;outline:none}
+.sl::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--acc)}
+.sl.live::-webkit-slider-thumb{background:var(--grn)}
+.pv{font-size:8.5px;color:var(--t);min-width:36px;text-align:right}
+.wsl{display:flex;flex-direction:column;gap:4px}
+.wr{display:flex;align-items:center;gap:6px;font-size:8.5px}
+.wl{color:var(--t3);width:18px;flex-shrink:0}
+.sbox{font-family:'IBM Plex Mono',monospace;font-size:9px;line-height:1.55;background:var(--bg);
+  border:1px solid var(--border);border-radius:3px;color:var(--grn);padding:6px;
+  width:100%;height:170px;resize:vertical;outline:none;transition:.12s}
+.sbox:focus{border-color:var(--acc)}.sbox.herr{border-color:var(--red)}
+.serr{margin-top:4px;padding:4px 6px;background:rgba(255,95,95,.05);border:1px solid rgba(255,95,95,.15);
+  border-radius:3px;font-size:8px;color:var(--red);line-height:1.7;white-space:pre-wrap;display:none}
+.serr.on{display:block}
+.abtn{margin-top:5px;width:100%;font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.1em;
+  text-transform:uppercase;padding:5px;border-radius:3px;border:1px solid var(--acc);
+  background:rgba(91,110,255,.07);color:var(--acc);cursor:pointer;transition:.12s}
+.abtn:hover{background:var(--acc);color:#fff}
+.pnote{font-size:7.5px;color:var(--t3);padding:2px 0 6px;line-height:1.8;font-style:italic}
+.urow{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.ubtn{font-family:'IBM Plex Mono',monospace;font-size:8px;padding:3px 7px;border-radius:3px;
+  border:1px solid var(--bhi);background:none;color:var(--t2);cursor:pointer;transition:.12s}
+.ubtn:hover{color:var(--t);border-color:var(--grn)}
+.utbl{width:100%;border-collapse:collapse;font-size:8px;margin-bottom:5px}
+.utbl td{padding:3px 5px;border-bottom:1px solid var(--border);vertical-align:middle}
+.utbl td:first-child{color:var(--acc);width:42%}
+.udel{border:none;background:none;color:var(--t3);cursor:pointer;font-size:12px;transition:.1s;line-height:1}
+.udel:hover{color:var(--red)}
+#vp{padding:8px 10px 10px;font-size:8.5px}
+.vr{display:flex;align-items:center;gap:7px;padding:3px 0;border-bottom:1px solid var(--border)}
+.vr:last-child{border:none}
+.vd{width:7px;height:7px;border-radius:50%;background:var(--t3);flex-shrink:0;transition:.3s}
+.vd.p{background:var(--grn)}.vd.f{background:var(--red)}.vd.w{background:var(--yel)}
+.vn{flex:1;color:var(--t2)}.vv{color:var(--t3);font-size:7.5px}
+#log{height:85px;overflow-y:auto;padding:4px 10px;font-size:8px;line-height:1.9;flex-shrink:0}
+#log::-webkit-scrollbar{width:2px}
+#log::-webkit-scrollbar-thumb{background:var(--border)}
+.le{display:flex;gap:6px}.lt{color:var(--t3);flex-shrink:0}.lm{color:var(--t2);word-break:break-all}
+.le.ok .lm{color:var(--grn)}.le.er .lm{color:var(--red)}
+.le.ev .lm{color:var(--acc)}.le.wa .lm{color:var(--yel)}
+#wh{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--bg3);
+  border:1px solid var(--yel);border-radius:20px;padding:5px 18px;font-size:10px;color:var(--yel);
+  pointer-events:none;opacity:0;transition:.2s;z-index:999;white-space:nowrap}
+#wh.on{opacity:1}
+#exp-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;display:none;align-items:center;justify-content:center}
+#exp-modal.on{display:flex}
+.modal-box{background:var(--bg1);border:1px solid var(--bhi);border-radius:8px;padding:22px;width:540px;max-height:82vh;overflow-y:auto}
+.modal-box h2{font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;margin-bottom:4px;color:var(--t)}
+.modal-sub{font-size:8px;color:var(--t3);margin-bottom:14px;line-height:1.8}
+.modal-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:12px}
+.mtab{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:5px 12px;cursor:pointer;color:var(--t3);border:none;background:none;border-bottom:2px solid transparent;transition:.12s}
+.mtab.act{color:var(--acc);border-bottom-color:var(--acc)}
+.modal-box pre{font-family:'IBM Plex Mono',monospace;font-size:8px;background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:10px;color:var(--grn);white-space:pre-wrap;max-height:280px;overflow-y:auto;margin-bottom:12px}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.mbtn{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:6px 14px;border-radius:3px;border:1px solid var(--border);background:none;color:var(--t2);cursor:pointer;transition:.12s}
+.mbtn:hover{color:var(--t);border-color:var(--acc)}
+.mbtn.p{border-color:var(--grn);color:var(--grn)}.mbtn.p:hover{background:var(--grn);color:var(--bg)}
+.mpanel{display:none}.mpanel.act{display:block}
+.mstep{font-size:8px;color:var(--t2);padding:6px 10px;background:var(--bg2);border-radius:3px;margin-bottom:8px;line-height:1.9;border-left:2px solid var(--acc)}
+.mstep code{color:var(--grn);font-family:'IBM Plex Mono',monospace}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">sch<em>eng</em></div><div class="vsn">v11</div>
+  <div class="gap"></div>
+  <div id="nc">needs compile</div>
+  <div class="hst"><div class="dot" id="dot"></div><span id="stxt">disconnected</span></div>
+  <button class="hbtn" id="btn-conn">connect</button>
+  <button class="hbtn b" id="btn-export" title="Export graph to JSON / standalone binary">export</button>
+  <button class="hbtn g" id="btn-save-tmpl" title="Snapshot current graph as custom template">save tmpl</button>
+  <button class="hbtn w" id="btn-comp">compile</button>
+</header>
+
+<div id="cw">
+  <svg id="el"><path id="dw" d=""/></svg>
+  <div id="cv"></div>
+</div>
+
+<!-- Export modal -->
+<div id="exp-modal">
+  <div class="modal-box">
+    <h2>export graph</h2>
+    <div class="modal-sub">
+      Save as JSON for import, or generate a standalone Rust binary template.<br>
+      The binary runs the effect with no editor — OSC/MIDI controllable on any platform.
+    </div>
+    <div class="modal-tabs">
+      <button class="mtab act" data-mt="json">graph json</button>
+      <button class="mtab" data-mt="rust">rust binary</button>
+      <button class="mtab" data-mt="osc">osc map</button>
+    </div>
+    <div class="mpanel act" id="mp-json">
+      <pre id="exp-json">// connect and build a graph first</pre>
+      <div class="modal-btns">
+        <button class="mbtn" id="btn-import-json">import json</button>
+        <input type="file" id="import-file" accept=".json" style="display:none"/>
+        <button class="mbtn p" id="btn-copy-json">copy</button>
+        <button class="mbtn p" id="btn-dl-json">download .json</button>
+      </div>
+    </div>
+    <div class="mpanel" id="mp-rust">
+      <div class="mstep">
+        <b>standalone binary workflow:</b><br>
+        1. Export graph JSON → <code>my_effect.json</code><br>
+        2. <code>cargo run -p scheng-export -- my_effect.json --out my_effect/</code><br>
+        3. <code>cd my_effect && cargo build --release</code><br>
+        4. <code>./target/release/my_effect --osc-port 57120 --fullscreen</code><br><br>
+        OSC/MIDI works identically — same addresses as the bridge.<br>
+        Cross-compiles to Linux aarch64 (Raspberry Pi 5, Jetson Orin).
+      </div>
+      <pre id="exp-rust">// graph JSON preview loads here</pre>
+      <div class="modal-btns">
+        <button class="mbtn p" id="btn-dl-json2">download graph.json</button>
+      </div>
+    </div>
+    <div class="mpanel" id="mp-osc">
+      <pre id="exp-osc">// OSC address map loads here</pre>
+      <div class="modal-btns">
+        <button class="mbtn p" id="btn-copy-osc">copy</button>
+      </div>
+    </div>
+    <div class="modal-btns" style="margin-top:0">
+      <button class="mbtn" id="btn-close-modal">close</button>
+    </div>
+  </div>
+</div>
+
+<aside id="panel">
+  <!-- ADD — tabs: Nodes / FX / Templates -->
+  <div class="sec">
+    <div class="sttl" style="cursor:default;padding-bottom:0">add<span class="arr" style="display:none"></span></div>
+    <div class="ptabs">
+      <button class="ptab act" data-tab="nodes">nodes</button>
+      <button class="ptab" data-tab="fx">fx library</button>
+      <button class="ptab" data-tab="tmpl">templates</button>
+    </div>
+
+    <!-- Nodes -->
+    <div class="pcat act" id="tab-nodes">
+      <div class="ngrid" id="palette">
+        <div style="grid-column:1/-1;font-size:8.5px;color:var(--t3);padding:5px 0">connect to load registry</div>
+      </div>
+    </div>
+
+    <!-- FX Library -->
+    <div class="pcat" id="tab-fx" style="padding-top:8px;max-height:320px;overflow-y:auto">
+      <div style="font-size:7.5px;color:var(--t3);padding:0 0 6px">
+        click → adds ShaderPass with shader pre-loaded + default uniforms set
+      </div>
+      <div class="fxcat">
+        <div class="fxcat-hdr">generators</div>
+        <button class="fxbtn" data-fx="gen_colourwheel">colour wheel<span class="fxi">u_speed u_inner u_outer</span></button>
+        <button class="fxbtn" data-fx="gen_plasma">plasma<span class="fxi">u_scale u_speed</span></button>
+        <button class="fxbtn" data-fx="gen_sdf_orbs">SDF orbs<span class="fxi">u_speed u_radius u_glow</span></button>
+        <button class="fxbtn" data-fx="gen_grid">vector grid<span class="fxi">u_cols u_rows u_lw</span></button>
+        <button class="fxbtn" data-fx="gen_noise">animated noise<span class="fxi">u_scale u_speed</span></button>
+        <button class="fxbtn" data-fx="gen_lissajous">lissajous scope<span class="fxi">u_fx u_fy u_phase</span></button>
+        <button class="fxbtn" data-fx="gen_interference">interference / moiré<span class="fxi">u_f1 u_f2 u_angle</span></button>
+        <button class="fxbtn" data-fx="gen_scope">oscilloscope<span class="fxi">u_freq u_amp u_thick</span></button>
+        <button class="fxbtn" data-fx="gen_cellular">cellular automata<span class="fxi">u_scale u_speed</span></button>
+      </div>
+      <div class="fxcat">
+        <div class="fxcat-hdr">fairlight CVI</div>
+        <button class="fxbtn" data-fx="fx_colorizer">colorizer<span class="fxi">u_cycles u_shift u_sat u_lum</span></button>
+        <button class="fxbtn" data-fx="fx_posterize">posterize<span class="fxi">u_levels u_gamma</span></button>
+        <button class="fxbtn" data-fx="fx_solarize">solarize<span class="fxi">u_thresh u_mix</span></button>
+        <button class="fxbtn" data-fx="fx_strobe">strobe / freeze<span class="fxi">u_rate u_duty</span></button>
+        <button class="fxbtn" data-fx="fx_edge">edge detect (Sobel)<span class="fxi">u_strength u_thresh u_invert</span></button>
+        <button class="fxbtn" data-fx="fx_mosaic">mosaic / pixelate<span class="fxi">u_size</span></button>
+        <button class="fxbtn" data-fx="fx_trails">trails / decay<span class="fxi">u_decay</span></button>
+        <button class="fxbtn" data-fx="fx_luma_key">luma key<span class="fxi">u_low u_high u_gain  ×2</span></button>
+        <button class="fxbtn" data-fx="fx_chroma_key">chroma key<span class="fxi">u_key_rgb u_thresh  ×2</span></button>
+        <button class="fxbtn" data-fx="fx_colour_correct">colour correct<span class="fxi">lift/gamma/gain/sat/hue</span></button>
+        <button class="fxbtn" data-fx="fx_invert">colour invert<span class="fxi">u_mix</span></button>
+        <button class="fxbtn" data-fx="fx_scanlines">scanlines CRT<span class="fxi">u_strength u_freq</span></button>
+        <button class="fxbtn" data-fx="fx_mirror">mirror / kaleidoscope<span class="fxi">u_mode u_offset</span></button>
+        <button class="fxbtn" data-fx="fx_hue_rot">hue rotation<span class="fxi">u_hue u_sat u_lum</span></button>
+        <button class="fxbtn" data-fx="fx_jones">Jones colorizer<span class="fxi">u_bands u_sat</span></button>
+      </div>
+      <div class="fxcat">
+        <div class="fxcat-hdr">rutt / etra · scanimate · paik</div>
+        <button class="fxbtn" data-fx="fx_rutt_etra">Rutt/Etra scanline warp<span class="fxi">u_disp u_lines</span></button>
+        <button class="fxbtn" data-fx="fx_scanimate">Scanimate envelope warp<span class="fxi">u_wobble u_freq u_phase</span></button>
+        <button class="fxbtn" data-fx="fx_paik_abe">Paik/Abe colorizer+fb<span class="fxi">u_hue_bias u_decay</span></button>
+        <button class="fxbtn" data-fx="fx_videosynth">video synth waveform<span class="fxi">u_h_freq u_v_freq u_lfo</span></button>
+      </div>
+      <div class="fxcat">
+        <div class="fxcat-hdr">quantel paintbox / harry</div>
+        <button class="fxbtn" data-fx="fx_dve_transform">DVE transform<span class="fxi">scale/pos/rot/border</span></button>
+        <button class="fxbtn" data-fx="fx_wipe_linear">wipe linear<span class="fxi">u_pos u_soft u_angle</span></button>
+        <button class="fxbtn" data-fx="fx_wipe_radial">wipe radial / clock<span class="fxi">u_pos u_soft</span></button>
+        <button class="fxbtn" data-fx="fx_glow">bloom / glow<span class="fxi">u_radius u_strength u_thresh</span></button>
+        <button class="fxbtn" data-fx="fx_film_grain">film grain<span class="fxi">u_amount u_size</span></button>
+        <button class="fxbtn" data-fx="fx_dither">Bayer dither<span class="fxi">u_levels u_scale</span></button>
+        <button class="fxbtn" data-fx="fx_chroma_aberration">chroma aberration<span class="fxi">u_aberr u_barrel</span></button>
+        <button class="fxbtn" data-fx="fx_halftone">halftone dots<span class="fxi">u_scale u_angle</span></button>
+        <button class="fxbtn" data-fx="fx_paint_smear">paint smear<span class="fxi">u_angle u_length u_steps</span></button>
+        <button class="fxbtn" data-fx="fx_zoom_blur">zoom / radial blur<span class="fxi">u_amount u_cx u_cy</span></button>
+        <button class="fxbtn" data-fx="fx_rgb_split">RGB split<span class="fxi">u_r_x u_b_x</span></button>
+        <button class="fxbtn" data-fx="fx_feedback_zoom">feedback zoom<span class="fxi">u_zoom u_angle u_decay</span></button>
+        <button class="fxbtn" data-fx="fx_vhs_glitch">VHS glitch<span class="fxi">u_jitter u_noise u_streak</span></button>
+        <button class="fxbtn" data-fx="fx_crt_curve">CRT barrel + vignette<span class="fxi">u_barrel u_vig</span></button>
+      </div>
+      <div class="fxcat">
+        <div class="fxcat-hdr">compositing</div>
+        <button class="fxbtn" data-fx="comp_add">additive blend<span class="fxi">u_a u_b  ×2</span></button>
+        <button class="fxbtn" data-fx="comp_multiply">multiply / screen<span class="fxi">u_mix  ×2</span></button>
+        <button class="fxbtn" data-fx="comp_difference">difference / XOR<span class="fxi">u_scale  ×2</span></button>
+        <button class="fxbtn" data-fx="comp_overlay">overlay blend<span class="fxi">u_mix  ×2</span></button>
+      </div>
+      <div class="fxcat">
+        <div class="fxcat-hdr">utility</div>
+        <button class="fxbtn" data-fx="util_passthrough">passthrough / gain / gamma<span class="fxi">u_gain u_gamma</span></button>
+        <button class="fxbtn" data-fx="util_scope">waveform scope overlay<span class="fxi">u_opacity u_col</span></button>
+        <button class="fxbtn" data-fx="util_histogram">histogram parade<span class="fxi">u_scale u_opacity</span></button>
+      </div>
+    </div>
+
+    <!-- Templates -->
+    <div class="pcat" id="tab-tmpl" style="max-height:340px;overflow-y:auto">
+      <div class="tg">
+        <div class="tsec">start here</div>
+        <button class="tb" data-t="fx_library_tour" style="border-left:2px solid var(--grn)">★ FX library tour<em>learn all nodes</em></button>
+        <button class="tb" data-t="minimal">graph_minimal<em>simplest patch</em></button>
+        <button class="tb" data-t="chain2">graph_chain2<em>warp+invert</em></button>
+        <button class="tb" data-t="mixer_builtin">crossfade mixer<em>live mix slider ★</em></button>
+        <button class="tb" data-t="matrix4">matrix_mix4<em>4-ch blend ★</em></button>
+
+        <div class="tsec">fairlight CVI</div>
+        <button class="tb hist" data-t="cvi_colorizer">CVI colorizer<em>luma→palette</em></button>
+        <button class="tb hist" data-t="cvi_posterize_edge">CVI posterize+edge<em>pop art</em></button>
+        <button class="tb hist" data-t="cvi_feedback_zoom">CVI feedback zoom<em>hypnotic ★</em></button>
+        <button class="tb hist" data-t="cvi_colour_correct">CVI colour correct<em>broadcast grade</em></button>
+        <button class="tb hist" data-t="cvi_mirror_kaleid">CVI mirror+kaleid<em>symmetry</em></button>
+        <button class="tb hist" data-t="cvi_jones_strobe">CVI Jones+strobe<em>luma band colour</em></button>
+
+        <div class="tsec">rutt / etra · scanimate</div>
+        <button class="tb hist" data-t="rutt_etra">Rutt/Etra classic<em>scanline warp</em></button>
+        <button class="tb hist" data-t="scanimate">Scanimate envelope<em>analog morph</em></button>
+        <button class="tb hist" data-t="paik_abe">Paik/Abe synth<em>color+feedback</em></button>
+        <button class="tb hist" data-t="videosynth_warp">video synth warp<em>waveform displacement</em></button>
+
+        <div class="tsec">quantel paintbox / harry</div>
+        <button class="tb hist" data-t="pb_dve">Paintbox DVE<em>scale+rotate+border</em></button>
+        <button class="tb hist" data-t="pb_luma_key">Paintbox luma key<em>2-source key</em></button>
+        <button class="tb hist" data-t="pb_chroma_key">Paintbox chroma key<em>greenscreen</em></button>
+        <button class="tb hist" data-t="pb_paint_chain">Paintbox paint chain<em>smear+glow+grain</em></button>
+        <button class="tb hist" data-t="pb_dither_halftone">Paintbox halftone<em>print sim</em></button>
+        <button class="tb hist" data-t="pb_wipe">Harry wipe suite<em>linear+radial</em></button>
+
+        <div class="tsec">generative</div>
+        <button class="tb" data-t="gen_orb_feedback">orb+feedback<em>trails+spin</em></button>
+        <button class="tb" data-t="gen_plasma_scanlines">plasma+scanlines<em>CRT sim</em></button>
+        <button class="tb" data-t="gen_sdf_chroma">SDF orbs+chroma<em>4-stage post</em></button>
+        <button class="tb" data-t="gen_lissajous_col">lissajous+colour<em>scope aesthetics</em></button>
+        <button class="tb" data-t="gen_cellular_grade">cellular+grade<em>organic patterns</em></button>
+        <button class="tb" data-t="gen_interference_key">interference+key<em>moiré composite</em></button>
+        <button class="tb" data-t="gen_noise_warp">noise field+warp<em>fluid motion</em></button>
+        <button class="tb" data-t="gen_videosynth_full">video synth full<em>4-band synthesis</em></button>
+
+        <div class="tsec">custom saved</div>
+        <div id="custom-tmpls" style="font-size:7.5px;color:var(--t3);padding:4px 0">
+          none saved — build a patch, then click "save tmpl"
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROPERTIES -->
+  <div class="sec" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0">
+    <div class="sttl" style="cursor:default">properties</div>
+    <div class="psc"><div id="props">
+      <div class="emp">click a node<br>to inspect + edit<br><br>
+        <span style="font-size:7.5px;color:var(--t3)">
+          ● mix / weights / uniforms — live<br>
+          ● shader text — needs compile<br>
+          ● FX library → click to add node
+        </span>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- VALIDATE -->
+  <div class="sec" id="s-val">
+    <div class="sttl" id="h-val">validate<span class="arr">▾</span></div>
+    <div class="sbdy" id="b-val">
+      <div id="vp">
+        <div class="vr"><div class="vd" id="v-ws"></div><span class="vn">WebSocket</span><span class="vv" id="vv-ws">—</span></div>
+        <div class="vr"><div class="vd" id="v-nd"></div><span class="vn">has nodes</span><span class="vv" id="vv-nd">—</span></div>
+        <div class="vr"><div class="vd" id="v-out"></div><span class="vn">PixelsOut present</span><span class="vv" id="vv-out">—</span></div>
+        <div class="vr"><div class="vd" id="v-dang"></div><span class="vn">no orphan passes</span><span class="vv" id="vv-dang">—</span></div>
+        <div class="vr"><div class="vd" id="v-comp"></div><span class="vn">compiled</span><span class="vv" id="vv-comp">—</span></div>
+        <div class="vr"><div class="vd" id="v-glsl"></div><span class="vn">no GLSL errors</span><span class="vv" id="vv-glsl">—</span></div>
+        <div class="vr"><div class="vd" id="v-sl"></div><span class="vn">slider hotpatch</span><span class="vv" id="vv-sl">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div style="border-top:1px solid var(--border);flex-shrink:0">
+    <div class="sttl" style="cursor:default;padding-bottom:4px">log</div>
+    <div id="log"></div>
+  </div>
+</aside>
+
+<div id="wh">mousedown an INPUT port to complete wire  ·  esc cancels</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// scheng editor v11
+// ══════════════════════════════════════════════════════════════════════════════
+const G={
+  nodes:{}, edges:[], sel:null,
+  ws:null, ok:false,
+  wiring:null, drag:null,
+  registry:[], errs:{}, compiled:false,
+  _ni:0, slMoved:false,
+};
+
+// ── WebSocket ────────────────────────────────────────────────────────────────
+function wsConn(){
+  if(G.ws) G.ws.close();
+  G.ws=new WebSocket('ws://127.0.0.1:7777');
+  G.ws.onopen=()=>{G.ok=true;dot('on','connected');log('connected','ok');
+    send({action:'get_state'});send({action:'get_registry'});};
+  G.ws.onmessage=e=>onMsg(JSON.parse(e.data));
+  G.ws.onclose=()=>{G.ok=false;dot('','disconnected');log('disconnected','er');validate();};
+  G.ws.onerror=()=>{dot('err','error');log('ws://127.0.0.1:7777 unreachable — is bridge running?','er');};
+}
+function send(o){if(G.ws?.readyState===1)G.ws.send(JSON.stringify(o));else log('not connected','er');}
+
+function onMsg(m){
+  switch(m.event){
+    case 'state':         hydrate(m); break;
+    case 'node_added':    nodeAdd(m); validate(); break;
+    case 'node_removed':  nodeRm(m.id); validate(); break;
+    case 'edge_added':    edgeAdd(m); validate(); break;
+    case 'edge_removed':  edgeRm(m.from_id,m.from_port,m.to_id,m.to_port); validate(); break;
+    case 'compiled':
+      G.compiled=true; G.errs={}; nc(false);
+      document.querySelectorAll('.node.nerror').forEach(n=>n.classList.remove('nerror'));
+      document.querySelectorAll('.nerrmsg').forEach(n=>{n.textContent='';n.classList.remove('on');});
+      log(`compiled ✓  ${m.node_count}n ${m.edge_count}e`,'ok'); validate(); break;
+    case 'shader_error':
+      G.errs[m.node_id]=m.error; glslErr(m.node_id,m.error);
+      log(`✗ GLSL ${m.node_id}: ${m.error.split('\n')[0]}`,'er'); validate(); break;
+    case 'shader_updated': log(`shader → ${m.node_id}`,'ev'); break;
+    case 'param_updated':
+      G.slMoved=true; log(`${m.node_id}.${m.param}=${m.value?.toFixed(3)}`,'ev'); validate(); break;
+    case 'weights_updated':
+      G.slMoved=true; log(`${m.node_id}.weights`,'ev'); validate(); break;
+    case 'uniform_updated':
+      G.slMoved=true; log(`${m.node_id}.${m.name}=${m.value?.toFixed(3)}`,'ev'); validate(); break;
+    case 'error':   log(`✗ ${m.message}`,'er'); break;
+    case 'registry': buildPalette(m.nodes); break;
+  }
+}
+
+function hydrate(s){
+  document.getElementById('cv').innerHTML='';
+  G.edges.forEach(e=>e.el?.remove());
+  G.nodes={}; G.edges=[]; G.sel=null; G.errs={};
+  G.compiled=s.compiled; nc(!s.compiled);
+  s.nodes.forEach(nodeAdd);
+  setTimeout(()=>s.edges.forEach(edgeAdd),40);
+  log(`state: ${s.nodes.length}n ${s.edges.length}e`,'ok'); validate();
+}
+
+// ── Registry → palette ────────────────────────────────────────────────────
+function buildPalette(defs){
+  G.registry=defs;
+  const g=document.getElementById('palette'); g.innerHTML='';
+  const ico={source:'◈',processor:'◧',mixer:'◑',output:'▣'};
+  ['source','processor','mixer','output'].forEach(cat=>{
+    defs.filter(d=>d.category===cat).forEach(d=>{
+      const b=document.createElement('button');
+      b.className='ngbtn'; b.title=d.description;
+      b.innerHTML=`${ico[cat]||'○'} ${d.label}<span>${cat}</span>`;
+      b.onclick=()=>{const id=`${d.kind}_${++G._ni}`;
+        send({action:'add_node',id,kind:d.kind,label:`${d.label} ${G._ni}`,
+          position:{x:80+Math.random()*280,y:60+Math.random()*200}});
+        nc(true);};
+      g.appendChild(b);
+    });
+  });
+  log(`registry: ${defs.length} types`,'ok');
+}
+
+// ── Nodes ─────────────────────────────────────────────────────────────────
+function nodeAdd(d){
+  if(G.nodes[d.id]) return;
+  const el=document.createElement('div');
+  el.className=`node k-${d.kind}`; el.id='n-'+d.id;
+  el.style.left=(d.position?.x??80)+'px'; el.style.top=(d.position?.y??80)+'px';
+  const reg=G.registry.find(r=>r.kind===d.kind);
+  const ins=d.input_ports||[], outs=d.output_ports||[];
+  el.innerHTML=`<div class="stripe"></div>
+    <div class="nhdr"><span class="nbg">${badge(d.kind)}</span><span class="nlbl">${esc(d.label)}</span><button class="nx" title="remove">×</button></div>
+    <div class="nerrmsg" id="ne-${d.id}"></div>
+    <div class="nports">
+      <div class="pcol ins">${ins.map(p=>portHtml(d.id,p,'in',reg)).join('')}</div>
+      <div class="pcol outs">${outs.map(p=>portHtml(d.id,p,'out',reg)).join('')}</div>
+    </div>`;
+  el.querySelector('.nhdr').addEventListener('mousedown',startDrag);
+  el.querySelector('.nx').addEventListener('click',ev=>{ev.stopPropagation();send({action:'remove_node',id:d.id});nc(true);});
+  el.addEventListener('click',ev=>{if(!ev.target.closest('.pdot,.nx'))selNode(d.id);});
+  el.querySelectorAll('.pdot').forEach(dot=>dot.addEventListener('mousedown',portMD));
+  document.getElementById('cv').appendChild(el);
+  G.nodes[d.id]={el,desc:d,uniforms:{}};
+  if(G.errs[d.id]) glslErr(d.id,G.errs[d.id]);
+  liveDots();
+}
+
+function portHtml(nid,port,dir,reg){
+  const pd=reg?.ports?.find(p=>p.name===port&&p.dir===dir);
+  const tip=pd?`${dir}:${port} — ${pd.description}`:port;
+  const dot=`<div class="pdot" data-node="${nid}" data-port="${port}" data-dir="${dir}" title="${esc(tip)}"></div>`;
+  const lbl=`<span class="plbl">${port}</span>`;
+  return `<div class="prow">${dir==='in'?dot+lbl:lbl+dot}</div>`;
+}
+
+function glslErr(id,err){
+  const e=G.nodes[id]; if(!e) return;
+  e.el.classList.add('nerror');
+  const b=e.el.querySelector('.nerrmsg');
+  if(b){b.textContent=err.split('\n')[0];b.classList.add('on');}
+  if(G.sel===id) renderProps(id);
+}
+
+function nodeRm(id){
+  G.nodes[id]?.el.remove();
+  G.edges=G.edges.filter(e=>{if(e.from_id===id||e.to_id===id){e.el?.remove();return false;}return true;});
+  delete G.nodes[id]; delete G.errs[id];
+  if(G.sel===id){G.sel=null;renderProps(null);}
+  liveDots();
+}
+
+function badge(k){return{shader_source:'SRC',shader_pass:'SHD',crossfade:'MIX',matrix_mix4:'MTX',pixels_out:'OUT',syphon:'SYP',add:'ADD'}[k]??k.slice(0,3).toUpperCase();}
+
+// ── Edges ─────────────────────────────────────────────────────────────────
+function edgeAdd(d){
+  if(G.edges.find(e=>e.from_id===d.from_id&&e.from_port===d.from_port&&e.to_id===d.to_id&&e.to_port===d.to_port)) return;
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.classList.add('edge');
+  const fk=G.nodes[d.from_id]?.desc?.kind, tk=G.nodes[d.to_id]?.desc?.kind;
+  if(fk==='shader_source'&&tk==='shader_pass') path.classList.add('code');
+  document.getElementById('el').insertBefore(path,document.getElementById('dw'));
+  const edge={...d,el:path}; G.edges.push(edge); drawE(edge);
+  path.addEventListener('click',()=>{
+    if(confirm(`Disconnect ${d.from_id}.${d.from_port} → ${d.to_id}.${d.to_port}?`)){
+      send({action:'disconnect',from_id:d.from_id,from_port:d.from_port,to_id:d.to_id,to_port:d.to_port}); nc(true);
+    }
+  });
+  liveDots();
+}
+function edgeRm(fi,fp,ti,tp){
+  const i=G.edges.findIndex(e=>e.from_id===fi&&e.from_port===fp&&e.to_id===ti&&e.to_port===tp);
+  if(i>=0){G.edges[i].el?.remove();G.edges.splice(i,1);}
+  liveDots();
+}
+function drawE(e){
+  const a=ppos(e.from_id,e.from_port,'out'),b=ppos(e.to_id,e.to_port,'in');
+  if(!a||!b){e.el.setAttribute('d','');return;}
+  e.el.setAttribute('d',bez(a.x,a.y,b.x,b.y));
+}
+function redrawE(){G.edges.forEach(drawE);}
+function bez(x1,y1,x2,y2){const d=Math.abs(x2-x1)*.55+40;return`M${x1},${y1} C${x1+d},${y1} ${x2-d},${y2} ${x2},${y2}`;}
+function ppos(nid,port,dir){
+  const e=G.nodes[nid]; if(!e) return null;
+  const dot=e.el.querySelector(`.pdot[data-port="${port}"][data-dir="${dir}"]`); if(!dot) return null;
+  const r=dot.getBoundingClientRect(),wr=document.getElementById('cw').getBoundingClientRect();
+  return{x:r.left-wr.left+r.width/2,y:r.top-wr.top+r.height/2};
+}
+function liveDots(){
+  document.querySelectorAll('.pdot').forEach(d=>d.classList.remove('live'));
+  G.edges.forEach(e=>{
+    G.nodes[e.from_id]?.el.querySelector(`.pdot[data-port="${e.from_port}"][data-dir="out"]`)?.classList.add('live');
+    G.nodes[e.to_id]?.el.querySelector(`.pdot[data-port="${e.to_port}"][data-dir="in"]`)?.classList.add('live');
+  });
+}
+
+// ── Wiring ─────────────────────────────────────────────────────────────────
+function portMD(ev){
+  ev.stopPropagation(); ev.preventDefault();
+  const {node:nid,port,dir}=ev.currentTarget.dataset;
+  if(G.wiring){
+    if(dir==='in') finW(nid,port); else{cancelW();beginW(ev.currentTarget,nid,port);}
+    return;
+  }
+  if(dir==='out') beginW(ev.currentTarget,nid,port);
+  else log('start from OUTPUT port (right side)','wa');
+}
+function beginW(dot,nid,port){
+  const wr=document.getElementById('cw').getBoundingClientRect(),r=dot.getBoundingClientRect();
+  G.wiring={nid,port,x:r.left-wr.left+r.width/2,y:r.top-wr.top+r.height/2};
+  dot.classList.add('wiring');
+  document.querySelectorAll('.pdot[data-dir="in"]').forEach(d=>{if(d.dataset.node!==nid)d.classList.add('canc');});
+  document.getElementById('wh').classList.add('on');
+}
+function finW(tid,tp){
+  const f=G.wiring; cancelW();
+  if(f.nid===tid){log('cannot self-connect','wa');return;}
+  send({action:'connect',from_id:f.nid,from_port:f.port,to_id:tid,to_port:tp}); nc(true);
+}
+function cancelW(){
+  if(!G.wiring) return;
+  document.querySelectorAll('.pdot.wiring,.pdot.canc').forEach(d=>d.classList.remove('wiring','canc'));
+  G.wiring=null; document.getElementById('dw').setAttribute('d','');
+  document.getElementById('wh').classList.remove('on');
+}
+document.addEventListener('mousemove',ev=>{
+  if(G.wiring){const wr=document.getElementById('cw').getBoundingClientRect();document.getElementById('dw').setAttribute('d',bez(G.wiring.x,G.wiring.y,ev.clientX-wr.left,ev.clientY-wr.top));}
+  if(G.drag){const dx=ev.clientX-G.drag.sx,dy=ev.clientY-G.drag.sy;const e=G.nodes[G.drag.id];if(e){e.el.style.left=(G.drag.nx+dx)+'px';e.el.style.top=(G.drag.ny+dy)+'px';redrawE();}}
+});
+document.addEventListener('mouseup',()=>{
+  if(G.drag){const e=G.nodes[G.drag.id];if(e)send({action:'move_node',id:G.drag.id,position:{x:parseInt(e.el.style.left),y:parseInt(e.el.style.top)}});G.drag=null;}
+});
+document.getElementById('cw').addEventListener('mousedown',ev=>{if(!ev.target.closest('.node,.pdot')){cancelW();selNode(null);}});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape')cancelW();});
+function startDrag(ev){
+  if(ev.target.closest('.nx,.pdot')) return; ev.preventDefault();
+  const ne=ev.currentTarget.closest('.node'),id=ne.id.replace('n-','');
+  G.drag={id,sx:ev.clientX,sy:ev.clientY,nx:parseInt(ne.style.left),ny:parseInt(ne.style.top)};
+}
+
+// ── Properties ──────────────────────────────────────────────────────────────
+function selNode(id){
+  document.querySelectorAll('.node.sel').forEach(n=>n.classList.remove('sel'));
+  G.sel=id;
+  if(id&&G.nodes[id]){G.nodes[id].el.classList.add('sel');renderProps(id);}
+  else renderProps(null);
+}
+
+function uRange(name){
+  if(/mix|decay|alpha|blend|opacity|duty/.test(name)) return{min:0,max:1,step:0.005};
+  if(/gain|scale|strength|level|bright|amp/.test(name)) return{min:0,max:3,step:0.01};
+  if(/speed|rate|freq|lfo/.test(name)) return{min:0,max:8,step:0.01};
+  if(/angle|hue|rot|phase/.test(name)) return{min:-3.14159,max:3.14159,step:0.01};
+  if(/pos_|_x|_y|cx|cy|offset/.test(name)) return{min:0,max:1,step:0.005};
+  if(/size|radius|width|lw|blur|aberr|barrel|jitter/.test(name)) return{min:0,max:0.3,step:0.001};
+  if(/col|row|step|slice|band|lines/.test(name)) return{min:1,max:64,step:0.5};
+  if(/low|high|thresh/.test(name)) return{min:0,max:1,step:0.005};
+  if(/mode|invert/.test(name)) return{min:0,max:3,step:1};
+  return{min:0,max:2,step:0.01};
+}
+
+function renderProps(id){
+  const panel=document.getElementById('props');
+  if(!id||!G.nodes[id]){
+    panel.innerHTML='<div class="emp">click a node<br>to inspect + edit<br><br><span style="font-size:7.5px;color:var(--t3)">● mix/weights/uniforms — live<br>● shader text — needs compile<br>● FX library → click to add</span></div>';
+    return;
+  }
+  const d=G.nodes[id].desc, nd=G.nodes[id];
+  const reg=G.registry.find(r=>r.kind===d.kind);
+  const glslE=G.errs[id];
+  let h=`<div class="pf"><label>id / kind</label>
+    <div style="font-size:8.5px;color:var(--t3)">${esc(d.id)} <span style="color:var(--acc)">${esc(d.kind)}</span></div></div>`;
+  if(reg?.description) h+=`<div class="pnote">${esc(reg.description)}</div>`;
+
+  if(d.mix!=null)
+    h+=`<div class="pf"><label>mix <span style="font-size:7px;color:var(--grn)">● live</span></label>
+      <div class="sr"><input type="range" class="sl live" id="p-mix" min="0" max="1" step="0.005" value="${d.mix}"/><span class="pv" id="pmv">${d.mix.toFixed(3)}</span></div></div>`;
+
+  if(d.weights){
+    const ls=['in0','in1','in2','in3'];
+    h+=`<div class="pf"><label>weights <span style="font-size:7px;color:var(--grn)">● live</span></label><div class="wsl">
+    ${d.weights.map((w,i)=>`<div class="wr"><span class="wl">${ls[i]}</span>
+      <input type="range" class="sl live" data-wi="${i}" min="0" max="1" step="0.005" value="${w}"/>
+      <span class="pv" id="wv${i}">${w.toFixed(3)}</span></div>`).join('')}</div></div>`;
+  }
+
+  // Uniforms
+  const uniforms=nd.uniforms||{};
+  const uList=Object.entries(uniforms);
+  h+=`<div class="pf"><label>uniforms <span style="font-size:7px;color:var(--grn)">● live  /scheng/node/${id}/uniform/{name}</span></label>
+    ${uList.length?`<table class="utbl">${uList.map(([n,v])=>{const r=uRange(n);return`<tr>
+      <td title="OSC: /scheng/node/${id}/uniform/${n}">${esc(n)}</td>
+      <td><div class="sr"><input type="range" class="sl live" data-un="${esc(n)}" min="${r.min}" max="${r.max}" step="${r.step}" value="${v}"/><span class="pv" id="uv-${esc(n)}">${parseFloat(v).toFixed(3)}</span></div></td>
+      <td><button class="udel" data-un="${esc(n)}" title="remove">×</button></td></tr>`;}).join('')}</table>`:'<div style="font-size:7.5px;color:var(--t3)">none — add below</div>'}
+    <div class="urow" style="margin-top:6px">
+      <input class="inp" id="un-name" placeholder="name e.g. u_gain" value="u_gain" style="font-size:8px"/>
+      <input class="inp" id="un-val" placeholder="val" value="1.0" style="width:52px;flex:0 0 52px;font-size:8px"/>
+      <button class="ubtn" id="btn-uadd">+ add</button>
+    </div>
+    <div style="font-size:7px;color:var(--t3);margin-top:3px">
+      Declare in shader: <span style="color:var(--grn)">uniform float u_gain;</span>
+    </div></div>`;
+
+  if(d.frag!=null)
+    h+=`<div class="pf"><label>fragment shader <span style="font-size:7px;color:var(--yel)">needs compile</span></label>
+      <textarea class="sbox${glslE?' herr':''}" id="p-frag" spellcheck="false">${esc(d.frag)}</textarea>
+      <div class="serr${glslE?' on':''}">${glslE?esc(glslE):''}</div>
+      <button class="abtn" id="p-apply">▶ apply + compile</button></div>`;
+
+  panel.innerHTML=h;
+
+  panel.querySelector('#p-mix')?.addEventListener('input',e=>{
+    const v=parseFloat(e.target.value); panel.querySelector('#pmv').textContent=v.toFixed(3);
+    d.mix=v; send({action:'set_mix',node_id:id,mix:v});
+  });
+  if(d.weights) panel.querySelectorAll('.sl[data-wi]').forEach(sl=>{
+    sl.addEventListener('input',e=>{
+      const i=parseInt(e.target.dataset.wi),v=parseFloat(e.target.value);
+      document.getElementById(`wv${i}`).textContent=v.toFixed(3);
+      d.weights[i]=v; send({action:'set_weights',node_id:id,weights:[...d.weights]});
+    });
+  });
+  panel.querySelectorAll('.sl[data-un]').forEach(sl=>{
+    sl.addEventListener('input',e=>{
+      const n=e.target.dataset.un,v=parseFloat(e.target.value);
+      const span=document.getElementById('uv-'+n); if(span) span.textContent=v.toFixed(3);
+      nd.uniforms[n]=v; send({action:'set_uniform',node_id:id,name:n,value:v});
+    });
+  });
+  panel.querySelectorAll('.udel').forEach(btn=>{
+    btn.addEventListener('click',()=>{const n=btn.dataset.un;delete nd.uniforms[n];send({action:'set_uniform',node_id:id,name:n,value:0});renderProps(id);});
+  });
+  panel.querySelector('#btn-uadd')?.addEventListener('click',()=>{
+    const n=(panel.querySelector('#un-name').value||'').trim();
+    const v=parseFloat(panel.querySelector('#un-val').value)||0;
+    if(!n){log('name required','wa');return;}
+    nd.uniforms[n]=v; send({action:'set_uniform',node_id:id,name:n,value:v});
+    log(`uniform ${id}.${n}=${v}`,'ok'); renderProps(id);
+  });
+  panel.querySelector('#p-apply')?.addEventListener('click',()=>{
+    const frag=panel.querySelector('#p-frag').value;
+    d.frag=frag; send({action:'set_shader',node_id:id,frag}); send({action:'compile'});
+  });
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── FX library — click to add a ShaderPass with that shader pre-loaded ──────
+document.querySelectorAll('.fxbtn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    if(!G.ok){log('connect first','wa');return;}
+    const fxKey=btn.dataset.fx;
+    const id=`${fxKey}_${++G._ni}`;
+    const label=btn.childNodes[0].textContent.trim();
+    send({action:'add_node',id,kind:'shader_pass',label:`${label}`,position:{x:80+Math.random()*280,y:80+Math.random()*180}});
+    setTimeout(()=>{
+      const frag=FX[fxKey];
+      if(frag) send({action:'set_shader',node_id:id,frag});
+      // Set default uniforms from shader comments
+      const defaults=parseDefaults(frag||'');
+      if(Object.keys(defaults).length){
+        G.nodes[id].uniforms=defaults;
+        Object.entries(defaults).forEach(([n,v])=>send({action:'set_uniform',node_id:id,name:n,value:v}));
+      }
+      nc(true);
+      log(`added ${fxKey} → ${id}  (${Object.keys(defaults).length} uniforms set)`,'ok');
+    },120);
+  });
+});
+
+// Parse uniform defaults from shader comments: "uniform float u_gain; // 1.0"
+function parseDefaults(src){
+  const out={};
+  const re=/uniform float (\w+)\s*;[^\/\n]*\/\/[^(\n]*\(?([\d.]+)\)?/g;
+  let m;
+  while((m=re.exec(src))!==null) out[m[1]]=parseFloat(m[2]);
+  return out;
+}
+
+// ── Tabs ────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.ptab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    const t=tab.dataset.tab;
+    document.querySelectorAll('.ptab,.pcat').forEach(e=>e.classList.remove('act'));
+    tab.classList.add('act');
+    document.getElementById('tab-'+t)?.classList.add('act');
+  });
+});
+
+// ── Collapsible ─────────────────────────────────────────────────────────────
+['val'].forEach(n=>{
+  const hdr=document.getElementById(`h-${n}`),bdy=document.getElementById(`b-${n}`);
+  if(!hdr||!bdy) return;
+  bdy.style.maxHeight=bdy.scrollHeight+'px';
+  hdr.addEventListener('click',()=>{const c=bdy.classList.toggle('coll');hdr.classList.toggle('coll',c);if(!c)bdy.style.maxHeight=bdy.scrollHeight+'px';});
+});
+
+// ── Export modal ──────────────────────────────────────────────────────────
+document.getElementById('btn-export').addEventListener('click',()=>{
+  buildExport(); document.getElementById('exp-modal').classList.add('on');
+});
+document.getElementById('btn-close-modal').addEventListener('click',()=>document.getElementById('exp-modal').classList.remove('on'));
+document.querySelectorAll('.mtab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.mtab,.mpanel').forEach(e=>e.classList.remove('act'));
+    tab.classList.add('act');
+    document.getElementById('mp-'+tab.dataset.mt)?.classList.add('act');
+  });
+});
+
+function graphSnapshot(){
+  return{
+    scheng_version:'v11',
+    exported:new Date().toISOString(),
+    nodes:Object.keys(G.nodes).map(id=>{
+      const{desc:d,uniforms}=G.nodes[id];
+      return{id:d.id,kind:d.kind,label:d.label,
+        position:d.position||{x:80,y:80},
+        frag:d.frag,mix:d.mix,weights:d.weights,uniforms};
+    }),
+    edges:G.edges.map(e=>({from_id:e.from_id,from_port:e.from_port,to_id:e.to_id,to_port:e.to_port})),
+  };
+}
+
+function buildExport(){
+  const snap=graphSnapshot();
+  const json=JSON.stringify(snap,null,2);
+  document.getElementById('exp-json').textContent=json;
+  document.getElementById('exp-rust').textContent=json;
+
+  // Build OSC map
+  let osc='# scheng OSC address map\n# Generated: '+new Date().toISOString()+'\n\n';
+  osc+='# Compile\n/scheng/compile\n\n';
+  snap.nodes.forEach(n=>{
+    osc+=`# ${n.id} (${n.kind})\n`;
+    if(n.mix!=null) osc+=`/scheng/node/${n.id}/mix  f32  [0..1]  current=${n.mix?.toFixed(3)}\n`;
+    if(n.weights) n.weights.forEach((w,i)=>osc+=`/scheng/node/${n.id}/weight${i}  f32  [0..1]  current=${w?.toFixed(3)}\n`);
+    if(n.uniforms) Object.entries(n.uniforms).forEach(([nm,v])=>{
+      const r=uRange(nm);
+      osc+=`/scheng/node/${n.id}/uniform/${nm}  f32  [${r.min}..${r.max}]  current=${v?.toFixed(3)}\n`;
+    });
+    osc+='\n';
+  });
+  document.getElementById('exp-osc').textContent=osc;
+}
+
+function dlJson(fn='graph.json'){
+  const json=JSON.stringify(graphSnapshot(),null,2);
+  const a=document.createElement('a');
+  a.href='data:application/json,'+encodeURIComponent(json);
+  a.download=fn; a.click();
+}
+document.getElementById('btn-dl-json').addEventListener('click',()=>dlJson());
+document.getElementById('btn-dl-json2').addEventListener('click',()=>dlJson());
+document.getElementById('btn-copy-json').addEventListener('click',()=>{
+  navigator.clipboard.writeText(document.getElementById('exp-json').textContent);
+  log('json copied to clipboard','ok');
+});
+document.getElementById('btn-copy-osc').addEventListener('click',()=>{
+  navigator.clipboard.writeText(document.getElementById('exp-osc').textContent);
+  log('osc map copied','ok');
+});
+
+// Import JSON
+document.getElementById('btn-import-json').addEventListener('click',()=>document.getElementById('import-file').click());
+document.getElementById('import-file').addEventListener('change',ev=>{
+  const f=ev.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{const snap=JSON.parse(e.target.result);loadSnap(snap);}
+    catch(err){log('import failed: '+err.message,'er');}
+  };
+  r.readAsText(f);
+});
+
+function loadSnap(snap){
+  if(!G.ok){log('connect first','wa');return;}
+  clearThen(()=>{
+    snap.nodes.forEach(n=>send({action:'add_node',id:n.id,kind:n.kind,label:n.label,position:n.position}));
+    setTimeout(()=>{
+      snap.edges.forEach(e=>send({action:'connect',from_id:e.from_id,from_port:e.from_port,to_id:e.to_id,to_port:e.to_port}));
+      snap.nodes.forEach(n=>{
+        if(n.frag) send({action:'set_shader',node_id:n.id,frag:n.frag});
+        if(n.mix!=null) send({action:'set_mix',node_id:n.id,mix:n.mix});
+        if(n.weights) send({action:'set_weights',node_id:n.id,weights:n.weights});
+        if(n.uniforms){
+          if(!G.nodes[n.id]) G.nodes[n.id]={uniforms:{}};
+          G.nodes[n.id].uniforms=n.uniforms;
+          Object.entries(n.uniforms).forEach(([nm,v])=>send({action:'set_uniform',node_id:n.id,name:nm,value:v}));
+        }
+      });
+      setTimeout(()=>{send({action:'compile'});log(`imported: ${snap.nodes.length}n`,'ok');},180);
+    },200);
+  });
+}
+
+// ── Custom template save ──────────────────────────────────────────────────
+function saveTemplate(){
+  const name=document.getElementById('tmpl-name')?.value.trim()||prompt('Template name:');
+  if(!name) return;
+  const saved=JSON.parse(localStorage.getItem('scheng_tmpls')||'[]');
+  saved.push({name,desc:'',snap:graphSnapshot(),saved:new Date().toISOString()});
+  localStorage.setItem('scheng_tmpls',JSON.stringify(saved));
+  log(`saved template: ${name}`,'ok'); renderCustomTemplates();
+}
+
+function renderCustomTemplates(){
+  const ct=document.getElementById('custom-tmpls');
+  const saved=JSON.parse(localStorage.getItem('scheng_tmpls')||'[]');
+  if(!saved.length){ct.innerHTML='<div style="font-size:7.5px;color:var(--t3);padding:3px 0">none saved</div>';return;}
+  ct.innerHTML=saved.map((t,i)=>`<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">
+    <button class="tb" style="flex:1" data-ci="${i}">${esc(t.name)}<em>${t.saved?.slice(0,10)||''}</em></button>
+    <button style="border:none;background:none;color:var(--t3);cursor:pointer;font-size:13px;line-height:1" data-cd="${i}" title="delete">×</button>
+  </div>`).join('');
+  ct.querySelectorAll('[data-ci]').forEach(b=>b.addEventListener('click',()=>{
+    const s=JSON.parse(localStorage.getItem('scheng_tmpls')||'[]');
+    const t=s[parseInt(b.dataset.ci)]; if(t) loadSnap(t.snap);
+  }));
+  ct.querySelectorAll('[data-cd]').forEach(b=>b.addEventListener('click',()=>{
+    const s=JSON.parse(localStorage.getItem('scheng_tmpls')||'[]');
+    s.splice(parseInt(b.dataset.cd),1);
+    localStorage.setItem('scheng_tmpls',JSON.stringify(s)); renderCustomTemplates();
+  }));
+}
+
+document.getElementById('btn-save-tmpl').addEventListener('click',()=>{
+  if(!G.ok){log('connect first','wa');return;}
+  if(!Object.keys(G.nodes).length){log('nothing to save','wa');return;}
+  saveTemplate();
+});
+
+// ── Validate ──────────────────────────────────────────────────────────────
+function validate(){
+  const nk=Object.keys(G.nodes);
+  const hasOut=nk.some(id=>G.nodes[id].desc?.kind==='pixels_out');
+  const dangling=nk.filter(id=>{
+    const d=G.nodes[id].desc;
+    if(d?.kind!=='shader_pass') return false;
+    return !G.edges.some(e=>e.to_id===id)&&!G.edges.some(e=>e.from_id===id);
+  });
+  const noErr=Object.keys(G.errs).length===0;
+  vset('v-ws', G.ok,            G.ok?'connected':'disconnected');
+  vset('v-nd', nk.length>0,     `${nk.length} nodes`);
+  vset('v-out',hasOut,          hasOut?'ok':'missing PixelsOut');
+  vset('v-dang',dangling.length===0,dangling.length===0?'ok':`${dangling.length} orphan`);
+  vset('v-comp',G.compiled,     G.compiled?'ok':'not yet');
+  vset('v-glsl',noErr,          noErr?'ok':`${Object.keys(G.errs).length} error`);
+  const d=document.getElementById('v-sl'),v=document.getElementById('vv-sl');
+  if(d){d.className='vd '+(G.slMoved?'p':G.ok&&G.compiled?'w':'');if(v)v.textContent=G.slMoved?'hotpatched ✓':G.ok&&G.compiled?'move a slider':'compile first';}
+}
+function vset(di,pass,val){
+  const d=document.getElementById(di),v=document.getElementById('v'+di.slice(1));
+  if(d) d.className='vd '+(pass?'p':'f');
+  const vv=document.getElementById('vv-'+di.slice(2));
+  if(vv) vv.textContent=val;
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────
+function dot(cls,txt){document.getElementById('dot').className='dot '+cls;document.getElementById('stxt').textContent=txt;}
+function nc(v){G.compiled=!v;document.getElementById('nc').classList.toggle('on',v);validate();}
+function log(msg,type=''){
+  const a=document.getElementById('log');
+  const r=document.createElement('div'); r.className='le '+(type||'');
+  const t=new Date(); const ts=[t.getHours(),t.getMinutes(),t.getSeconds()].map(v=>String(v).padStart(2,'0')).join(':');
+  r.innerHTML=`<span class="lt">${ts}</span><span class="lm">${esc(msg)}</span>`;
+  a.appendChild(r); a.scrollTop=a.scrollHeight;
+  while(a.children.length>800) a.removeChild(a.firstChild);
+}
+document.getElementById('btn-conn').addEventListener('click',wsConn);
+document.getElementById('btn-comp').addEventListener('click',()=>send({action:'compile'}));
+
+// ── Template helpers ───────────────────────────────────────────────────────
+function clearThen(fn){
+  if(!G.ok){log('connect first','wa');return;}
+  Object.keys(G.nodes).forEach(id=>send({action:'remove_node',id}));
+  setTimeout(fn,300);
+}
+const ns=(arr)=>arr.forEach(([id,kind,label,x,y])=>send({action:'add_node',id,kind,label,position:{x,y}}));
+const es=(arr)=>arr.forEach(([a,b,c,d])=>send({action:'connect',from_id:a,from_port:b,to_id:c,to_port:d}));
+function ss(arr,cb){arr.forEach(([id,frag])=>send({action:'set_shader',node_id:id,frag}));setTimeout(cb,140);}
+function su(arr){arr.forEach(([id,n,v])=>{
+  if(G.nodes[id]){if(!G.nodes[id].uniforms)G.nodes[id].uniforms={};G.nodes[id].uniforms[n]=v;}
+  send({action:'set_uniform',node_id:id,name:n,value:v});
+});}
+function compile(msg){send({action:'compile'});G.slMoved=false;if(msg)log(msg,'ok');}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FX SHADER LIBRARY — 55 shaders
+// ══════════════════════════════════════════════════════════════════════════════
+const FX={
+
+// ─ GENERATORS ────────────────────────────────────────────────────────────────
+
+gen_colourwheel:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+uniform float u_speed;  // rotation speed  (0.2)
+uniform float u_inner;  // inner radius    (0.15)
+uniform float u_outer;  // outer radius    (0.9)
+void main(){
+  vec2 p=v_uv*2.-1.;p.x*=1.7778;float r=length(p);
+  float a=atan(p.y,p.x)/6.28318+.5+u_time*u_speed;
+  float ring=smoothstep(u_inner,u_inner+.02,r)*smoothstep(u_outer+.02,u_outer,r);
+  vec4 K=vec4(1.,2./3.,1./3.,3.);vec3 f=abs(fract(a+K.xyz)*6.-K.www);
+  fragColor=vec4(mix(K.xxx,clamp(f-K.xxx,0.,1.),1.-r*.3)*ring,1.);}`,
+
+gen_plasma:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+uniform float u_scale;  // spatial scale  (3.0)
+uniform float u_speed;  // time scale     (1.0)
+void main(){vec2 uv=v_uv*u_scale;float t=u_time*u_speed;
+  float v=sin(uv.x+t)+sin(uv.y+t*.7)+sin(uv.x+uv.y+t*.5)+sin(length(uv-u_scale*.5)+t*1.3);
+  fragColor=vec4(.5+.5*sin(v*3.14159+vec3(0.,2.094,4.189)),1.);}`,
+
+gen_sdf_orbs:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+uniform float u_speed;   // orbit speed  (0.6)
+uniform float u_radius;  // circle r     (0.22)
+uniform float u_glow;    // glow amount  (0.15)
+void main(){
+  vec2 uv=v_uv*2.-1.;uv.x*=1.7778;float t=u_time*u_speed;
+  vec2 c1=vec2(.4*cos(t),.3*sin(t)),c2=vec2(.35*cos(t+2.094),.3*sin(t+2.094)),c3=vec2(.38*cos(t+4.189),.3*sin(t+4.189));
+  float d1=length(uv-c1)-u_radius,d2=length(uv-c2)-u_radius,d3=length(uv-c3)-u_radius;
+  vec3 col=vec3(.04,.02,.08);
+  col=mix(vec3(.9,.4,1.),col,smoothstep(-.01,.01,d1));
+  col=mix(vec3(.3,.8,1.),col,smoothstep(-.01,.01,d2));
+  col=mix(vec3(1.,.6,.2),col,smoothstep(-.01,.01,d3));
+  col+=u_glow/(abs(min(min(d1,d2),d3))*8.+.3);fragColor=vec4(col,1.);}`,
+
+gen_grid:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+uniform float u_cols;  // grid columns  (8.0)
+uniform float u_rows;  // grid rows     (6.0)
+uniform float u_lw;    // line width    (0.04)
+uniform float u_speed; // scroll speed  (0.5)
+void main(){vec2 uv=v_uv;uv.y+=u_time*u_speed*.1;
+  vec2 g=fract(uv*vec2(u_cols,u_rows));
+  float gr=max(smoothstep(u_lw,0.,min(g.x,1.-g.x)),smoothstep(u_lw,0.,min(g.y,1.-g.y)));
+  fragColor=vec4(mix(vec3(.04),vec3(.2,1.,.4),gr),1.);}`,
+
+gen_noise:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+uniform float u_scale;  // spatial scale  (4.0)
+uniform float u_speed;  // time scroll    (0.3)
+float hash(vec2 p){p=fract(p*vec2(127.1,311.7));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+float noise(vec2 p){vec2 i=floor(p),f=fract(p),u=f*f*(3.-2.*f);
+  return mix(mix(hash(i),hash(i+vec2(1,0)),u.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),u.x),u.y);}
+void main(){vec2 uv=v_uv*u_scale+vec2(0.,u_time*u_speed);
+  float n=noise(uv)*.5+noise(uv*2.1+5.2)*.25+noise(uv*4.3+1.7)*.125;
+  fragColor=vec4(vec3(n),1.);}`,
+
+gen_lissajous:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+uniform float u_fx;     // X frequency  (3.0)
+uniform float u_fy;     // Y frequency  (2.0)
+uniform float u_phase;  // phase offset (1.57)
+uniform float u_thick;  // line width   (0.008)
+void main(){
+  vec2 p=v_uv*2.-1.;p.x*=1.7778;
+  float lx=sin(u_fy*u_time+u_phase),ly=sin(u_fx*u_time);
+  // Analytical distance to lissajous — sample along parameter
+  float d=1e9;
+  for(int i=0;i<128;i++){float tt=float(i)/128.*6.28318;
+    vec2 q=vec2(sin(u_fy*tt+u_phase),sin(u_fx*tt));
+    d=min(d,length(p-q));}
+  float line=1.-smoothstep(u_thick,u_thick*2.,d);
+  vec3 col=mix(vec3(.03,.02,.05),vec3(.4,.9,1.)*line+vec3(.9,.4,.1)*line*.5,line);
+  col+=.04*vec3(.2,.5,.4);
+  fragColor=vec4(col,1.);}`,
+
+gen_interference:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+uniform float u_f1;    // freq source 1  (20.0)
+uniform float u_f2;    // freq source 2  (21.0)
+uniform float u_angle; // source 2 angle (0.5)
+void main(){
+  vec2 p=v_uv*2.-1.;p.x*=1.7778;
+  float w1=sin(length(p)*u_f1-u_time*2.);
+  vec2 p2=mat2(cos(u_angle),-sin(u_angle),sin(u_angle),cos(u_angle))*p;
+  float w2=sin(length(p2)*u_f2-u_time*2.1);
+  float moiré=w1*w2;
+  vec3 col=.5+.5*vec3(moiré,moiré*.8+w1*.2,w2);
+  fragColor=vec4(col,1.);}`,
+
+gen_scope:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+uniform float u_freq;   // wave frequency  (3.0)
+uniform float u_amp;    // amplitude       (0.4)
+uniform float u_thick;  // beam thickness  (0.006)
+uniform float u_speed;  // time scale      (1.5)
+void main(){
+  vec2 p=v_uv*2.-1.;p.x*=1.7778;
+  float wave=u_amp*sin(p.x*u_freq*3.14159+u_time*u_speed);
+  float beam=exp(-abs(p.y-wave)/(u_thick*2.));
+  // Phosphor glow
+  float glow=exp(-abs(p.y-wave)/(.12));
+  vec3 col=vec3(.05,.9,.3)*beam+vec3(.02,.3,.1)*glow;
+  fragColor=vec4(col,1.);}`,
+
+gen_cellular:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+uniform float u_scale;  // cell scale  (6.0)
+uniform float u_speed;  // anim speed  (0.4)
+float hash(vec2 p){p=fract(p*vec2(127.1,311.7));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+void main(){
+  vec2 uv=v_uv*u_scale;float t=u_time*u_speed;
+  vec2 i=floor(uv);float minD=1e9;vec2 closest;
+  for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++){
+    vec2 n=i+vec2(x,y);
+    vec2 pt=n+vec2(hash(n+t*.1),hash(n+t*.1+5.2));
+    float d=length(uv-pt);if(d<minD){minD=d;closest=pt;}}
+  vec3 col=vec3(.5+.5*sin(hash(floor(closest))*6.28+t),
+                .5+.5*cos(hash(floor(closest)+1.)*6.28+t),
+                .5+.5*sin(hash(floor(closest)+2.)*6.28-t));
+  col*=smoothstep(.0,.05,minD)*1.3;
+  fragColor=vec4(col,1.);}`,
+
+// ─ FAIRLIGHT CVI FX ──────────────────────────────────────────────────────────
+
+fx_colorizer:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_cycles;  // palette cycles  (1.0)
+uniform float u_shift;   // hue shift       (0.0)
+uniform float u_sat;     // saturation      (1.0)
+uniform float u_lum;     // luma blend      (0.0)
+void main(){vec3 src=texture(iChannel0,v_uv).rgb;
+  float luma=dot(src,vec3(.299,.587,.114));
+  float h=fract(luma*u_cycles+u_shift);
+  vec4 K=vec4(1.,2./3.,1./3.,3.);vec3 f=abs(fract(h+K.xyz)*6.-K.www);
+  vec3 col=mix(K.xxx,clamp(f-K.xxx,0.,1.),u_sat);
+  fragColor=vec4(mix(col,vec3(luma),u_lum),1.);}`,
+
+fx_posterize:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_levels;  // colour levels  (4.0)
+uniform float u_gamma;   // gamma          (1.0)
+void main(){vec3 src=pow(max(texture(iChannel0,v_uv).rgb,vec3(0.)),vec3(u_gamma));
+  fragColor=vec4(pow(floor(src*u_levels+.5)/u_levels,vec3(1./max(u_gamma,.001))),1.);}`,
+
+fx_solarize:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_thresh;  // threshold  (0.5)
+uniform float u_mix;     // blend      (1.0)
+void main(){vec3 src=texture(iChannel0,v_uv).rgb;
+  vec3 sol=mix(src,1.-src,step(u_thresh,dot(src,vec3(.299,.587,.114))));
+  fragColor=vec4(mix(src,sol,u_mix),1.);}`,
+
+fx_strobe:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;uniform float u_time;
+uniform float u_rate;  // strobe rate  (4.0)
+uniform float u_duty;  // duty cycle   (0.5)
+void main(){fragColor=vec4(texture(iChannel0,v_uv).rgb*step(fract(u_time*u_rate),u_duty),1.);}`,
+
+fx_edge:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;uniform vec2 u_resolution;
+uniform float u_strength;  // edge strength   (1.0)
+uniform float u_thresh;    // threshold       (0.1)
+uniform float u_invert;    // invert 0/1      (0.0)
+void main(){vec2 px=1./u_resolution;
+  vec3 tl=texture(iChannel0,v_uv+px*vec2(-1,1)).rgb,tc=texture(iChannel0,v_uv+px*vec2(0,1)).rgb,tr=texture(iChannel0,v_uv+px*vec2(1,1)).rgb;
+  vec3 ml=texture(iChannel0,v_uv+px*vec2(-1,0)).rgb,mr=texture(iChannel0,v_uv+px*vec2(1,0)).rgb;
+  vec3 bl=texture(iChannel0,v_uv+px*vec2(-1,-1)).rgb,bc=texture(iChannel0,v_uv+px*vec2(0,-1)).rgb,br=texture(iChannel0,v_uv+px*vec2(1,-1)).rgb;
+  vec3 gx=-tl-2.*ml-bl+tr+2.*mr+br,gy=-tl-2.*tc-tr+bl+2.*bc+br;
+  float e=smoothstep(u_thresh,u_thresh+.1,length(vec2(dot(gx,vec3(.299,.587,.114)),dot(gy,vec3(.299,.587,.114))))*u_strength);
+  fragColor=vec4(vec3(mix(e,1.-e,u_invert)),1.);}`,
+
+fx_mosaic:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_size;  // block size  (0.04)
+void main(){vec2 uv=floor(v_uv/u_size)*u_size+u_size*.5;fragColor=texture(iChannel0,clamp(uv,0.,1.));}`,
+
+fx_trails:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_decay;  // trail decay  (0.92)
+void main(){fragColor=vec4(texture(iChannel0,v_uv).rgb*u_decay,1.);}`,
+
+fx_luma_key:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform sampler2D iChannel0,iChannel1;
+uniform float u_low;   // key low   (0.2)
+uniform float u_high;  // key high  (0.8)
+uniform float u_gain;  // fg gain   (1.0)
+void main(){vec4 bg=texture(iChannel0,v_uv),fg=texture(iChannel1,v_uv)*u_gain;
+  fragColor=mix(bg,fg,smoothstep(u_low,u_high,dot(fg.rgb,vec3(.299,.587,.114))));}`,
+
+fx_chroma_key:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;
+uniform sampler2D iChannel0,iChannel1;
+uniform float u_key_r;  // key R    (0.1)
+uniform float u_key_g;  // key G    (0.7)
+uniform float u_key_b;  // key B    (0.1)
+uniform float u_thresh; // thresh   (0.4)
+uniform float u_smooth; // smooth   (0.1)
+void main(){vec3 key=vec3(u_key_r,u_key_g,u_key_b);vec4 fg=texture(iChannel1,v_uv);
+  fragColor=mix(texture(iChannel0,v_uv),fg,smoothstep(u_thresh,u_thresh+u_smooth,distance(fg.rgb,key)));}`,
+
+fx_colour_correct:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_lift;   // black lift  (0.0)
+uniform float u_gamma;  // midtones    (1.0)
+uniform float u_gain;   // whites      (1.0)
+uniform float u_sat;    // saturation  (1.0)
+uniform float u_hue;    // hue rot rad (0.0)
+void main(){vec3 c=texture(iChannel0,v_uv).rgb;
+  c=pow(clamp(c*u_gain+u_lift,0.,1.),vec3(1./max(u_gamma,.001)));
+  float luma=dot(c,vec3(.299,.587,.114));c=mix(vec3(luma),c,u_sat);
+  float ch=cos(u_hue),sh=sin(u_hue);
+  float I=dot(c,vec3(.596,-.274,-.321)),Q=dot(c,vec3(.211,-.523,.311));
+  c=clamp(vec3(luma+ch*I+sh*Q,luma-.274*(ch*I+sh*Q),luma-.321*ch*I+.311*sh*Q),0.,1.);
+  fragColor=vec4(c,1.);}`,
+
+fx_invert:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_mix;  // blend  (1.0)
+void main(){vec3 s=texture(iChannel0,v_uv).rgb;fragColor=vec4(mix(s,1.-s,u_mix),1.);}`,
+
+fx_scanlines:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;uniform vec2 u_resolution;
+uniform float u_strength;  // depth   (0.3)
+uniform float u_freq;      // lines   (1.0)
+void main(){vec4 s=texture(iChannel0,v_uv);
+  fragColor=vec4(s.rgb*(1.-u_strength*(.5+.5*sin(v_uv.y*u_resolution.y*u_freq*3.14159))),1.);}`,
+
+fx_mirror:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_mode;    // 0=h 1=v 2=quad 3=kaleid  (2.0)
+uniform float u_offset;  // mirror offset             (0.5)
+void main(){vec2 uv=v_uv;
+  if(u_mode<.5)uv.x=abs(uv.x-u_offset)+(u_offset-.5);
+  else if(u_mode<1.5)uv.y=abs(uv.y-u_offset)+(u_offset-.5);
+  else if(u_mode<2.5)uv=abs(uv-u_offset)+(u_offset-.5);
+  else{uv=abs(uv*2.-1.);uv=vec2(max(uv.x,uv.y),min(uv.x,uv.y))*.5+.25;}
+  fragColor=texture(iChannel0,clamp(uv,0.,1.));}`,
+
+fx_hue_rot:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_hue;  // hue rotation rad  (0.0)
+uniform float u_sat;  // saturation scale  (1.0)
+uniform float u_lum;  // luminance scale   (1.0)
+void main(){vec3 c=texture(iChannel0,v_uv).rgb;
+  float luma=dot(c,vec3(.299,.587,.114));
+  vec3 col=mix(vec3(luma),c,u_sat)*u_lum;
+  float ch=cos(u_hue),sh=sin(u_hue);
+  float I=dot(col,vec3(.596,-.274,-.321)),Q=dot(col,vec3(.211,-.523,.311));
+  col=clamp(vec3(luma+ch*I+sh*Q,luma-.274*(ch*I+sh*Q),luma-.321*ch*I+.311*sh*Q),0.,1.);
+  fragColor=vec4(col,1.);}`,
+
+fx_jones:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+// Jones colorizer: maps luminance bands to distinct hues (George Brown analog technique)
+uniform float u_bands;  // number of bands  (5.0)
+uniform float u_sat;    // saturation       (1.0)
+void main(){
+  float luma=dot(texture(iChannel0,v_uv).rgb,vec3(.299,.587,.114));
+  float band=floor(luma*u_bands)/u_bands;
+  // Each band gets a distinct hue based on its position in the spectrum
+  float h=band+(luma-band)*0.5;
+  vec4 K=vec4(1.,2./3.,1./3.,3.);
+  vec3 f=abs(fract(h+K.xyz)*6.-K.www);
+  vec3 col=mix(K.xxx,clamp(f-K.xxx,0.,1.),u_sat);
+  fragColor=vec4(col,1.);}`,
+
+// ─ RUTT/ETRA · SCANIMATE · PAIK/ABE ─────────────────────────────────────────
+
+fx_rutt_etra:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+// Rutt/Etra Video Synthesizer (1973) — scanline displacement by luminance
+// Each horizontal scan line is displaced vertically in proportion to brightness
+uniform float u_disp;    // displacement amount  (0.04)
+uniform float u_lines;   // number of scan lines (64.0)
+uniform float u_thick;   // line thickness       (0.4)
+uniform float u_col_r;   // R shift              (0.0)
+uniform float u_col_g;   // G shift              (0.2)
+uniform float u_col_b;   // B shift              (0.4)
+void main(){
+  vec2 uv=v_uv;
+  // Quantize to scan lines
+  float line=floor(uv.y*u_lines)/u_lines;
+  float lineCenter=line+.5/u_lines;
+  // Sample luma at this scan line (use center of line)
+  float luma=dot(texture(iChannel0,vec2(uv.x,lineCenter)).rgb,vec3(.299,.587,.114));
+  // Displace this line vertically by luma
+  float displaced=lineCenter+luma*u_disp;
+  // Distance from current pixel to this displaced line
+  float dist=abs(uv.y-displaced)/(1./u_lines*u_thick);
+  float beam=exp(-dist*dist*2.);
+  // Colour: tint by luma band
+  vec3 col=beam*vec3(.3+luma*u_col_r,.4+luma*u_col_g,.6+luma*u_col_b);
+  fragColor=vec4(col,1.);}`,
+
+fx_scanimate:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;uniform float u_time;
+// Scanimate (1969) — analog computer video, envelope-controlled warp + colour cycling
+uniform float u_wobble;  // warp amount   (0.03)
+uniform float u_freq;    // warp freq     (8.0)
+uniform float u_phase;   // phase offset  (0.0)
+uniform float u_hue;     // colour cycle  (0.0)
+uniform float u_speed;   // anim speed    (1.0)
+void main(){
+  float t=u_time*u_speed+u_phase;
+  // Envelope-controlled X and Y warp (sinusoidal, modulated by position)
+  float wx=sin(v_uv.y*u_freq*3.14159+t)*u_wobble*(1.-abs(v_uv.x-.5)*2.);
+  float wy=cos(v_uv.x*u_freq*3.14159+t*1.1)*u_wobble*.5;
+  vec2 warped=v_uv+vec2(wx,wy);
+  vec3 src=texture(iChannel0,clamp(warped,0.,1.)).rgb;
+  // Colour cycling via luma mapping (analogue saturation shift)
+  float luma=dot(src,vec3(.299,.587,.114));
+  float h=fract(luma+u_hue+u_time*.05);
+  vec4 K=vec4(1.,2./3.,1./3.,3.);vec3 f=abs(fract(h+K.xyz)*6.-K.www);
+  vec3 col=mix(src,mix(K.xxx,clamp(f-K.xxx,0.,1.),1.2),luma*.7);
+  fragColor=vec4(col,1.);}`,
+
+fx_paik_abe:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;uniform float u_time;
+// Nam June Paik / Shuya Abe Video Synthesizer (1972)
+// Hue rotation + feedback saturation boost + electron beam smear
+uniform float u_hue_bias;  // hue push      (0.3)
+uniform float u_decay;     // feedback amt  (0.85)
+uniform float u_smear;     // h-smear amt   (0.004)
+uniform float u_sat;       // sat boost     (1.4)
+void main(){
+  // Horizontal smear (simulates slow video amp response)
+  vec3 left=texture(iChannel0,v_uv-vec2(u_smear,0.)).rgb;
+  vec3 right=texture(iChannel0,v_uv+vec2(u_smear,0.)).rgb;
+  vec3 src=texture(iChannel0,v_uv).rgb*.7+left*.15+right*.15;
+  // Sat boost
+  float luma=dot(src,vec3(.299,.587,.114));
+  src=mix(vec3(luma),src,u_sat);
+  // Hue rotation biased by brightness (neon effect)
+  float h=fract(luma*1.5+u_hue_bias+u_time*.03);
+  vec4 K=vec4(1.,2./3.,1./3.,3.);vec3 f=abs(fract(h+K.xyz)*6.-K.www);
+  vec3 col=mix(src,mix(K.xxx,clamp(f-K.xxx,0.,1.),u_sat)*luma*1.5+src*u_decay,luma*.8);
+  fragColor=vec4(clamp(col,0.,1.),1.);}`,
+
+fx_videosynth:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform float u_time;
+// Analog video synthesizer — waveform-based colour generation (no input needed)
+// Models horizontal/vertical sync oscillators and LFO modulation
+uniform float u_h_freq;  // H oscillator freq  (8.0)
+uniform float u_v_freq;  // V oscillator freq  (6.0)
+uniform float u_lfo;     // LFO rate           (0.3)
+uniform float u_colour;  // colour mode 0..3   (0.0)
+void main(){
+  float t=u_time;
+  float lfo=sin(t*u_lfo*6.28318);
+  // Horizontal and vertical waveforms
+  float h=sin(v_uv.x*u_h_freq*6.28318+t*(1.+lfo*.2));
+  float v=sin(v_uv.y*u_v_freq*6.28318+t*.7);
+  float diag=sin((v_uv.x+v_uv.y)*5.*6.28318-t*1.3);
+  float r=sin(length(v_uv-.5)*12.-t*2.);
+  // Mode selection
+  float m=mod(u_colour,4.);
+  vec3 col;
+  if(m<1.)      col=vec3(h*.5+.5,v*.5+.5,diag*.5+.5);
+  else if(m<2.) col=vec3(r*.5+.5,h*v*.5+.5,sin(t+v_uv.x*3.)*.5+.5);
+  else if(m<3.) col=.5+.5*vec3(sin(h*3.14+v),cos(v*3.14),sin(r*2.));
+  else          col=vec3(h*h,diag*diag,v*v);
+  fragColor=vec4(col,1.);}`,
+
+// ─ PAINTBOX / HARRY FX ───────────────────────────────────────────────────────
+
+fx_dve_transform:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_scale;   // zoom      (1.0)
+uniform float u_pos_x;   // X pos     (0.5)
+uniform float u_pos_y;   // Y pos     (0.5)
+uniform float u_angle;   // rot rad   (0.0)
+uniform float u_border;  // border    (0.0)
+void main(){vec2 uv=v_uv-vec2(u_pos_x,u_pos_y);
+  float c=cos(u_angle),s=sin(u_angle);uv=mat2(c,s,-s,c)*uv;uv=uv/u_scale+.5;
+  if(uv.x<0.||uv.x>1.||uv.y<0.||uv.y>1.){
+    fragColor=vec4(vec3(step(1.-u_border*20.,max(abs(uv.x-.5)*2.,abs(uv.y-.5)*2.))),1.);return;}
+  fragColor=texture(iChannel0,uv);}`,
+
+fx_wipe_linear:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0,iChannel1;
+uniform float u_pos;    // position  (0.5)
+uniform float u_soft;   // softness  (0.02)
+uniform float u_angle;  // degrees   (0.0)
+void main(){float r=u_angle*.01745;vec2 d=vec2(cos(r),sin(r));
+  float alpha=smoothstep(u_pos-u_soft,u_pos+u_soft,dot(v_uv-.5,d)+.5);
+  fragColor=mix(texture(iChannel0,v_uv),texture(iChannel1,v_uv),alpha);}`,
+
+fx_wipe_radial:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0,iChannel1;
+uniform float u_pos;   // sweep 0..1  (0.5)
+uniform float u_soft;  // softness    (0.02)
+void main(){vec2 p=v_uv-.5;float angle=atan(p.x,p.y)/6.28318+.5;
+  fragColor=mix(texture(iChannel0,v_uv),texture(iChannel1,v_uv),smoothstep(u_pos-u_soft,u_pos+u_soft,angle));}`,
+
+fx_glow:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;uniform vec2 u_resolution;
+uniform float u_radius;    // blur radius   (0.008)
+uniform float u_strength;  // glow amount   (1.5)
+uniform float u_thresh;    // bloom thresh  (0.6)
+void main(){vec3 src=texture(iChannel0,v_uv).rgb;vec2 px=u_radius/u_resolution;
+  vec3 blur=vec3(0.);
+  for(int i=0;i<8;i++){float a=float(i)/8.*6.28318;blur+=texture(iChannel0,v_uv+vec2(cos(a),sin(a))*px).rgb;}
+  blur/=8.;float luma=dot(blur,vec3(.299,.587,.114));
+  fragColor=vec4(src+blur*max(0.,luma-u_thresh)/max(1.-u_thresh,.001)*u_strength,1.);}`,
+
+fx_film_grain:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;uniform float u_time;
+uniform float u_amount;  // grain amount  (0.08)
+uniform float u_size;    // grain size    (1.0)
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+void main(){vec3 s=texture(iChannel0,v_uv).rgb;
+  float g=hash(floor(v_uv*u_size*512.)+fract(u_time*17.3)*100.)-.5;
+  fragColor=vec4(clamp(s+g*u_amount,0.,1.),1.);}`,
+
+fx_dither:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;uniform vec2 u_resolution;
+uniform float u_levels;  // levels  (4.0)
+uniform float u_scale;   // scale   (1.0)
+float bayer(vec2 p){p=mod(p*u_scale,4.);int x=int(p.x),y=int(p.y);
+  int[16] m=int[16](0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5);return float(m[y*4+x])/16.;}
+void main(){vec3 s=texture(iChannel0,v_uv).rgb;
+  fragColor=vec4(clamp(floor(s*u_levels+bayer(v_uv*u_resolution))/u_levels,0.,1.),1.);}`,
+
+fx_chroma_aberration:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_aberr;   // aberration  (0.006)
+uniform float u_barrel;  // barrel dist (0.08)
+vec2 barrel(vec2 uv){vec2 p=uv-.5;return p*(1.+u_barrel*dot(p,p))+.5;}
+void main(){vec2 uv=barrel(v_uv);vec2 off=(uv-.5)*u_aberr;
+  float vig=1.-dot(v_uv-.5,v_uv-.5)*1.4;
+  fragColor=vec4(vec3(texture(iChannel0,uv-off).r,texture(iChannel0,uv).g,texture(iChannel0,uv+off).b)*vig,1.);}`,
+
+fx_halftone:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;uniform vec2 u_resolution;
+uniform float u_scale;  // dots per width  (80.0)
+uniform float u_angle;  // screen angle    (0.785)
+void main(){vec2 uv=v_uv*u_resolution;float c=cos(u_angle),s=sin(u_angle);
+  vec2 ruv=mat2(c,s,-s,c)*uv;vec2 cell=fract(ruv/u_scale)-.5;
+  float luma=dot(texture(iChannel0,v_uv).rgb,vec3(.299,.587,.114));
+  fragColor=vec4(vec3(smoothstep(sqrt(luma)*.7+.02,sqrt(luma)*.7,length(cell))),1.);}`,
+
+fx_paint_smear:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_angle;   // direction rad  (0.785)
+uniform float u_length;  // smear length   (0.02)
+uniform float u_steps;   // samples        (8.0)
+void main(){vec2 dir=vec2(cos(u_angle),sin(u_angle))*u_length/max(u_steps,1.);
+  vec3 col=vec3(0.);float n=max(u_steps,1.);
+  for(float i=0.;i<16.;i++){if(i>=n)break;col+=texture(iChannel0,v_uv+dir*i).rgb;}
+  fragColor=vec4(col/n,1.);}`,
+
+fx_zoom_blur:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_amount;  // blur amount  (0.02)
+uniform float u_cx;      // center X     (0.5)
+uniform float u_cy;      // center Y     (0.5)
+uniform float u_steps;   // samples      (8.0)
+void main(){vec2 center=vec2(u_cx,u_cy),dir=(v_uv-center)*u_amount;
+  vec3 col=vec3(0.);float n=max(u_steps,1.);
+  for(float i=0.;i<16.;i++){if(i>=n)break;col+=texture(iChannel0,v_uv-dir*i).rgb;}
+  fragColor=vec4(col/n,1.);}`,
+
+fx_rgb_split:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_r_x;  // R X offset  (0.01)
+uniform float u_r_y;  // R Y offset  (0.0)
+uniform float u_b_x;  // B X offset  (-0.01)
+uniform float u_b_y;  // B Y offset  (0.0)
+void main(){fragColor=vec4(
+  texture(iChannel0,v_uv+vec2(u_r_x,u_r_y)).r,
+  texture(iChannel0,v_uv).g,
+  texture(iChannel0,v_uv+vec2(u_b_x,u_b_y)).b,1.);}`,
+
+fx_feedback_zoom:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_zoom;   // zoom/frame  (1.005)
+uniform float u_angle;  // rot/frame   (0.005)
+uniform float u_decay;  // brightness  (0.97)
+uniform float u_cx;     // center X    (0.5)
+uniform float u_cy;     // center Y    (0.5)
+void main(){vec2 center=vec2(u_cx,u_cy),p=v_uv-center;
+  float c=cos(u_angle),s=sin(u_angle);p=mat2(c,s,-s,c)*p;
+  fragColor=vec4(texture(iChannel0,clamp(p/u_zoom+center,0.,1.)).rgb*u_decay,1.);}`,
+
+fx_vhs_glitch:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;uniform float u_time;
+// VHS tape artifact simulation
+uniform float u_jitter;  // scanline jitter  (0.004)
+uniform float u_noise;   // noise level      (0.05)
+uniform float u_streak;  // colour streak    (0.008)
+float hash(float n){return fract(sin(n)*43758.5453);}
+void main(){
+  vec2 uv=v_uv;
+  // Horizontal scanline jitter
+  float jb=hash(floor(uv.y*240.)+floor(u_time*30.));
+  uv.x+=mix(-u_jitter,u_jitter,step(.97,jb))*hash(floor(uv.y*180.)+u_time);
+  // Colour bleeding — R channel streaks right
+  vec3 col=vec3(
+    texture(iChannel0,clamp(uv+vec2(u_streak,0.),0.,1.)).r,
+    texture(iChannel0,clamp(uv,0.,1.)).g,
+    texture(iChannel0,clamp(uv-vec2(u_streak*.5,0.),0.,1.)).b);
+  // Luma noise
+  col+=u_noise*(hash(uv.x+uv.y*100.+u_time*7.)-.5);
+  fragColor=vec4(clamp(col,0.,1.),1.);}`,
+
+fx_crt_curve:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+// CRT barrel distortion + vignette + phosphor shadow mask
+uniform float u_barrel;  // barrel amount  (0.12)
+uniform float u_vig;     // vignette amt   (1.2)
+uniform float u_mask;    // shadow mask    (0.0)
+void main(){
+  vec2 uv=v_uv-.5;
+  uv*=1.+u_barrel*dot(uv,uv);
+  uv+=.5;
+  if(uv.x<0.||uv.x>1.||uv.y<0.||uv.y>1.){fragColor=vec4(0.);return;}
+  vec3 col=texture(iChannel0,uv).rgb;
+  // Vignette
+  col*=1.-u_vig*dot(v_uv-.5,v_uv-.5);
+  // RGB shadow mask
+  if(u_mask>0.01){
+    float mx=mod(gl_FragCoord.x,3.);
+    vec3 mask=vec3(step(mx,1.),step(1.,mx)*step(mx,2.),step(2.,mx));
+    col*=mix(vec3(1.),mask*1.5,.5*u_mask);}
+  fragColor=vec4(col,1.);}`,
+
+// ─ COMPOSITING ────────────────────────────────────────────────────────────────
+
+comp_add:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0,iChannel1;
+uniform float u_a;  // ch A gain  (1.0)
+uniform float u_b;  // ch B gain  (1.0)
+void main(){fragColor=vec4(clamp(texture(iChannel0,v_uv).rgb*u_a+texture(iChannel1,v_uv).rgb*u_b,0.,1.),1.);}`,
+
+comp_multiply:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0,iChannel1;
+uniform float u_mix;  // multiply↔screen blend  (0.0)
+void main(){vec3 a=texture(iChannel0,v_uv).rgb,b=texture(iChannel1,v_uv).rgb;
+  fragColor=vec4(mix(a*b,1.-(1.-a)*(1.-b),u_mix),1.);}`,
+
+comp_difference:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0,iChannel1;
+uniform float u_scale;  // output scale  (1.0)
+void main(){fragColor=vec4(abs(texture(iChannel0,v_uv).rgb-texture(iChannel1,v_uv).rgb)*u_scale,1.);}`,
+
+comp_overlay:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0,iChannel1;
+uniform float u_mix;   // blend  (1.0)
+void main(){vec3 a=texture(iChannel0,v_uv).rgb,b=texture(iChannel1,v_uv).rgb;
+  vec3 ov=mix(2.*a*b,1.-2.*(1.-a)*(1.-b),step(.5,a));
+  fragColor=vec4(mix(a,ov,u_mix),1.);}`,
+
+// ─ UTILITY ────────────────────────────────────────────────────────────────────
+
+util_passthrough:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_gain;   // brightness  (1.0)
+uniform float u_gamma;  // gamma       (1.0)
+void main(){fragColor=vec4(pow(texture(iChannel0,v_uv).rgb*u_gain,vec3(1./max(u_gamma,.001))),1.);}`,
+
+util_scope:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_opacity;  // scope opacity  (0.7)
+uniform float u_col;      // sample column  (0.5)
+void main(){vec3 src=texture(iChannel0,v_uv).rgb;
+  float luma=dot(texture(iChannel0,vec2(u_col,v_uv.y)).rgb,vec3(.299,.587,.114));
+  fragColor=vec4(mix(src,vec3(.2,1.,.4),smoothstep(.01,0.,abs(v_uv.x-luma))*u_opacity),1.);}`,
+
+util_histogram:`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;
+uniform float u_scale;    // bar scale    (1.0)
+uniform float u_opacity;  // overlay amt  (0.8)
+void main(){
+  vec3 src=texture(iChannel0,v_uv).rgb;
+  // Parade-style: R in left third, G in middle, B in right
+  vec3 hist=vec3(0.);float px=1./256.;
+  float zone=floor(v_uv.x*3.);
+  if(v_uv.y<.25*u_opacity){
+    // Sample histogram by reading column brightness
+    float b=zone<.5?src.r:zone<1.5?src.g:src.b;
+    float col=zone<.5?0.:zone<1.5?1.:2.;
+    float brightness=dot(texture(iChannel0,vec2(v_uv.x,0.5)).rgb,vec3(.299,.587,.114));
+    float bar=step(v_uv.y/(.25*u_opacity),brightness*u_scale);
+    hist=mix(vec3(0.),vec3(zone<.5,zone>0.&&zone<2.,zone>1.),bar)*.6;}
+  fragColor=vec4(mix(src,hist,step(.001,length(hist))),1.);}`,
+
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TEMPLATES v12 — extreme defaults, every node has OSC/MIDI-testable uniforms
+// Convention: uniforms set to EXTREME visible values so effect is immediately obvious
+// ══════════════════════════════════════════════════════════════════════════════
+const T={
+
+// ── START HERE ───────────────────────────────────────────────────────────────
+// FX LIBRARY TOUR: Loads every major FX type, 1 node each, labelled
+// Purpose: understand how the FX browser works and what each node does
+// Run this first. Click each node to see its uniforms in Properties panel.
+// OSC test: /scheng/node/{id}/uniform/{name} {value}
+fx_library_tour(){clearThen(()=>{
+  // Row 1: generators (no inputs)
+  ns([
+    ['gen_pw', 'shader_pass','① Plasma Gen',   40, 40],
+    ['gen_orb','shader_pass','② SDF Orbs',      40,160],
+    ['gen_col','shader_pass','③ Colour Wheel',  40,280],
+    ['gen_noi','shader_pass','④ Noise Field',   40,400],
+    ['gen_lis','shader_pass','⑤ Lissajous',    40,520],
+    // Row 2: FX (1 input each)
+    ['fx_col', 'shader_pass','⑥ Colorizer',   340, 40],
+    ['fx_pos', 'shader_pass','⑦ Posterize',   340,160],
+    ['fx_edg', 'shader_pass','⑧ Sobel Edge',  340,280],
+    ['fx_mir', 'shader_pass','⑨ Mirror/Kaleid',340,400],
+    ['fx_fbz', 'shader_pass','⑩ Feedback Zoom',340,520],
+    // Row 3: post/composite
+    ['fx_crt', 'shader_pass','⑪ CRT+Vignette',640, 40],
+    ['fx_vhs', 'shader_pass','⑫ VHS Glitch',  640,160],
+    ['fx_rutt','shader_pass','⑬ Rutt/Etra',   640,280],
+    ['out_0',  'pixels_out', 'OUT',            940,280],
+  ]);
+  setTimeout(()=>{
+    // Chain: plasma → colorizer → CRT → OUT
+    es([
+      ['gen_pw','out','fx_col','in'],
+      ['fx_col','out','fx_crt','in'],
+      ['fx_crt','out','out_0','in'],
+      // independent chains for inspection
+      ['gen_orb','out','fx_edg','in'],
+      ['gen_col','out','fx_fbz','in'],
+      ['gen_noi','out','fx_mir','in'],
+    ]);
+    ss([
+      ['gen_pw', FX.gen_plasma],
+      ['gen_orb',FX.gen_sdf_orbs],
+      ['gen_col',FX.gen_colourwheel],
+      ['gen_noi',FX.gen_noise],
+      ['gen_lis',FX.gen_lissajous],
+      ['fx_col', FX.fx_colorizer],
+      ['fx_pos', FX.fx_posterize],
+      ['fx_edg', FX.fx_edge],
+      ['fx_mir', FX.fx_mirror],
+      ['fx_fbz', FX.fx_feedback_zoom],
+      ['fx_crt', FX.fx_crt_curve],
+      ['fx_vhs', FX.fx_vhs_glitch],
+      ['fx_rutt',FX.fx_rutt_etra],
+    ],()=>{
+      // Set obvious defaults so each node shows clearly what it does
+      su([
+        // Generators — fast + vivid
+        ['gen_pw', 'u_scale',4.0], ['gen_pw', 'u_speed',1.5],
+        ['gen_orb','u_speed',0.8], ['gen_orb','u_radius',0.18],['gen_orb','u_glow',0.25],
+        ['gen_col','u_speed',0.4], ['gen_col','u_inner',0.1],  ['gen_col','u_outer',0.95],
+        ['gen_noi','u_scale',5.0], ['gen_noi','u_speed',0.5],
+        ['gen_lis','u_fx',3.0],    ['gen_lis','u_fy',2.0],     ['gen_lis','u_thick',0.008],
+        // FX — set extreme so they're obviously doing something
+        ['fx_col','u_cycles',4.0], ['fx_col','u_sat',1.0],     ['fx_col','u_shift',0.2],
+        ['fx_pos','u_levels',3.0],
+        ['fx_edg','u_strength',2.0],['fx_edg','u_thresh',0.05],['fx_edg','u_invert',1.0],
+        ['fx_mir','u_mode',3.0],   ['fx_mir','u_offset',0.5],
+        ['fx_fbz','u_zoom',1.012],  ['fx_fbz','u_angle',0.015],['fx_fbz','u_decay',0.94],
+        ['fx_crt','u_barrel',0.18],['fx_crt','u_vig',1.5],     ['fx_crt','u_mask',0.6],
+        ['fx_vhs','u_jitter',0.01],['fx_vhs','u_noise',0.12],  ['fx_vhs','u_streak',0.015],
+        ['fx_rutt','u_disp',0.08], ['fx_rutt','u_lines',32.0], ['fx_rutt','u_thick',0.6],
+      ]);
+      compile('FX Library Tour ✓  click each node → see its uniforms in Properties\n  Adjust u_scale/u_speed/u_cycles etc — all live via OSC/MIDI\n  OSC: /scheng/node/gen_pw/uniform/u_scale 8.0');
+    });
+  },200);
+})},
+
+// ── BASICS ────────────────────────────────────────────────────────────────────
+// MINIMAL: Simplest possible patch. Plasma generator → ShaderPass → Out.
+// Demonstrates: source node, shader_pass, pixels_out, wiring.
+// OSC: /scheng/node/gen/uniform/u_scale, /scheng/node/gen/uniform/u_speed
+minimal(){clearThen(()=>{
+  ns([
+    ['gen',  'shader_pass','① Plasma Source',   60,140],
+    ['pass', 'shader_pass','② Warp Pass',       300,140],
+    ['out',  'pixels_out', '③ Output',          540,140],
+  ]);
+  setTimeout(()=>{
+    es([['gen','out','pass','in'],['pass','out','out','in']]);
+    ss([
+      ['gen', FX.gen_plasma],
+      ['pass',`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;uniform float u_time;
+// Simple X/Y warp pass — start here to understand the shader_pass node
+uniform float u_warp;   // warp amount 0..0.1  (0.04)
+uniform float u_freq;   // warp frequency      (12.0)
+uniform float u_speed;  // time scale          (1.2)
+void main(){
+  float t=u_time*u_speed;
+  vec2 uv=v_uv;
+  uv.x+=u_warp*sin(uv.y*u_freq+t);
+  uv.y+=u_warp*cos(uv.x*u_freq+t*.7);
+  fragColor=texture(iChannel0,clamp(uv,0.,1.));}`],
+    ],()=>{
+      su([
+        ['gen', 'u_scale',4.0],  ['gen', 'u_speed',1.8],
+        ['pass','u_warp',0.04],  ['pass','u_freq',12.0], ['pass','u_speed',1.2],
+      ]);
+      compile('graph_minimal ✓\n  gen: u_scale (size) u_speed (rate)\n  pass: u_warp (intensity) u_freq (ripple) — ALL LIVE\n  OSC: /scheng/node/pass/uniform/u_warp 0.08');
+    });
+  },180);
+})},
+
+// CHAIN2: Two-stage processing. Plasma → warp → colour invert+aberration → Out.
+// Demonstrates: chaining FX nodes, per-node uniforms, named IDs for OSC.
+chain2(){clearThen(()=>{
+  ns([
+    ['src', 'shader_pass','Plasma Source',    40,140],
+    ['warp','shader_pass','XY Warp',         280,140],
+    ['post','shader_pass','Invert+Aberr',    520,140],
+    ['out', 'pixels_out', 'Output',          760,140],
+  ]);
+  setTimeout(()=>{
+    es([['src','out','warp','in'],['warp','out','post','in'],['post','out','out','in']]);
+    ss([
+      ['src', FX.gen_plasma],
+      ['warp',`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0;uniform float u_time;
+uniform float u_amt;    // warp amount   (0.06)
+uniform float u_freq;   // warp freq     (15.0)
+uniform float u_speed;  // time rate     (1.0)
+void main(){
+  float t=u_time*u_speed;
+  vec2 uv=v_uv;
+  uv.x+=u_amt*sin(uv.y*u_freq+t);
+  uv.y+=u_amt*cos(uv.x*u_freq*0.8+t*1.1);
+  fragColor=texture(iChannel0,clamp(uv,0.,1.));}`],
+      ['post',FX.fx_chroma_aberration],
+    ],()=>{
+      su([
+        ['src', 'u_scale', 3.5], ['src', 'u_speed',1.4],
+        ['warp','u_amt',  0.06], ['warp','u_freq', 15.0], ['warp','u_speed',1.0],
+        ['post','u_aberr',0.012],['post','u_barrel',0.12],
+      ]);
+      compile('graph_chain2 ✓\n  warp: u_amt (0..0.15) u_freq (5..30) — extreme live\n  post: u_aberr (0..0.02) u_barrel (0..0.3)\n  OSC: /scheng/node/warp/uniform/u_amt 0.15');
+    });
+  },180);
+})},
+
+// CROSSFADE MIXER: Two sources, live crossfade slider. The ur-example of live params.
+// Demonstrates: crossfade node, mix slider (no recompile), live param hotpatch.
+// OSC: /scheng/node/mix/mix 0.0..1.0
+mixer_builtin(){clearThen(()=>{
+  ns([
+    ['srcA','shader_pass','Source A — Plasma',    50,100],
+    ['srcB','shader_pass','Source B — Colour Whl',50,300],
+    ['mix', 'crossfade',  'Crossfade ← LIVE MIX', 320,200],
+    ['post','shader_pass','Post Grade',           560,200],
+    ['out', 'pixels_out', 'Output',               800,200],
+  ]);
+  setTimeout(()=>{
+    es([['srcA','out','mix','a'],['srcB','out','mix','b'],['mix','out','post','in'],['post','out','out','in']]);
+    ss([
+      ['srcA',FX.gen_plasma],
+      ['srcB',FX.gen_colourwheel],
+      ['post',FX.fx_colour_correct],
+    ],()=>{
+      su([
+        ['srcA','u_scale',5.0], ['srcA','u_speed',2.0],
+        ['srcB','u_speed',0.5], ['srcB','u_inner',0.05],['srcB','u_outer',1.0],
+        ['post','u_sat',  1.6], ['post','u_gain', 1.1], ['post','u_hue',0.0],
+      ]);
+      send({action:'set_mix',node_id:'mix',mix:0.5});
+      compile('crossfade mixer ✓\n  click mix → drag Mix 0..1 — NO RECOMPILE NEEDED ★\n  OSC: /scheng/node/mix/mix 0.75\n  srcA/srcB: u_scale u_speed — live\n  post: u_sat u_hue u_gain — live grade');
+    });
+  },180);
+})},
+
+// MATRIX MIX 4: Four sources into MatrixMix4, 4 independent weight sliders.
+// Demonstrates: matrix_mix4 node, per-input weights, 4-channel composition.
+// OSC: /scheng/node/mtx/weight0 .. weight3  each 0..1
+matrix4(){clearThen(()=>{
+  ns([
+    ['ch_r','shader_pass','CH1 Red Plasma',   40, 50],
+    ['ch_g','shader_pass','CH2 Green Scope',  40,170],
+    ['ch_b','shader_pass','CH3 Blue Cellular',40,290],
+    ['ch_w','shader_pass','CH4 Lissajous',    40,410],
+    ['mtx', 'matrix_mix4','MatrixMix4 ← 4 weights LIVE',320,230],
+    ['post','shader_pass','Grade',            570,230],
+    ['out', 'pixels_out', 'Output',           810,230],
+  ]);
+  setTimeout(()=>{
+    es([
+      ['ch_r','out','mtx','in0'],['ch_g','out','mtx','in1'],
+      ['ch_b','out','mtx','in2'],['ch_w','out','mtx','in3'],
+      ['mtx','out','post','in'],['post','out','out','in'],
+    ]);
+    ss([
+      ['ch_r',FX.gen_plasma],
+      ['ch_g',FX.gen_scope],
+      ['ch_b',FX.gen_cellular],
+      ['ch_w',FX.gen_lissajous],
+      ['post',FX.fx_colour_correct],
+    ],()=>{
+      su([
+        ['ch_r','u_scale',4.0],  ['ch_r','u_speed',2.0],
+        ['ch_g','u_freq', 5.0],  ['ch_g','u_amp',  0.6], ['ch_g','u_thick',0.008],
+        ['ch_b','u_scale',5.0],  ['ch_b','u_speed',0.5],
+        ['ch_w','u_fx',  5.0],   ['ch_w','u_fy',   4.0], ['ch_w','u_thick',0.006],
+        ['post','u_sat', 1.5],   ['post','u_gain', 1.0],
+      ]);
+      send({action:'set_weights',node_id:'mtx',weights:[0.6,0.2,0.1,0.1]});
+      compile('matrix_mix4 ✓\n  click mtx → 4 weight sliders — all LIVE\n  OSC: /scheng/node/mtx/weight0 1.0  (0..1 each)\n  Try: bring ch_g all the way up for scope-only');
+    });
+  },180);
+})},
+
+// ── FAIRLIGHT CVI ─────────────────────────────────────────────────────────────
+// CVI COLORIZER: Maps input luminance to a full spectrum palette. Core CVI technique.
+// Extreme: u_cycles=6 = 6 full rainbows across the luma range (psychedelic)
+// OSC: /scheng/node/col/uniform/u_cycles, u_shift, u_sat, u_lum
+cvi_colorizer(){clearThen(()=>{
+  ns([
+    ['gen','shader_pass','Plasma Generator',  60,140],
+    ['col','shader_pass','CVI Colorizer',     330,140],
+    ['out','pixels_out', 'Output',            600,140],
+  ]);
+  setTimeout(()=>{
+    es([['gen','out','col','in'],['col','out','out','in']]);
+    ss([['gen',FX.gen_plasma],['col',FX.fx_colorizer]],()=>{
+      su([
+        ['gen','u_scale',5.0],   ['gen','u_speed',1.5],
+        ['col','u_cycles',6.0],  // EXTREME: 6 rainbow cycles — try 0.5 to 12
+        ['col','u_shift', 0.0],  // hue offset: 0..1 full spectrum shift
+        ['col','u_sat',   1.0],  // 0=greyscale, 1=full colour, 2=hypersaturate
+        ['col','u_lum',   0.0],  // 0=pure mapped colour, 1=original luma preserved
+      ]);
+      compile('CVI Colorizer ✓\n  u_cycles: 0.5=gentle  6=psychedelic  12=stroboscopic\n  u_shift: 0..1 rotates entire palette\n  u_sat: 0=grey  2=hypersaturated\n  u_lum: 0=mapped  1=original preserved\n  OSC: /scheng/node/col/uniform/u_cycles 8.0');
+    });
+  },180);
+})},
+
+// CVI POSTERIZE + EDGE: Classic CVI "pop art" look. SDF orbs → posterize, then edge detect, blend.
+// Extreme: u_levels=2 = hard 2-level posterize, u_invert=1 = white edges on black
+// OSC: mix slider, u_levels, u_strength
+cvi_posterize_edge(){clearThen(()=>{
+  ns([
+    ['gen', 'shader_pass','SDF Orbs Source',   60,100],
+    ['post','shader_pass','CVI Posterize',     320,100],
+    ['edge','shader_pass','Sobel Edge',        320,270],
+    ['mix', 'crossfade',  'Blend: post↔edge', 560,185],
+    ['out', 'pixels_out', 'Output',            790,185],
+  ]);
+  setTimeout(()=>{
+    es([
+      ['gen','out','post','in'],['gen','out','edge','in'],
+      ['post','out','mix','a'],['edge','out','mix','b'],
+      ['mix','out','out','in'],
+    ]);
+    ss([['gen',FX.gen_sdf_orbs],['post',FX.fx_posterize],['edge',FX.fx_edge]],()=>{
+      su([
+        ['gen', 'u_speed', 0.7],  ['gen', 'u_radius',0.22],['gen','u_glow',0.2],
+        ['post','u_levels',2.0],  // EXTREME: 2 = brutal hard posterize (try 2..8)
+        ['post','u_gamma', 1.2],
+        ['edge','u_strength',3.0],// EXTREME: visible thick edges
+        ['edge','u_thresh', 0.04],
+        ['edge','u_invert', 1.0], // 1=white edges on black bg (classic CVI)
+      ]);
+      send({action:'set_mix',node_id:'mix',mix:0.0}); // start on posterize
+      compile('CVI posterize+edge ✓\n  mix slider: 0=posterize  1=edge only  0.5=blend\n  post.u_levels: 2=brutal  8=smooth  (try 2,3,4)\n  edge.u_strength: 0..5 (3=thick outlines)\n  edge.u_invert: 0=black outlines  1=white on black\n  OSC: /scheng/node/mix/mix 0.5');
+    });
+  },180);
+})},
+
+// CVI FEEDBACK ZOOM: Self-referential zoom/rotate feedback. Hypnotic tunnel effect.
+// Extreme: u_zoom=1.02 + u_angle=0.02 = strong spiralling vortex
+// OSC: u_zoom, u_angle, u_decay, u_cx, u_cy
+cvi_feedback_zoom(){clearThen(()=>{
+  ns([
+    ['gen','shader_pass','Colour Wheel Src',  60,140],
+    ['fbz','shader_pass','Feedback Zoom',    330,140],
+    ['out','pixels_out', 'Output',            600,140],
+  ]);
+  setTimeout(()=>{
+    es([['gen','out','fbz','in'],['fbz','out','out','in']]);
+    ss([['gen',FX.gen_colourwheel],['fbz',FX.fx_feedback_zoom]],()=>{
+      su([
+        ['gen','u_speed', 0.2],
+        ['fbz','u_zoom',  1.018],  // EXTREME: strong zoom (1.001=subtle, 1.03=fast vortex)
+        ['fbz','u_angle', 0.018],  // EXTREME: fast spin (0=no rotate, 0.03=fast)
+        ['fbz','u_decay', 0.94],   // 0.9=fast fade, 0.99=long trails
+        ['fbz','u_cx',    0.5],    // centre X: move off-centre for asymmetric spiral
+        ['fbz','u_cy',    0.5],
+      ]);
+      compile('CVI feedback zoom ✓  HYPNOTIC SPIRAL\n  u_zoom: 1.001=gentle  1.018=vortex  1.03=fast collapse\n  u_angle: 0=no spin  0.018=spin  -0.018=reverse\n  u_decay: 0.9=short trails  0.99=long trails  (>1.0=explosion!)\n  u_cx/cy: move centre for asymmetric spirals\n  OSC: /scheng/node/fbz/uniform/u_zoom 1.025');
+    });
+  },180);
+})},
+
+// CVI COLOUR CORRECT: Full broadcast-grade colour corrector on vivid source.
+// Extreme defaults pushed so every slider visibly does something.
+// OSC: u_lift, u_gamma, u_gain, u_sat, u_hue + sc.u_strength
+cvi_colour_correct(){clearThen(()=>{
+  ns([
+    ['gen','shader_pass','Plasma Source',   60,140],
+    ['cc', 'shader_pass','Colour Correct',  310,140],
+    ['sc', 'shader_pass','CRT Scanlines',   580,140],
+    ['out','pixels_out', 'Output',          840,140],
+  ]);
+  setTimeout(()=>{
+    es([['gen','out','cc','in'],['cc','out','sc','in'],['sc','out','out','in']]);
+    ss([['gen',FX.gen_plasma],['cc',FX.fx_colour_correct],['sc',FX.fx_scanlines]],()=>{
+      su([
+        ['gen','u_scale',4.0],   ['gen','u_speed',1.5],
+        ['cc', 'u_lift',  0.0],  // black lift: 0=normal, 0.2=milky blacks, -0.1=crush
+        ['cc', 'u_gamma', 1.0],  // midtones: 0.5=dark, 1.5=bright
+        ['cc', 'u_gain',  1.2],  // whites: 1=normal, 2=blown out, 0.5=dim
+        ['cc', 'u_sat',   2.0],  // EXTREME: 2=hypersaturated (try 0=greyscale, 3=neon)
+        ['cc', 'u_hue',   0.0],  // hue rotation: 0..3.14 rad
+        ['sc', 'u_strength',0.5],['sc','u_freq',1.0],
+      ]);
+      compile('CVI colour correct ✓\n  u_sat: 0=greyscale  1=normal  2=vivid  3=neon\n  u_hue: 0..3.14 rad full hue rotation\n  u_lift: -0.1=crush blacks  0=normal  0.2=milky\n  u_gamma: 0.5=dark  1=normal  1.5=bright mids\n  sc.u_strength: 0=no lines  1=heavy CRT\n  OSC: /scheng/node/cc/uniform/u_sat 3.0');
+    });
+  },180);
+})},
+
+// CVI MIRROR KALEIDOSCOPE: 4 mirror modes from 1 uniform. Vivid source.
+// u_mode: 0=horizontal  1=vertical  2=quad-mirror  3=kaleidoscope
+// OSC: u_mode (0..3), u_offset (0..1)
+cvi_mirror_kaleid(){clearThen(()=>{
+  ns([
+    ['gen','shader_pass','SDF Orbs Source',  60,140],
+    ['mir','shader_pass','Mirror/Kaleid',   330,140],
+    ['glo','shader_pass','Glow Post',       580,140],
+    ['out','pixels_out', 'Output',          820,140],
+  ]);
+  setTimeout(()=>{
+    es([['gen','out','mir','in'],['mir','out','glo','in'],['glo','out','out','in']]);
+    ss([['gen',FX.gen_sdf_orbs],['mir',FX.fx_mirror],['glo',FX.fx_glow]],()=>{
+      su([
+        ['gen','u_speed', 0.6],  ['gen','u_radius',0.22], ['gen','u_glow',0.3],
+        ['mir','u_mode',  3.0],  // 3=kaleidoscope (try 0,1,2,3)
+        ['mir','u_offset',0.5],  // mirror axis position
+        ['glo','u_radius',0.01], ['glo','u_strength',2.5],['glo','u_thresh',0.3],
+      ]);
+      compile('CVI mirror+kaleid ✓\n  mir.u_mode: 0=horiz  1=vert  2=quad  3=kaleid\n  mir.u_offset: axis position (0..1) — try 0.3 in kaleid\n  glo.u_strength: 0=no glow  3=intense bloom\n  OSC: /scheng/node/mir/uniform/u_mode 2.0');
+    });
+  },180);
+})},
+
+// CVI JONES STROBE: Jones colorizer (luma band→hue) + strobe/freeze.
+// Extreme: u_bands=8, u_sat=2.0, strobe rate 16Hz
+// OSC: u_bands, u_sat, u_rate, u_duty
+cvi_jones_strobe(){clearThen(()=>{
+  ns([
+    ['gen',  'shader_pass','Noise Source',      60,140],
+    ['jones','shader_pass','Jones Colorizer',   310,140],
+    ['strb', 'shader_pass','Strobe/Freeze',     560,140],
+    ['out',  'pixels_out', 'Output',             810,140],
+  ]);
+  setTimeout(()=>{
+    es([['gen','out','jones','in'],['jones','out','strb','in'],['strb','out','out','in']]);
+    ss([['gen',FX.gen_noise],['jones',FX.fx_jones],['strb',FX.fx_strobe]],()=>{
+      su([
+        ['gen',  'u_scale',5.0],  ['gen','u_speed',0.8],
+        ['jones','u_bands',8.0],  // EXTREME: 8 discrete colour bands (try 2..12)
+        ['jones','u_sat',  2.0],  // EXTREME: 2=vivid, 0.5=pastel
+        ['strb', 'u_rate', 8.0],  // strobe rate Hz (try 2..30)
+        ['strb', 'u_duty', 0.5],  // 0.1=brief flash  0.9=mostly on
+      ]);
+      compile('CVI Jones+strobe ✓\n  jones.u_bands: 2=brutal posterize  8=rainbow  12=fine\n  jones.u_sat: 0=grey  1=normal  2=vivid\n  strb.u_rate: 2=slow flash  8=medium  24=fast\n  strb.u_duty: 0.1=brief flash  0.5=50/50  0.9=mostly on\n  OSC: /scheng/node/jones/uniform/u_bands 4.0');
+    });
+  },180);
+})},
+
+// ── RUTT/ETRA · SCANIMATE · PAIK/ABE ─────────────────────────────────────────
+// RUTT/ETRA: 1973 scan-line displacement synthesizer.
+// Extreme: u_disp=0.12 = heavy displacement, u_lines=32 = visible thick scan lines
+// OSC: u_disp, u_lines, u_thick, u_col_r/g/b
+rutt_etra(){clearThen(()=>{
+  ns([
+    ['src', 'shader_pass','Input Source',   60,140],
+    ['rutt','shader_pass','Rutt/Etra Warp', 330,140],
+    ['out', 'pixels_out', 'Output',          600,140],
+  ]);
+  setTimeout(()=>{
+    es([['src','out','rutt','in'],['rutt','out','out','in']]);
+    ss([['src',FX.gen_sdf_orbs],['rutt',FX.fx_rutt_etra]],()=>{
+      su([
+        ['src', 'u_speed', 0.5],  ['src','u_radius',0.22],
+        ['rutt','u_disp',  0.12], // EXTREME: heavy displacement (0=flat, 0.06=medium, 0.2=max)
+        ['rutt','u_lines', 32.0], // low line count = clearly visible bands (try 16..128)
+        ['rutt','u_thick', 0.7],  // line thickness (0.2=thin, 1.0=fills gaps)
+        ['rutt','u_col_r', 0.8],  // R tint on displaced lines
+        ['rutt','u_col_g', 0.1],
+        ['rutt','u_col_b', 0.9],  // B tint — try RGB combinations
+      ]);
+      compile('Rutt/Etra 1973 ✓  SCANLINE WARP SYNTHESIZER\n  u_disp: 0=flat  0.06=subtle  0.12=heavy  0.2=max distort\n  u_lines: 128=fine scan  32=thick bands  8=extreme\n  u_thick: 0.2=hair thin  1.0=fills all gaps\n  u_col_r/g/b: tint each displaced line by colour\n  OSC: /scheng/node/rutt/uniform/u_disp 0.2');
+    });
+  },180);
+})},
+
+// SCANIMATE: 1969 analog computer warp. Sinusoidal envelope-controlled distortion.
+// Extreme: u_wobble=0.08 = heavy visible warp, u_freq=12 = tight ripples
+// OSC: u_wobble, u_freq, u_phase, u_hue, u_speed
+scanimate(){clearThen(()=>{
+  ns([
+    ['src','shader_pass','Colour Wheel Src',  60,140],
+    ['sca','shader_pass','Scanimate Warp',   330,140],
+    ['out','pixels_out', 'Output',            610,140],
+  ]);
+  setTimeout(()=>{
+    es([['src','out','sca','in'],['sca','out','out','in']]);
+    ss([['src',FX.gen_colourwheel],['sca',FX.fx_scanimate]],()=>{
+      su([
+        ['src','u_speed', 0.3],
+        ['sca','u_wobble',0.08], // EXTREME: very visible wave distortion (try 0.01..0.15)
+        ['sca','u_freq',  12.0], // frequency of envelope wave (1=one big wave, 20=tight ripples)
+        ['sca','u_phase', 0.0],  // phase — automatable for smooth animation
+        ['sca','u_hue',   0.5],  // colour cycle amount (0=no shift, 1=full cycle)
+        ['sca','u_speed', 1.5],  // animation rate
+      ]);
+      compile('Scanimate 1969 ✓  ANALOG ENVELOPE WARP\n  u_wobble: 0.01=subtle  0.08=visible  0.15=extreme warp\n  u_freq: 1=one big wave  12=ripple  20=tight interference\n  u_phase: automate 0..6.28 for smooth morph\n  u_hue: 0=no colour shift  1=full cycle\n  OSC: /scheng/node/sca/uniform/u_wobble 0.12');
+    });
+  },180);
+})},
+
+// PAIK/ABE VIDEO SYNTHESIZER 1972: Hue rotation + sat boost + horizontal smear.
+// Extreme: u_sat=2.5 = intense neon, u_smear=0.015 = visible H-smear
+// OSC: u_hue_bias, u_decay, u_smear, u_sat
+paik_abe(){clearThen(()=>{
+  ns([
+    ['src', 'shader_pass','Plasma Source',   60,140],
+    ['paik','shader_pass','Paik/Abe Synth',  320,140],
+    ['out', 'pixels_out', 'Output',           600,140],
+  ]);
+  setTimeout(()=>{
+    es([['src','out','paik','in'],['paik','out','out','in']]);
+    ss([['src',FX.gen_plasma],['paik',FX.fx_paik_abe]],()=>{
+      su([
+        ['src', 'u_scale',  4.5], ['src','u_speed',1.6],
+        ['paik','u_hue_bias',0.5],// EXTREME: strong hue push (0=no push, 1=full rotate)
+        ['paik','u_decay',  0.88],// feedback brightness (0.8=fast fade, 0.97=long)
+        ['paik','u_smear',  0.015],// H-smear (0=none, 0.02=visible streak)
+        ['paik','u_sat',    2.5], // EXTREME: neon saturation (1=normal, 3=extreme)
+      ]);
+      compile('Paik/Abe 1972 ✓  VIDEO SYNTHESIZER — NEON COLOUR\n  u_sat: 1=normal  2.5=neon  0=greyscale\n  u_hue_bias: 0=no shift  0.5=half rotation  1=full cycle\n  u_smear: 0=clean  0.015=H-smear  0.03=heavy streak\n  u_decay: 0.8=fast fade  0.97=long persistence\n  OSC: /scheng/node/paik/uniform/u_sat 3.0');
+    });
+  },180);
+})},
+
+// VIDEO SYNTH WARP: Pure waveform synthesis → Rutt/Etra → grade. No video input.
+// Extreme: h_freq=12, v_freq=9 = dense interference, u_disp=0.06 = clear warp
+// OSC: u_h_freq, u_v_freq, u_lfo, u_colour, u_disp, u_sat
+videosynth_warp(){clearThen(()=>{
+  ns([
+    ['vs',  'shader_pass','Video Synth',    60,140],
+    ['rutt','shader_pass','Rutt/Etra',     310,140],
+    ['cc',  'shader_pass','Grade',         560,140],
+    ['out', 'pixels_out', 'Output',         810,140],
+  ]);
+  setTimeout(()=>{
+    es([['vs','out','rutt','in'],['rutt','out','cc','in'],['cc','out','out','in']]);
+    ss([['vs',FX.fx_videosynth],['rutt',FX.fx_rutt_etra],['cc',FX.fx_colour_correct]],()=>{
+      su([
+        ['vs',  'u_h_freq',12.0],  // EXTREME: dense H oscillations (1=slow, 20=dense)
+        ['vs',  'u_v_freq', 9.0],
+        ['vs',  'u_lfo',    0.8],  // LFO modulation rate
+        ['vs',  'u_colour', 1.0],  // 0..3 colour mode (integer snap)
+        ['rutt','u_disp',   0.06], ['rutt','u_lines',48.0],['rutt','u_thick',0.5],
+        ['cc',  'u_sat',    1.8],  ['cc',  'u_gamma', 0.9],['cc','u_gain',1.1],
+      ]);
+      compile('video synth warp ✓  PURE SYNTHESIS\n  vs.u_h_freq: 1=slow wave  12=dense  20=interference\n  vs.u_colour: 0,1,2,3 = 4 colour modes (snap integer)\n  vs.u_lfo: 0=no modulation  1=strong morph\n  rutt.u_disp: 0=flat  0.06=warped\n  OSC: /scheng/node/vs/uniform/u_h_freq 20.0');
+    });
+  },180);
+})},
+
+// ── PAINTBOX / HARRY ──────────────────────────────────────────────────────────
+// PAINTBOX DVE: Digital Video Effects — scale, position, rotate, border.
+// Extreme: u_scale=0.35 = small box with thick border, u_angle=0.5 = tilted
+// OSC: u_scale, u_pos_x, u_pos_y, u_angle, u_border
+pb_dve(){clearThen(()=>{
+  ns([
+    ['gen','shader_pass','Grid Source',     60,140],
+    ['dve','shader_pass','DVE Transform',  330,140],
+    ['out','pixels_out', 'Output',          590,140],
+  ]);
+  setTimeout(()=>{
+    es([['gen','out','dve','in'],['dve','out','out','in']]);
+    ss([['gen',FX.gen_grid],['dve',FX.fx_dve_transform]],()=>{
+      su([
+        ['gen','u_cols', 12.0], ['gen','u_rows',8.0],  ['gen','u_speed',0.3],
+        ['dve','u_scale', 0.35],// EXTREME: small box = clearly visible DVE effect
+        ['dve','u_pos_x', 0.65],// off-centre
+        ['dve','u_pos_y', 0.4],
+        ['dve','u_angle', 0.4], // tilted ~23 degrees
+        ['dve','u_border',0.06],// thick border = clearly visible
+      ]);
+      compile('Paintbox DVE ✓  DIGITAL VIDEO EFFECTS\n  u_scale: 0.1=tiny  0.35=quarter  1=fullscreen  2=overflow\n  u_pos_x/y: 0..1 position (0.5,0.5=centre)\n  u_angle: rad (-3.14..3.14) — live rotation\n  u_border: 0=none  0.05=thin  0.15=thick border\n  OSC: /scheng/node/dve/uniform/u_scale 0.5');
+    });
+  },180);
+})},
+
+// PAINTBOX LUMA KEY: Key FG source over BG by luminance range.
+// Extreme: wide key range, colorized FG for clear visual separation
+// OSC: u_low, u_high, u_gain
+pb_luma_key(){clearThen(()=>{
+  ns([
+    ['bg', 'shader_pass','BG — Plasma',     40,100],
+    ['fg', 'shader_pass','FG — SDF Orbs',   40,290],
+    ['key','shader_pass','Luma Key',        330,195],
+    ['out','pixels_out', 'Output',           590,195],
+  ]);
+  setTimeout(()=>{
+    es([['bg','out','key','in'],['fg','out','key','in'],['key','out','out','in']]);
+    ss([
+      ['bg', FX.gen_plasma],
+      ['fg', FX.gen_sdf_orbs],
+      ['key',FX.fx_luma_key],
+    ],()=>{
+      su([
+        ['bg', 'u_scale', 3.0],  ['bg','u_speed',1.0],
+        ['fg', 'u_speed', 0.8],  ['fg','u_radius',0.24],['fg','u_glow',0.3],
+        ['key','u_low',   0.05], // wide key: pass almost everything bright
+        ['key','u_high',  0.98], // EXTREME wide key = see entire FG visible
+        ['key','u_gain',  1.4],  // boost FG so it's clearly distinct
+      ]);
+      compile('Paintbox luma key ✓  FG keyed over BG by luminance\n  u_low: raise = key out darker FG areas\n  u_high: lower = key out brighter areas\n  Try u_low=0.3, u_high=0.7 for midrange key\n  u_gain: boost FG brightness (1..2)\n  OSC: /scheng/node/key/uniform/u_low 0.3');
+    });
+  },180);
+})},
+
+// PAINTBOX CHROMA KEY: Green-screen style key by colour distance.
+// Extreme: grid source has clear green lines = easy to key
+// OSC: u_key_r/g/b, u_thresh, u_smooth
+pb_chroma_key(){clearThen(()=>{
+  ns([
+    ['bg', 'shader_pass','BG — Colourwheel', 40,100],
+    ['fg', 'shader_pass','FG — Grid',        40,290],
+    ['key','shader_pass','Chroma Key',       330,195],
+    ['out','pixels_out', 'Output',            590,195],
+  ]);
+  setTimeout(()=>{
+    es([['bg','out','key','in'],['fg','out','key','in'],['key','out','out','in']]);
+    ss([
+      ['bg', FX.gen_colourwheel],
+      ['fg', FX.gen_grid],
+      ['key',FX.fx_chroma_key],
+    ],()=>{
+      su([
+        ['bg', 'u_speed', 0.3],
+        ['fg', 'u_cols', 10.0],  ['fg','u_rows',7.0],  ['fg','u_lw',0.04],
+        ['key','u_key_r', 0.04], // key colour = dark green (the grid lines)
+        ['key','u_key_g', 0.4],
+        ['key','u_key_b', 0.04],
+        ['key','u_thresh', 0.35],// distance threshold
+        ['key','u_smooth', 0.15],// softness at edges
+      ]);
+      compile('Paintbox chroma key ✓  COLOUR DISTANCE KEY\n  u_key_r/g/b: set to the colour you want to REMOVE from FG\n  u_thresh: 0.1=tight key  0.4=wide  0.8=almost all\n  u_smooth: 0=hard edge  0.2=soft AA\n  OSC: /scheng/node/key/uniform/u_thresh 0.2');
+    });
+  },180);
+})},
+
+// PAINTBOX PAINT CHAIN: Smear → Bloom → Film Grain. Classic painted look.
+// Extreme: long smear + strong glow + heavy grain = impressionist painting effect
+// OSC: u_length (smear), u_strength (bloom), u_amount (grain)
+pb_paint_chain(){clearThen(()=>{
+  ns([
+    ['gen','shader_pass','Noise Source',  40,140],
+    ['smr','shader_pass','Paint Smear',  280,140],
+    ['glo','shader_pass','Bloom',        520,140],
+    ['grn','shader_pass','Film Grain',   760,140],
+    ['out','pixels_out', 'Output',       1000,140],
+  ]);
+  setTimeout(()=>{
+    es([['gen','out','smr','in'],['smr','out','glo','in'],['glo','out','grn','in'],['grn','out','out','in']]);
+    ss([['gen',FX.gen_noise],['smr',FX.fx_paint_smear],['glo',FX.fx_glow],['grn',FX.fx_film_grain]],()=>{
+      su([
+        ['gen','u_scale', 4.0],  ['gen','u_speed', 0.3],
+        ['smr','u_angle', 0.785],
+        ['smr','u_length',0.06], // EXTREME: long brush strokes (0.01=short, 0.1=very long)
+        ['smr','u_steps', 12.0], // more steps = smoother smear
+        ['glo','u_radius',0.012],
+        ['glo','u_strength',3.0],// EXTREME: strong bloom (0.5=subtle, 4=glowing)
+        ['glo','u_thresh', 0.3], // lower = more pixels bloom
+        ['grn','u_amount', 0.18],// EXTREME: heavy grain (0.02=fine, 0.2=coarse)
+        ['grn','u_size',   2.0], // grain clump size
+      ]);
+      compile('Paintbox paint chain ✓  PAINTED TEXTURE\n  smr.u_length: 0.01=short  0.06=medium  0.12=long strokes\n  smr.u_angle: direction rad (auto 0.785=diagonal)\n  glo.u_strength: 0.5=subtle  3=strong  5=extreme\n  grn.u_amount: 0.02=fine  0.18=heavy grain\n  OSC: /scheng/node/smr/uniform/u_length 0.1');
+    });
+  },180);
+})},
+
+// PAINTBOX HALFTONE: Bayer ordered dither + halftone dot screen. Print simulation.
+// Extreme: u_levels=2 + u_scale=40 = large halftone dots, clearly visible
+// OSC: u_levels (dither), u_scale (dot size), u_angle (screen angle), mix
+pb_dither_halftone(){clearThen(()=>{
+  ns([
+    ['gen','shader_pass','Plasma Source',  60,100],
+    ['dit','shader_pass','Bayer Dither',  320,100],
+    ['ht', 'shader_pass','Halftone Dots', 320,280],
+    ['mix','crossfade',  'Dither↔Halftone',560,190],
+    ['out','pixels_out', 'Output',          800,190],
+  ]);
+  setTimeout(()=>{
+    es([
+      ['gen','out','dit','in'],['gen','out','ht','in'],
+      ['dit','out','mix','a'],['ht','out','mix','b'],
+      ['mix','out','out','in'],
+    ]);
+    ss([['gen',FX.gen_plasma],['dit',FX.fx_dither],['ht',FX.fx_halftone]],()=>{
+      su([
+        ['gen','u_scale',  4.0], ['gen','u_speed',1.2],
+        ['dit','u_levels', 2.0], // EXTREME: 2-level dither = black/white only
+        ['dit','u_scale',  2.0], // dither pattern scale
+        ['ht', 'u_scale',  40.0],// EXTREME: large halftone dots (20=small, 120=tiny)
+        ['ht', 'u_angle',  0.785],
+      ]);
+      send({action:'set_mix',node_id:'mix',mix:0.5});
+      compile('Paintbox halftone ✓  PRINT SIMULATION\n  mix: 0=pure dither  0.5=blend  1=pure halftone\n  dit.u_levels: 2=black/white  4=4-shade  8=smooth\n  ht.u_scale: 20=fine dots  40=medium  80=coarse\n  ht.u_angle: screen angle 0..3.14\n  OSC: /scheng/node/mix/mix 0.0  then /scheng/node/mix/mix 1.0');
+    });
+  },180);
+})},
+
+// HARRY WIPE SUITE: Linear + radial wipes with softness. Broadcast transition toolkit.
+// Both wipes independently addressable via OSC for live switching.
+// OSC: wl.u_pos, wl.u_angle, wr2.u_pos — all live
+pb_wipe(){clearThen(()=>{
+  ns([
+    ['srcA','shader_pass','Source A — Wheel',  40,100],
+    ['srcB','shader_pass','Source B — Plasma', 40,280],
+    ['wl',  'shader_pass','Linear Wipe',       310,100],
+    ['wr2', 'shader_pass','Radial Wipe',       310,280],
+    ['mix', 'crossfade',  'Select wipe type',  560,190],
+    ['out', 'pixels_out', 'Output',             800,190],
+  ]);
+  setTimeout(()=>{
+    es([
+      ['srcA','out','wl','in'], ['srcB','out','wl','in'],
+      ['srcA','out','wr2','in'],['srcB','out','wr2','in'],
+      ['wl','out','mix','a'],   ['wr2','out','mix','b'],
+      ['mix','out','out','in'],
+    ]);
+    ss([
+      ['srcA',FX.gen_colourwheel],
+      ['srcB',FX.gen_plasma],
+      ['wl',  FX.fx_wipe_linear],
+      ['wr2', FX.fx_wipe_radial],
+    ],()=>{
+      su([
+        ['srcA','u_speed', 0.3],
+        ['srcB','u_scale', 4.0],['srcB','u_speed',1.5],
+        ['wl',  'u_pos',   0.5], // wipe position 0..1 — automate for transition
+        ['wl',  'u_soft',  0.02],// 0=hard cut  0.1=soft
+        ['wl',  'u_angle', 0.0], // wipe direction degrees
+        ['wr2', 'u_pos',   0.5], // radial sweep position
+        ['wr2', 'u_soft',  0.02],
+      ]);
+      send({action:'set_mix',node_id:'mix',mix:0.0}); // start on linear wipe
+      compile('Harry wipe suite ✓  BROADCAST TRANSITIONS\n  mix: 0=linear wipe  1=radial wipe\n  wl.u_pos: 0..1 sweeps A→B (automate for transition)\n  wl.u_angle: 0=left→right  90=top→bottom  45=diagonal\n  wr2.u_pos: 0..1 clock wipe\n  OSC: /scheng/node/wl/uniform/u_pos 0.0 → 1.0 (transition)');
+    });
+  },180);
+})},
+
+// ── GENERATIVE ────────────────────────────────────────────────────────────────
+// ORB FEEDBACK: SDF orbs → zoom/rotate feedback → grade. Beautiful spirals.
+// Extreme: u_zoom=1.015 + fast decay = clear accumulating trails
+// OSC: u_zoom, u_angle, u_decay, u_sat
+gen_orb_feedback(){clearThen(()=>{
+  ns([
+    ['gen','shader_pass','SDF Orbs',      60,140],
+    ['fbz','shader_pass','Feedback Zoom', 320,140],
+    ['cc', 'shader_pass','Grade',         580,140],
+    ['out','pixels_out', 'Output',         840,140],
+  ]);
+  setTimeout(()=>{
+    es([['gen','out','fbz','in'],['fbz','out','cc','in'],['cc','out','out','in']]);
+    ss([['gen',FX.gen_sdf_orbs],['fbz',FX.fx_feedback_zoom],['cc',FX.fx_colour_correct]],()=>{
+      su([
+        ['gen','u_speed',  0.5],  ['gen','u_radius',0.2], ['gen','u_glow',0.25],
+        ['fbz','u_zoom',   1.015],// clear visible zoom trail
+        ['fbz','u_angle',  0.012],// spin rate
+        ['fbz','u_decay',  0.95], // trail length (0.9=short, 0.99=long)
+        ['fbz','u_cx',     0.5],  ['fbz','u_cy',0.5],
+        ['cc', 'u_sat',    1.6],  ['cc','u_gain',1.05],['cc','u_gamma',0.9],
+      ]);
+      compile('orb+feedback ✓  ACCUMULATING SPIRAL TRAILS\n  fbz.u_zoom: 1.005=gentle  1.015=clear  1.03=fast collapse\n  fbz.u_angle: 0=no spin  0.012=slow  0.03=fast spin\n  fbz.u_decay: 0.9=short  0.95=medium  0.99=long trails\n  cc.u_sat: boost saturation of accumulated image\n  OSC: /scheng/node/fbz/uniform/u_zoom 1.02');
+    });
+  },180);
+})},
+
+// PLASMA + SCANLINES: Plasma generator → CRT scanline overlay → chroma aberration.
+// Extreme: heavy scanlines + strong aberration = obvious CRT simulation
+// OSC: u_scale (plasma), u_strength (scanlines), u_aberr (aberration)
+gen_plasma_scanlines(){clearThen(()=>{
+  ns([
+    ['pl','shader_pass','Plasma Generator',  60,140],
+    ['sc','shader_pass','CRT Scanlines',    310,140],
+    ['ab','shader_pass','Chroma Aberration',560,140],
+    ['out','pixels_out','Output',            800,140],
+  ]);
+  setTimeout(()=>{
+    es([['pl','out','sc','in'],['sc','out','ab','in'],['ab','out','out','in']]);
+    ss([['pl',FX.gen_plasma],['sc',FX.fx_scanlines],['ab',FX.fx_chroma_aberration]],()=>{
+      su([
+        ['pl','u_scale',  5.0], ['pl','u_speed', 2.0],
+        ['sc','u_strength',0.7],// EXTREME: heavy scanlines — clearly visible
+        ['sc','u_freq',    1.0],// scanline frequency multiplier
+        ['ab','u_aberr',   0.018],// EXTREME: big RGB split (0=none, 0.02=strong)
+        ['ab','u_barrel',  0.2],// EXTREME: heavy barrel distortion
+      ]);
+      compile('plasma+scanlines+chroma ✓  CRT SIMULATION\n  sc.u_strength: 0=none  0.4=subtle  0.7=heavy  1.0=extreme\n  sc.u_freq: 0.5=wide bands  1=normal  2=fine\n  ab.u_aberr: 0=none  0.01=slight  0.02=heavy RGB split\n  ab.u_barrel: 0=flat  0.1=subtle  0.3=strong barrel\n  OSC: /scheng/node/sc/uniform/u_strength 0.0 → 1.0');
+    });
+  },180);
+})},
+
+// SDF + ZOOM + CHROMA + GLOW: 4-stage post-processing chain. Each step visible.
+// Extreme: strong values at each stage so you can toggle/tune each node
+// OSC: u_amount (zoom blur), u_aberr (chroma), u_strength (glow)
+gen_sdf_chroma(){clearThen(()=>{
+  ns([
+    ['sdf','shader_pass','SDF Orbs',        60,140],
+    ['zb', 'shader_pass','Zoom Blur',       300,140],
+    ['ab', 'shader_pass','Chroma Aberr',    540,140],
+    ['glo','shader_pass','Bloom',           780,140],
+    ['out','pixels_out', 'Output',          1020,140],
+  ]);
+  setTimeout(()=>{
+    es([['sdf','out','zb','in'],['zb','out','ab','in'],['ab','out','glo','in'],['glo','out','out','in']]);
+    ss([['sdf',FX.gen_sdf_orbs],['zb',FX.fx_zoom_blur],['ab',FX.fx_chroma_aberration],['glo',FX.fx_glow]],()=>{
+      su([
+        ['sdf','u_speed',  0.7],  ['sdf','u_radius',0.2],  ['sdf','u_glow',0.25],
+        ['zb', 'u_amount', 0.03], // visible zoom blur (0=none, 0.05=strong)
+        ['zb', 'u_cx',     0.5],  ['zb','u_cy',0.5],
+        ['ab', 'u_aberr',  0.01], ['ab','u_barrel',0.1],
+        ['glo','u_radius', 0.012],
+        ['glo','u_strength',3.5], // EXTREME: strong glow
+        ['glo','u_thresh', 0.3],
+      ]);
+      compile('SDF+zoom+chroma+glow ✓  4-STAGE POST CHAIN\n  zb.u_amount: 0=sharp  0.03=soft  0.06=heavy zoom blur\n  ab.u_aberr: 0=none  0.01=subtle  0.02=strong split\n  glo.u_strength: 1=subtle  3.5=intense  6=extreme bloom\n  glo.u_thresh: lower=more pixels bloom\n  OSC: /scheng/node/glo/uniform/u_strength 6.0');
+    });
+  },180);
+})},
+
+// LISSAJOUS + COLOUR + GLOW: Oscilloscope waveform with spectrum colour mapping.
+// Extreme: u_fx=5 u_fy=4 = complex pattern, vivid palette, strong glow
+// OSC: u_fx, u_fy, u_phase (pattern), u_cycles (colour)
+gen_lissajous_col(){clearThen(()=>{
+  ns([
+    ['lis','shader_pass','Lissajous Scope',  60,140],
+    ['col','shader_pass','Colorizer',        330,140],
+    ['glo','shader_pass','Glow',             580,140],
+    ['out','pixels_out', 'Output',            830,140],
+  ]);
+  setTimeout(()=>{
+    es([['lis','out','col','in'],['col','out','glo','in'],['glo','out','out','in']]);
+    ss([['lis',FX.gen_lissajous],['col',FX.fx_colorizer],['glo',FX.fx_glow]],()=>{
+      su([
+        ['lis','u_fx',    5.0], // EXTREME: complex ratio (try 1,2,3,4,5,7)
+        ['lis','u_fy',    4.0],
+        ['lis','u_phase', 1.57],// phase offset — automate for rotating pattern
+        ['lis','u_thick', 0.008],// beam width
+        ['col','u_cycles',5.0], // EXTREME: 5 colour cycles along beam
+        ['col','u_shift', 0.3],
+        ['col','u_sat',   1.0],
+        ['glo','u_radius',0.008],
+        ['glo','u_strength',4.0],// EXTREME: phosphor glow
+        ['glo','u_thresh', 0.15],
+      ]);
+      compile('lissajous+colour+glow ✓  OSCILLOSCOPE SCOPE\n  lis.u_fx / u_fy: integer ratios for standing patterns (1:1, 2:3, 3:4, 5:7)\n  lis.u_phase: automate 0..6.28 for rotating figure\n  col.u_cycles: colour bands along beam\n  glo.u_strength: phosphor persistence\n  OSC: /scheng/node/lis/uniform/u_fx 7.0  (prime ratios = complex)');
+    });
+  },180);
+})},
+
+// CELLULAR AUTOMATA + MIRROR + GRADE: Voronoi cells → quad mirror → colour grade.
+// Extreme: fast cells, saturated grade, quad mirror = beautiful organic symmetry
+// OSC: u_scale, u_speed (cellular), u_mode (mirror), u_sat
+gen_cellular_grade(){clearThen(()=>{
+  ns([
+    ['cel','shader_pass','Cellular',    60,140],
+    ['mir','shader_pass','Mirror/Kaleid',310,140],
+    ['cc', 'shader_pass','Colour Grade',560,140],
+    ['out','pixels_out', 'Output',       810,140],
+  ]);
+  setTimeout(()=>{
+    es([['cel','out','mir','in'],['mir','out','cc','in'],['cc','out','out','in']]);
+    ss([['cel',FX.gen_cellular],['mir',FX.fx_mirror],['cc',FX.fx_colour_correct]],()=>{
+      su([
+        ['cel','u_scale', 8.0],  // EXTREME: many cells = dense pattern
+        ['cel','u_speed', 1.2],  // fast animation
+        ['mir','u_mode',  3.0],  // kaleidoscope
+        ['mir','u_offset',0.5],
+        ['cc', 'u_sat',   2.2],  // EXTREME: vivid
+        ['cc', 'u_gain',  1.2],
+        ['cc', 'u_gamma', 0.85],
+      ]);
+      compile('cellular+mirror+grade ✓  ORGANIC KALEIDOSCOPE\n  cel.u_scale: 3=large cells  8=dense  16=very fine\n  cel.u_speed: 0.1=slow morph  1=medium  3=fast\n  mir.u_mode: 0=horiz  1=vert  2=quad  3=kaleid\n  cc.u_sat: 0=grey  2.2=vivid  3=neon\n  OSC: /scheng/node/mir/uniform/u_mode 2.0');
+    });
+  },180);
+})},
+
+// INTERFERENCE KEY: Moiré interference pattern keyed over cellular. Dense + vivid.
+// Extreme: f1 vs f2 very close = beats, high freq = dense moiré
+// OSC: u_f1, u_f2, u_angle (interference), u_low, u_high (key threshold)
+gen_interference_key(){clearThen(()=>{
+  ns([
+    ['int','shader_pass','Interference',    60,100],
+    ['cel','shader_pass','Cellular BG',     60,290],
+    ['key','shader_pass','Luma Key',        330,195],
+    ['col','shader_pass','Colorizer',       570,195],
+    ['out','pixels_out', 'Output',           820,195],
+  ]);
+  setTimeout(()=>{
+    es([['int','out','key','in'],['cel','out','key','in'],['key','out','col','in'],['col','out','out','in']]);
+    ss([['int',FX.gen_interference],['cel',FX.gen_cellular],['key',FX.fx_luma_key],['col',FX.fx_colorizer]],()=>{
+      su([
+        ['int','u_f1',    22.0],  // EXTREME: high freq moiré
+        ['int','u_f2',    23.0],  // close together = visible beat pattern
+        ['int','u_angle',  0.7],  // rotation between sources
+        ['cel','u_scale',  6.0],  ['cel','u_speed',0.5],
+        ['key','u_low',    0.1],  ['key','u_high',0.9],['key','u_gain',1.2],
+        ['col','u_cycles', 4.0],  ['col','u_sat',1.0],
+      ]);
+      compile('interference+key ✓  MOIRÉ OVER CELLULAR\n  int.u_f1 / u_f2: keep close for beat (22/23=slow beat, 20/28=fast)\n  int.u_angle: rotation between sources\n  key.u_low/u_high: threshold for keying int over cel\n  OSC: /scheng/node/int/uniform/u_f1 25.0  /scheng/node/int/uniform/u_f2 26.0');
+    });
+  },180);
+})},
+
+// NOISE FIELD WARP: Two noise fields — one content, one as displacement map.
+// Extreme: u_amount=0.12 = heavy visible warp of source by noise field
+// OSC: n1.u_scale, n2.u_scale, u_amount, u_cycles
+gen_noise_warp(){clearThen(()=>{
+  ns([
+    ['n1',  'shader_pass','Noise — Content',  60,100],
+    ['n2',  'shader_pass','Noise — Warp Map', 60,280],
+    ['warp','shader_pass','Noise Warp',       330,190],
+    ['col', 'shader_pass','Colorizer',        580,190],
+    ['out', 'pixels_out', 'Output',            830,190],
+  ]);
+  setTimeout(()=>{
+    es([['n1','out','warp','in'],['n2','out','warp','in'],['warp','out','col','in'],['col','out','out','in']]);
+    ss([
+      ['n1',  FX.gen_noise],
+      ['n2',  FX.gen_noise],
+      ['warp',`#version 330 core
+in vec2 v_uv;out vec4 fragColor;uniform sampler2D iChannel0,iChannel1;
+// iChannel0=content  iChannel1=displacement map
+// Each pixel of content is warped by the displacement map
+uniform float u_amount;  // warp strength 0..0.2  (0.12)
+void main(){
+  vec2 offset=(texture(iChannel1,v_uv).rg*2.-1.)*u_amount;
+  fragColor=texture(iChannel0,clamp(v_uv+offset,0.,1.));}`],
+      ['col', FX.fx_colorizer],
+    ],()=>{
+      su([
+        ['n1',  'u_scale', 3.0],  ['n1','u_speed',0.2],
+        ['n2',  'u_scale', 7.0],  ['n2','u_speed',0.5], // different freq = more complex warp
+        ['warp','u_amount',0.12], // EXTREME: heavy visible warping
+        ['col', 'u_cycles',3.0],  ['col','u_sat',1.0], ['col','u_shift',0.15],
+      ]);
+      compile('noise field warp ✓  DISPLACEMENT MAPPING\n  n2.u_scale: warp map frequency (low=big waves, high=turbulent)\n  warp.u_amount: 0=no warp  0.06=subtle  0.12=heavy  0.2=extreme\n  n1.u_scale: content detail\n  col.u_cycles: colour mapping on warped result\n  OSC: /scheng/node/warp/uniform/u_amount 0.2');
+    });
+  },180);
+})},
+
+// VIDEO SYNTH FULL: 4-stage historical chain. Waveform → Rutt/Etra → Jones → CRT.
+// Most extreme template. Every stage clearly doing something extreme.
+// OSC: virtually every param across 4 nodes
+gen_videosynth_full(){clearThen(()=>{
+  ns([
+    ['vs',   'shader_pass','① Video Synth',      60,140],
+    ['rutt', 'shader_pass','② Rutt/Etra',        310,140],
+    ['jones','shader_pass','③ Jones Colorizer',  560,140],
+    ['crt',  'shader_pass','④ CRT + Mask',       800,140],
+    ['out',  'pixels_out', 'Output',             1040,140],
+  ]);
+  setTimeout(()=>{
+    es([['vs','out','rutt','in'],['rutt','out','jones','in'],['jones','out','crt','in'],['crt','out','out','in']]);
+    ss([['vs',FX.fx_videosynth],['rutt',FX.fx_rutt_etra],['jones',FX.fx_jones],['crt',FX.fx_crt_curve]],()=>{
+      su([
+        ['vs',   'u_h_freq',14.0],  // EXTREME: dense horizontal oscillations
+        ['vs',   'u_v_freq',10.0],
+        ['vs',   'u_lfo',    1.0],  // strong LFO modulation
+        ['vs',   'u_colour', 2.0],  // colour mode 2 = most vivid
+        ['rutt', 'u_disp',   0.08], // EXTREME: clear scanline displacement
+        ['rutt', 'u_lines',  40.0], // visible scan bands
+        ['rutt', 'u_thick',  0.6],
+        ['rutt', 'u_col_r',  0.9],  ['rutt','u_col_g',0.1],['rutt','u_col_b',0.8],
+        ['jones','u_bands',  8.0],  // 8 vivid colour bands
+        ['jones','u_sat',    2.0],  // EXTREME: intense colours
+        ['crt',  'u_barrel', 0.15], ['crt','u_vig',1.4],['crt','u_mask',0.5],
+      ]);
+      compile('Video Synth Full ✓  4-STAGE HISTORICAL CHAIN\n  vs: u_h_freq/v_freq/colour — waveform synthesis\n  rutt: u_disp/lines/thick/col_r/g/b — scanline warp\n  jones: u_bands(2..12) u_sat(0..3) — luma→colour\n  crt: u_barrel/vig/mask — screen simulation\n  OSC: /scheng/node/jones/uniform/u_bands 4.0\n  OSC: /scheng/node/vs/uniform/u_colour 3.0');
+    });
+  },180);
+})},
+
+};
+document.querySelectorAll('.tb').forEach(b=>b.addEventListener('click',()=>T[b.dataset.t]?.()));
+
+// ── Header buttons ─────────────────────────────────────────────────────────
+document.getElementById('btn-conn').addEventListener('click',wsConn);
+document.getElementById('btn-comp').addEventListener('click',()=>send({action:'compile'}));
+
+// ── Init ───────────────────────────────────────────────────────────────────
+window.addEventListener('load',()=>{
+  renderCustomTemplates();
+  // Collapse validate by default
+  const bdy=document.getElementById('b-val'),hdr=document.getElementById('h-val');
+  if(bdy){bdy.style.maxHeight=bdy.scrollHeight+'px';
+    bdy.classList.add('coll');hdr.classList.add('coll');}
+  log('scheng editor v11','ok');
+  log('1. cargo run -p scheng-bridge','');
+  log('2. connect  3. load template  4. compile','');
+  log('55 FX shaders — historical analog video recreation','');
+  log('export: graph.json + OSC map download','');
+  validate();
+});
+</script>
+</body>
+</html>

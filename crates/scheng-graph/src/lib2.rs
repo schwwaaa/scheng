@@ -2,8 +2,12 @@
 
 //! scheng graph vocabulary and patching model.
 //!
-//! LZX-style mental model: Sources → Processors/Mixers → Outputs.
-
+//! This crate is **contract-only**: no windowing, no OS policy, no GL handles.
+//! It defines an LZX-style mental model: Sources → Processors/Mixers → Outputs.
+//!
+//! Execution is intentionally minimal in v0: `compile()` returns a lightweight `Plan`
+//! that preserves ordering and connectivity information, leaving scheduling/backends
+//! to runtime crates.
 #![deny(rustdoc::broken_intra_doc_links)]
 #![deny(missing_debug_implementations)]
 
@@ -17,7 +21,10 @@ pub struct NodeId(pub u32);
 pub struct PortId(pub u32);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PortDir { In, Out }
+pub enum PortDir {
+    In,
+    Out,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Endpoint {
@@ -28,46 +35,47 @@ pub struct Endpoint {
 
 #[derive(Debug, Clone)]
 pub struct Edge {
-    pub from: Endpoint,
-    pub to: Endpoint,
+    pub from: Endpoint, // Out
+    pub to: Endpoint,   // In
 }
 
+/// High-level class of a node in the patch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum NodeClass { Source, Processor, Mixer, Output }
+pub enum NodeClass {
+    Source,
+    Processor,
+    Mixer,
+    Output,
+}
 
+/// A conservative, future-proof node kind.
+///
+/// Keep this enum small in v0. As the SDK grows, add variants for common building blocks.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NodeKind {
     // Sources
     ShaderSource,
     NoiseSource,
     PreviousFrame,
+    /// Host-provided texture source (GL texture ID supplied via runtime props).
     TextureInputPass,
     VideoDecodeSource,
 
-    // Processors (single input "in")
+    // Processors
     ShaderPass,
     ColorCorrect,
     Blur,
     Keyer,
     Feedback,
 
-    // --- NEW: Multi-input shader passes ---
-    // These are Mixers (so the graph gives them multi-input ports)
-    // but they accept custom GLSL via NodeProps::shader_sources,
-    // enabling custom mixing/keying/compositing GLSL with 2, 3, or 4 inputs.
-    //
-    // Ports:  ShaderMix2  → "a", "b"           → iChannel0, iChannel1
-    //         ShaderMix3  → "a", "b", "c"      → iChannel0, iChannel1, iChannel2
-    //         ShaderMix4  → "a", "b", "c", "d" → iChannel0, iChannel1, iChannel2, iChannel3
-    ShaderMix2,
-    ShaderMix3,
-    ShaderMix4,
-
-    // Mixers (built-in fixed operations)
+    // Mixers
     Crossfade,
     Add,
     Multiply,
     KeyMix,
+    /// Weighted sum of up to 4 inputs.
+    ///
+    /// Ports (Option A ordering): in0, in1, in2, in3, out
     MatrixMix4,
 
     // Outputs
@@ -85,16 +93,12 @@ impl NodeKind {
     pub fn class(&self) -> NodeClass {
         use NodeKind::*;
         match self {
-            ShaderSource | NoiseSource | PreviousFrame | TextureInputPass | VideoDecodeSource
-                => NodeClass::Source,
-            ShaderPass | ColorCorrect | Blur | Keyer | Feedback
-                => NodeClass::Processor,
-            // ShaderMixN are Mixers — this gives them multi-input ports
-            ShaderMix2 | ShaderMix3 | ShaderMix4
-            | Crossfade | Add | Multiply | KeyMix | MatrixMix4
-                => NodeClass::Mixer,
-            Window | TextureOut | PixelsOut | Syphon | Spout | Recorder | Ndi | Rtsp
-                => NodeClass::Output,
+            ShaderSource | NoiseSource | PreviousFrame | TextureInputPass | VideoDecodeSource => NodeClass::Source,
+            ShaderPass | ColorCorrect | Blur | Keyer | Feedback => NodeClass::Processor,
+            Crossfade | Add | Multiply | KeyMix | MatrixMix4 => NodeClass::Mixer,
+            Window | TextureOut | PixelsOut | Syphon | Spout | Recorder | Ndi | Rtsp => {
+                NodeClass::Output
+            }
         }
     }
 }
@@ -122,38 +126,29 @@ pub struct Graph {
 }
 
 impl Graph {
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self {
+        Self::default()
+    }
 
-    pub fn nodes(&self) -> impl Iterator<Item = &Node> { self.nodes.values() }
-    pub fn edges(&self) -> &[Edge] { &self.edges }
-    pub fn node(&self, id: NodeId) -> Option<&Node> { self.nodes.get(&id) }
+    pub fn nodes(&self) -> impl Iterator<Item = &Node> {
+        self.nodes.values()
+    }
+
+    pub fn edges(&self) -> &[Edge] {
+        &self.edges
+    }
+
+    pub fn node(&self, id: NodeId) -> Option<&Node> {
+        self.nodes.get(&id)
+    }
 
     pub fn add_node(&mut self, kind: NodeKind) -> NodeId {
         let id = NodeId(self.next_node);
         self.next_node += 1;
 
+        // v0: generic port conventions by class; runtime can ignore names if it wants.
+        // Some kinds override the generic conventions for semantic ordering.
         let ports = match kind {
-            // ShaderMix2: 2 custom-shader inputs "a" and "b"
-            NodeKind::ShaderMix2 => vec![
-                self.new_port("a", PortDir::In),
-                self.new_port("b", PortDir::In),
-                self.new_port("out", PortDir::Out),
-            ],
-            // ShaderMix3: 3 custom-shader inputs "a", "b", "c"
-            NodeKind::ShaderMix3 => vec![
-                self.new_port("a", PortDir::In),
-                self.new_port("b", PortDir::In),
-                self.new_port("c", PortDir::In),
-                self.new_port("out", PortDir::Out),
-            ],
-            // ShaderMix4: 4 custom-shader inputs "a", "b", "c", "d"
-            NodeKind::ShaderMix4 => vec![
-                self.new_port("a", PortDir::In),
-                self.new_port("b", PortDir::In),
-                self.new_port("c", PortDir::In),
-                self.new_port("d", PortDir::In),
-                self.new_port("out", PortDir::Out),
-            ],
             NodeKind::MatrixMix4 => vec![
                 self.new_port("in0", PortDir::In),
                 self.new_port("in1", PortDir::In),
@@ -162,7 +157,7 @@ impl Graph {
                 self.new_port("out", PortDir::Out),
             ],
             _ => match kind.class() {
-                NodeClass::Source    => vec![self.new_port("out", PortDir::Out)],
+                NodeClass::Source => vec![self.new_port("out", PortDir::Out)],
                 NodeClass::Processor => vec![
                     self.new_port("in", PortDir::In),
                     self.new_port("out", PortDir::Out),
@@ -176,7 +171,8 @@ impl Graph {
             },
         };
 
-        self.nodes.insert(id, Node { id, kind, ports });
+        let node = Node { id, kind, ports };
+        self.nodes.insert(id, node);
         id
     }
 
@@ -188,10 +184,14 @@ impl Graph {
 
     pub fn find_port(&self, node: NodeId, name: &str, dir: PortDir) -> Option<PortId> {
         self.nodes.get(&node).and_then(|n| {
-            n.ports.iter().find(|p| p.dir == dir && p.name == name).map(|p| p.id)
+            n.ports
+                .iter()
+                .find(|p| p.dir == dir && p.name == name)
+                .map(|p| p.id)
         })
     }
 
+    /// Connect `from` (Out) → `to` (In).
     pub fn connect(&mut self, from: Endpoint, to: Endpoint) -> Result<(), EngineError> {
         if from.dir != PortDir::Out {
             return Err(EngineError::other("connect: from endpoint must be Out"));
@@ -202,12 +202,28 @@ impl Graph {
         if !self.nodes.contains_key(&from.node) || !self.nodes.contains_key(&to.node) {
             return Err(EngineError::other("connect: node not found"));
         }
-        let from_ok = self.nodes.get(&from.node)
-            .and_then(|n| n.ports.iter().find(|p| p.id == from.port)).is_some();
-        if !from_ok { return Err(EngineError::other("connect: from port not found on node")); }
-        let to_ok = self.nodes.get(&to.node)
-            .and_then(|n| n.ports.iter().find(|p| p.id == to.port)).is_some();
-        if !to_ok { return Err(EngineError::other("connect: to port not found on node")); }
+
+        // v0 safety: ensure the referenced ports actually belong to the specified nodes
+        // and match the declared direction.
+        {
+            let from_ok = self
+                .nodes
+                .get(&from.node)
+                .and_then(|n| n.ports.iter().find(|p| p.id == from.port))
+                .is_some();
+            if !from_ok {
+                return Err(EngineError::other("connect: from port not found on node"));
+            }
+            let to_ok = self
+                .nodes
+                .get(&to.node)
+                .and_then(|n| n.ports.iter().find(|p| p.id == to.port))
+                .is_some();
+            if !to_ok {
+                return Err(EngineError::other("connect: to port not found on node"));
+            }
+        }
+        // v0: prevent multiple drivers of same input
         if self.edges.iter().any(|e| e.to == to) {
             return Err(EngineError::other("connect: input already connected"));
         }
@@ -215,39 +231,67 @@ impl Graph {
         Ok(())
     }
 
+    /// Convenience: connect by port names using the default conventions.
     pub fn connect_named(
         &mut self,
-        from_node: NodeId, from_port: &str,
-        to_node: NodeId,   to_port: &str,
+        from_node: NodeId,
+        from_port: &str,
+        to_node: NodeId,
+        to_port: &str,
     ) -> Result<(), EngineError> {
-        let from_pid = self.find_port(from_node, from_port, PortDir::Out)
+        let from_pid = self
+            .find_port(from_node, from_port, PortDir::Out)
             .ok_or_else(|| EngineError::other("connect_named: from port not found"))?;
-        let to_pid = self.find_port(to_node, to_port, PortDir::In)
+        let to_pid = self
+            .find_port(to_node, to_port, PortDir::In)
             .ok_or_else(|| EngineError::other("connect_named: to port not found"))?;
+
         self.connect(
-            Endpoint { node: from_node, port: from_pid, dir: PortDir::Out },
-            Endpoint { node: to_node,   port: to_pid,   dir: PortDir::In  },
+            Endpoint {
+                node: from_node,
+                port: from_pid,
+                dir: PortDir::Out,
+            },
+            Endpoint {
+                node: to_node,
+                port: to_pid,
+                dir: PortDir::In,
+            },
         )
     }
 
+    /// Compile a graph into a lightweight plan. In v0 this is mostly a validation + ordering step.
     pub fn compile(&self) -> Result<Plan, EngineError> {
+        // v0: validate all Output nodes have their input connected.
         for n in self.nodes.values() {
             if n.kind.class() == NodeClass::Output {
                 let in_port = n.ports.iter().find(|p| p.dir == PortDir::In).map(|p| p.id);
                 if let Some(pid) = in_port {
-                    let to = Endpoint { node: n.id, port: pid, dir: PortDir::In };
+                    let to = Endpoint {
+                        node: n.id,
+                        port: pid,
+                        dir: PortDir::In,
+                    };
                     if !self.edges.iter().any(|e| e.to == to) {
                         return Err(EngineError::other("compile: output input not connected"));
                     }
                 }
             }
         }
+
+        // v0: emit nodes in insertion order (NodeId sequence) and edges.
         let mut nodes: Vec<NodeId> = self.nodes.keys().copied().collect();
         nodes.sort_by_key(|id| id.0);
-        Ok(Plan { nodes, edges: self.edges.clone() })
+
+        Ok(Plan {
+            nodes,
+            edges: self.edges.clone(),
+        })
     }
 }
 
+/// A minimal compiled representation of the graph.
+/// Runtimes can interpret this directly or translate it into backend-specific schedules.
 #[derive(Debug, Clone)]
 pub struct Plan {
     pub nodes: Vec<NodeId>,
@@ -261,27 +305,15 @@ mod tests {
     #[test]
     fn build_simple_chain() {
         let mut g = Graph::new();
-        let src  = g.add_node(NodeKind::ShaderSource);
+        let src = g.add_node(NodeKind::ShaderSource);
         let pass = g.add_node(NodeKind::ShaderPass);
-        let out  = g.add_node(NodeKind::PixelsOut);
-        g.connect_named(src,  "out", pass, "in").unwrap();
-        g.connect_named(pass, "out", out,  "in").unwrap();
+        let out = g.add_node(NodeKind::PixelsOut);
+
+        g.connect_named(src, "out", pass, "in").unwrap();
+        g.connect_named(pass, "out", out, "in").unwrap();
+
         let plan = g.compile().unwrap();
         assert!(plan.nodes.len() >= 3);
         assert_eq!(plan.edges.len(), 2);
-    }
-
-    #[test]
-    fn shader_mix2_has_two_inputs() {
-        let mut g = Graph::new();
-        let a   = g.add_node(NodeKind::ShaderSource);
-        let b   = g.add_node(NodeKind::ShaderSource);
-        let mix = g.add_node(NodeKind::ShaderMix2);
-        let out = g.add_node(NodeKind::PixelsOut);
-        g.connect_named(a,   "out", mix, "a").unwrap();
-        g.connect_named(b,   "out", mix, "b").unwrap();
-        g.connect_named(mix, "out", out, "in").unwrap();
-        let plan = g.compile().unwrap();
-        assert_eq!(plan.edges.len(), 3);
     }
 }
