@@ -16,6 +16,7 @@ members = [
   "crates/scheng-input-video",
   "crates/scrubbable_controls",
   "crates/scheng-bridge",
+  "crates/scheng-runtime-wgpu",
   "examples/minimal",
   "examples/pure_single_pass",
   "examples/render_target_only",
