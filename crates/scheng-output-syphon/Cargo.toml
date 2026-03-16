@@ -1,0 +1,19 @@
+[package]
+name        = "scheng-output-syphon"
+version     = "0.1.0"
+edition     = "2021"
+description = "Syphon Metal output sink for scheng (macOS only)"
+license     = "MIT"
+
+[dependencies]
+scheng-runtime-wgpu = { path = "../scheng-runtime-wgpu" }
+scheng-graph         = { path = "../scheng-graph" }
+log       = "0.4"
+wgpu      = "22"
+thiserror = "1"
+
+[build-dependencies]
+cc = "1"
+
+# This crate is macOS-only. On other platforms it compiles to empty stubs.
+# Use cfg(target_os = "macos") guards throughout.

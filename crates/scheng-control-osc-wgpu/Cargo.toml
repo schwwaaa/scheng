@@ -1,0 +1,18 @@
+[package]
+name        = "scheng-control-osc-wgpu"
+version     = "0.1.0"
+edition     = "2021"
+description = "OSC → ParamStore adapter for scheng-runtime-wgpu"
+license     = "MIT"
+
+# NOTE: This crate wires the existing scheng-control-osc receiver (rosc-based)
+# to ParamStore. It is a thin adapter — all OSC receive logic lives in
+# scheng-control-osc; this crate only adds the ParamStore routing layer.
+
+[dependencies]
+scheng-param-store = { path = "../scheng-param-store" }
+
+# rosc: OSC packet parsing (same as scheng-control-osc)
+rosc  = "0.10"
+log   = "0.4"
+thiserror = "1"

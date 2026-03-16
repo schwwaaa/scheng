@@ -1,0 +1,15 @@
+[package]
+name        = "scheng-param-store"
+version     = "0.1.0"
+edition     = "2021"
+description = "Central parameter state for scheng instruments — JSON schema, live values, NodeConfig builder"
+license     = "MIT"
+
+[dependencies]
+scheng-graph         = { path = "../scheng-graph" }
+scheng-runtime-wgpu  = { path = "../scheng-runtime-wgpu" }
+
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+log        = "0.4"
+thiserror  = "1"

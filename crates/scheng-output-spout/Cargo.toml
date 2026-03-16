@@ -1,0 +1,20 @@
+[package]
+name        = "scheng-output-spout"
+version     = "0.1.0"
+edition     = "2021"
+description = "Spout2 output sink for scheng (Windows only)"
+license     = "MIT"
+
+[dependencies]
+scheng-runtime-wgpu = { path = "../scheng-runtime-wgpu" }
+scheng-graph         = { path = "../scheng-graph" }
+log       = "0.4"
+wgpu      = "22"
+thiserror = "1"
+
+[build-dependencies]
+cc = "1"
+
+# Windows-only. Requires Visual Studio Build Tools (C++ workload).
+# The Spout2 C++ bridge from scheng-runtime-glow's native/spout_bridge/
+# is reused here. Copy that directory into this crate's native/ folder.

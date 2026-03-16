@@ -1,0 +1,20 @@
+[package]
+name        = "scheng-input-midi"
+version     = "0.1.0"
+edition     = "2021"
+description = "MIDI CC input for scheng — maps CC messages to ParamStore updates"
+license     = "MIT"
+
+[dependencies]
+scheng-param-store = { path = "../scheng-param-store" }
+
+# midir: cross-platform MIDI I/O
+# Uses CoreMIDI on macOS, WinMM on Windows, ALSA on Linux
+midir     = "0.10"
+log       = "0.4"
+thiserror = "1"
+
+[features]
+default = []
+# Enable to list available MIDI ports at startup (useful for development)
+list-ports = []

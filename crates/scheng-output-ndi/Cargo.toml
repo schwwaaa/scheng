@@ -1,0 +1,22 @@
+[package]
+name        = "scheng-output-ndi"
+version     = "0.1.0"
+edition     = "2021"
+description = "NDI output sink for scheng (cross-platform, requires NDI SDK)"
+license     = "MIT"
+
+[dependencies]
+scheng-runtime-wgpu = { path = "../scheng-runtime-wgpu" }
+scheng-graph         = { path = "../scheng-graph" }
+log        = "0.4"
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+wgpu      = "22"
+thiserror = "1"
+
+# NDI SDK Rust bindings — enable when NDI SDK is available
+# ndi = { version = "0.1", optional = true }
+
+[features]
+default = []
+# ndi-sdk = ["dep:ndi"]
