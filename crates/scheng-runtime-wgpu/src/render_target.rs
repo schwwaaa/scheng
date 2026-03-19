@@ -134,3 +134,91 @@ mod tests {
         assert_eq!(align_to(4 * 640, 256), 4 * 640);
     }
 }
+
+// ── PingPongTarget ────────────────────────────────────────────────────────
+
+/// Two render targets that alternate roles each frame.
+///
+/// Used by `Feedback` and `PreviousFrame` nodes to provide the previous
+/// frame's texture as input while rendering into a fresh target.
+///
+/// # Frame N:
+///   - render INTO `targets[write_idx]`
+///   - sample FROM `targets[read_idx]`  (previous frame result)
+///
+/// # Frame N+1: call `swap()` — write_idx and read_idx exchange.
+///
+/// Initialized to black on creation so frame 0 reads a valid (empty) texture.
+pub struct PingPongTarget {
+    targets:   [RenderTarget; 2],
+    write_idx: usize,
+}
+
+impl PingPongTarget {
+    /// Create two render targets initialized to black.
+    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue, width: u32, height: u32, label: &str) -> Self {
+        let a = RenderTarget::new(device, width, height, &format!("{label}_ping"));
+        let b = RenderTarget::new(device, width, height, &format!("{label}_pong"));
+        // Clear both to black so frame 0 reads a valid texture
+        clear_to_black(device, queue, &a);
+        clear_to_black(device, queue, &b);
+        Self { targets: [a, b], write_idx: 0 }
+    }
+
+    /// The target to render INTO this frame.
+    pub fn write_target(&self) -> &RenderTarget {
+        &self.targets[self.write_idx]
+    }
+
+    /// The texture to sample FROM this frame (previous frame's result).
+    pub fn read_texture_view(&self) -> wgpu::TextureView {
+        let read_idx = 1 - self.write_idx;
+        self.targets[read_idx].texture
+            .create_view(&wgpu::TextureViewDescriptor::default())
+    }
+
+    /// Swap ping and pong. Call after submitting the frame's render commands.
+    pub fn swap(&mut self) {
+        self.write_idx = 1 - self.write_idx;
+    }
+
+    /// Ensure both internal targets match the given resolution.
+    pub fn ensure_size(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, width: u32, height: u32, label: &str) {
+        if self.targets[0].width == width && self.targets[0].height == height {
+            return;
+        }
+        self.targets[0].ensure_size(device, width, height, &format!("{label}_ping"));
+        self.targets[1].ensure_size(device, width, height, &format!("{label}_pong"));
+        // Re-clear after resize
+        clear_to_black(device, queue, &self.targets[0]);
+        clear_to_black(device, queue, &self.targets[1]);
+    }
+}
+
+/// Clear a render target to black by uploading a zero-filled texture.
+/// Used to ensure ping-pong buffers start clean on init and resize.
+fn clear_to_black(_device: &wgpu::Device, queue: &wgpu::Queue, target: &RenderTarget) {
+    let pixels = vec![0u8; (target.width * target.height * 4) as usize];
+    let aligned = align_to(4 * target.width, wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
+    // If width is already aligned we can write directly; otherwise build a padded buffer
+    if aligned == 4 * target.width {
+        queue.write_texture(
+            wgpu::ImageCopyTexture {
+                texture:   &target.texture,
+                mip_level: 0,
+                origin:    wgpu::Origin3d::ZERO,
+                aspect:    wgpu::TextureAspect::All,
+            },
+            &pixels,
+            wgpu::ImageDataLayout {
+                offset:         0,
+                bytes_per_row:  Some(4 * target.width),
+                rows_per_image: Some(target.height),
+            },
+            wgpu::Extent3d { width: target.width, height: target.height, depth_or_array_layers: 1 },
+        );
+    }
+    // For non-aligned widths the clear is skipped — not critical since black is the desired state
+    // and the texture starts zeroed on GPU allocation.
+    let _ = aligned;
+}

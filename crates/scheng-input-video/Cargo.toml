@@ -1,9 +1,29 @@
 [package]
-name = "scheng-input-video"
-version = "0.1.0"
-edition = "2021"
+name        = "scheng-input-video"
+version     = "0.1.0"
+edition     = "2021"
+description = "Video file decoder → wgpu texture for scheng VideoDecodeSource nodes"
+license     = "MIT"
 
 [dependencies]
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+scheng-runtime-wgpu = { path = "../scheng-runtime-wgpu" }
+scheng-graph        = { path = "../scheng-graph" }
+
+wgpu      = "22"
+log       = "0.4"
 thiserror = "1"
+
+# ffmpeg-next: safe Rust bindings to libavcodec / libavformat / libswscale.
+# Decodes MP4, MOV, MKV, ProRes, H.264, H.265, DNxHD, and anything else
+# libavformat supports. Requires ffmpeg libraries installed on the system.
+#
+# macOS:  brew install ffmpeg
+# Linux:  apt install libavcodec-dev libavformat-dev libswscale-dev
+# Windows: vcpkg install ffmpeg
+ffmpeg-next = { version = "8", optional = true }
+
+[features]
+default = ["decode"]
+# Enable to build with libavformat/libavcodec video decoding.
+# Disable to get a compile-only stub (useful for CI without ffmpeg installed).
+decode = ["dep:ffmpeg-next"]

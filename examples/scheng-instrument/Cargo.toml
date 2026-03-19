@@ -1,0 +1,32 @@
+[package]
+name        = "scheng-example-instrument"
+version     = "0.1.0"
+edition     = "2021"
+description = "Minimal scheng instrument example — copy this as a starting point"
+default-run = "scheng-example-instrument"
+
+[[bin]]
+name = "scheng-example-instrument"
+path = "src/main.rs"
+
+[dependencies]
+scheng-graph            = { path = "../../crates/scheng-graph" }
+scheng-runtime-wgpu     = { path = "../../crates/scheng-runtime-wgpu" }
+scheng-param-store      = { path = "../../crates/scheng-param-store" }
+scheng-control-osc-wgpu = { path = "../../crates/scheng-control-osc-wgpu" }
+scheng-hotreload        = { path = "../../crates/scheng-hotreload" }
+scheng-output-ffmpeg    = { path = "../../crates/scheng-output-ffmpeg" }
+scheng-input-midi       = { path = "../../crates/scheng-input-midi", optional = true }
+wgpu                    = "22"
+winit                   = "0.30"
+pollster                = "0.3"
+env_logger              = "0.11"
+log                     = "0.4"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+scheng-output-syphon = { path = "../../crates/scheng-output-syphon", optional = true }
+
+[features]
+default = ["midi", "syphon"]
+midi    = ["dep:scheng-input-midi"]
+syphon  = ["dep:scheng-output-syphon"]

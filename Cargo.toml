@@ -26,6 +26,11 @@ members = [
   "crates/scheng-control-osc-wgpu",
   "crates/scheng-hotreload",
   "crates/scheng-tauri",
+  "crates/scheng-input-ndi",
+  "crates/scheng-input-video",
+  "crates/scheng-input-webcam",
+  "crates/scheng-input-syphon",
+  "crates/scheng-input-spout",
   "examples/minimal",
   "examples/pure_single_pass",
   "examples/render_target_only",
@@ -50,6 +55,7 @@ members = [
   "examples/video_device_capture_macos",
   "examples/osc_minimal",
   "examples/video_scrub_keyboard_transport",
+  "examples/scheng-instrument",
 ]
 
 exclude = ["examples/syphon_builtin_legacy"]

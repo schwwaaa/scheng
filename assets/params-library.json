@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "_comment": "scheng Phase 6 shader library — complete parameter profiles. Copy the relevant params block into your instrument's assets/params.json",
+
+  "shaders": {
+
+    "proc-amp": {
+      "node_label": "proc",
+      "description": "Broadcast processing amplifier: brightness, contrast, saturation, hue",
+      "params": [
+        { "name": "u_brightness",  "min": -1.0, "max": 1.0,   "default": 0.0,   "smooth": 0.05, "midi_cc": 14, "osc_addr": "/scheng/node/proc/uniform/u_brightness",  "description": "Luma offset (IRE shift)" },
+        { "name": "u_contrast",    "min":  0.0, "max": 3.0,   "default": 1.0,   "smooth": 0.05, "midi_cc": 15, "osc_addr": "/scheng/node/proc/uniform/u_contrast",    "description": "Luma gain around mid-grey" },
+        { "name": "u_saturation",  "min":  0.0, "max": 3.0,   "default": 1.0,   "smooth": 0.05, "midi_cc": 16, "osc_addr": "/scheng/node/proc/uniform/u_saturation",  "description": "Chroma amplitude scale" },
+        { "name": "u_hue",         "min": -180, "max": 180,   "default": 0.0,   "smooth": 0.05, "midi_cc": 17, "osc_addr": "/scheng/node/proc/uniform/u_hue",         "description": "Hue rotation in degrees" }
+      ]
+    },
+
+    "colorizer": {
+      "node_label": "color",
+      "description": "Maps luminance to a hue sweep — LZX colour encoder style",
+      "params": [
+        { "name": "u_hue_start",  "min":  0.0, "max": 360.0, "default":   0.0,  "smooth": 0.05, "midi_cc": 20, "osc_addr": "/scheng/node/color/uniform/u_hue_start",  "description": "Hue at luma=0" },
+        { "name": "u_hue_range",  "min": -360, "max": 360.0, "default": 360.0,  "smooth": 0.05, "midi_cc": 21, "osc_addr": "/scheng/node/color/uniform/u_hue_range",  "description": "Hue sweep across full luma range" },
+        { "name": "u_saturation", "min":  0.0, "max":   1.0, "default":   1.0,  "smooth": 0.05, "midi_cc": 22, "osc_addr": "/scheng/node/color/uniform/u_saturation", "description": "Output saturation" },
+        { "name": "u_luminance",  "min":  0.0, "max":   1.0, "default":   0.5,  "smooth": 0.05, "midi_cc": 23, "osc_addr": "/scheng/node/color/uniform/u_luminance",  "description": "Output luminance" },
+        { "name": "u_invert",     "min":  0.0, "max":   1.0, "default":   0.0,  "smooth": 0.0,  "midi_cc": 24, "osc_addr": "/scheng/node/color/uniform/u_invert",     "description": "Invert luma before mapping" }
+      ]
+    },
+
+    "ramp-generator": {
+      "node_label": "ramp",
+      "description": "Geometric voltage ramps — LZX Cadet I/II style signal source",
+      "params": [
+        { "name": "u_mode",     "min": 0.0, "max": 3.0, "default": 0.0, "smooth": 0.0,  "midi_cc": 30, "osc_addr": "/scheng/node/ramp/uniform/u_mode",     "description": "0=H, 1=V, 2=radial, 3=angular" },
+        { "name": "u_freq",     "min": 0.1, "max": 16,  "default": 1.0, "smooth": 0.05, "midi_cc": 31, "osc_addr": "/scheng/node/ramp/uniform/u_freq",     "description": "Tile frequency" },
+        { "name": "u_phase",    "min": 0.0, "max": 1.0, "default": 0.0, "smooth": 0.05, "midi_cc": 32, "osc_addr": "/scheng/node/ramp/uniform/u_phase",    "description": "Phase offset" },
+        { "name": "u_invert",   "min": 0.0, "max": 1.0, "default": 0.0, "smooth": 0.0,  "midi_cc": 33, "osc_addr": "/scheng/node/ramp/uniform/u_invert",   "description": "Invert ramp polarity" },
+        { "name": "u_center_x", "min": 0.0, "max": 1.0, "default": 0.5, "smooth": 0.05, "midi_cc": 34, "osc_addr": "/scheng/node/ramp/uniform/u_center_x", "description": "Centre X (radial/angular)" },
+        { "name": "u_center_y", "min": 0.0, "max": 1.0, "default": 0.5, "smooth": 0.05, "midi_cc": 35, "osc_addr": "/scheng/node/ramp/uniform/u_center_y", "description": "Centre Y (radial/angular)" }
+      ]
+    },
+
+    "luma-keyer": {
+      "node_label": "lkey",
+      "description": "Luma key generator — LZX Cadet IV style threshold key",
+      "params": [
+        { "name": "u_thresh",   "min": 0.0, "max": 1.0, "default": 0.5,  "smooth": 0.03, "midi_cc": 40, "osc_addr": "/scheng/node/lkey/uniform/u_thresh",   "description": "Key clip threshold" },
+        { "name": "u_softness", "min": 0.0, "max": 0.5, "default": 0.05, "smooth": 0.03, "midi_cc": 41, "osc_addr": "/scheng/node/lkey/uniform/u_softness", "description": "Edge feather width" },
+        { "name": "u_gain",     "min": 0.0, "max": 4.0, "default": 1.0,  "smooth": 0.05, "midi_cc": 42, "osc_addr": "/scheng/node/lkey/uniform/u_gain",     "description": "Pre-key luma amplifier" },
+        { "name": "u_invert",   "min": 0.0, "max": 1.0, "default": 0.0,  "smooth": 0.0,  "midi_cc": 43, "osc_addr": "/scheng/node/lkey/uniform/u_invert",   "description": "Invert key matte" }
+      ]
+    },
+
+    "chroma-keyer": {
+      "node_label": "ckey",
+      "description": "Chroma key (green/blue screen) with spill suppression",
+      "params": [
+        { "name": "u_key_hue",      "min":   0, "max": 360, "default": 120.0, "smooth": 0.03, "midi_cc": 50, "osc_addr": "/scheng/node/ckey/uniform/u_key_hue",      "description": "Target hue to key out (120=green)" },
+        { "name": "u_hue_range",    "min":   0, "max": 180, "default":  30.0, "smooth": 0.03, "midi_cc": 51, "osc_addr": "/scheng/node/ckey/uniform/u_hue_range",    "description": "Hue acceptance range ±degrees" },
+        { "name": "u_saturation",   "min": 0.0, "max": 1.0, "default":   0.2, "smooth": 0.03, "midi_cc": 52, "osc_addr": "/scheng/node/ckey/uniform/u_saturation",   "description": "Min saturation to trigger key" },
+        { "name": "u_softness",     "min": 0.0, "max": 1.0, "default":   0.1, "smooth": 0.03, "midi_cc": 53, "osc_addr": "/scheng/node/ckey/uniform/u_softness",     "description": "Edge feather" },
+        { "name": "u_spill_reduce", "min": 0.0, "max": 1.0, "default":   0.5, "smooth": 0.05, "midi_cc": 54, "osc_addr": "/scheng/node/ckey/uniform/u_spill_reduce", "description": "Green/blue spill suppression" }
+      ]
+    },
+
+    "crossfader": {
+      "node_label": "xfad",
+      "description": "T-bar crossfader with dissolve, additive, multiply, and wipe modes",
+      "params": [
+        { "name": "u_tbar",     "min": 0.0, "max": 1.0, "default": 0.5,  "smooth": 0.02, "midi_cc": 7,  "osc_addr": "/scheng/node/xfad/uniform/u_tbar",     "description": "Crossfade position (0=A, 1=B)" },
+        { "name": "u_mode",     "min": 0.0, "max": 4.0, "default": 0.0,  "smooth": 0.0,  "midi_cc": 60, "osc_addr": "/scheng/node/xfad/uniform/u_mode",     "description": "0=dissolve 1=add 2=mult 3=hard-wipe 4=soft-wipe" },
+        { "name": "u_softness", "min": 0.0, "max": 0.5, "default": 0.05, "smooth": 0.03, "midi_cc": 61, "osc_addr": "/scheng/node/xfad/uniform/u_softness", "description": "Wipe edge softness" }
+      ]
+    },
+
+    "matrix-mixer": {
+      "node_label": "mtx",
+      "description": "4→1 weighted matrix mixer with optional DC offset and clip",
+      "params": [
+        { "name": "u_gain0",  "min": -2.0, "max": 2.0, "default": 1.0, "smooth": 0.05, "midi_cc": 70, "osc_addr": "/scheng/node/mtx/uniform/u_gain0",  "description": "iChannel0 gain" },
+        { "name": "u_gain1",  "min": -2.0, "max": 2.0, "default": 0.0, "smooth": 0.05, "midi_cc": 71, "osc_addr": "/scheng/node/mtx/uniform/u_gain1",  "description": "iChannel1 gain" },
+        { "name": "u_gain2",  "min": -2.0, "max": 2.0, "default": 0.0, "smooth": 0.05, "midi_cc": 72, "osc_addr": "/scheng/node/mtx/uniform/u_gain2",  "description": "iChannel2 gain" },
+        { "name": "u_gain3",  "min": -2.0, "max": 2.0, "default": 0.0, "smooth": 0.05, "midi_cc": 73, "osc_addr": "/scheng/node/mtx/uniform/u_gain3",  "description": "iChannel3 gain" },
+        { "name": "u_offset", "min":  0.0, "max": 1.0, "default": 0.0, "smooth": 0.05, "midi_cc": 74, "osc_addr": "/scheng/node/mtx/uniform/u_offset",  "description": "DC bias offset" },
+        { "name": "u_clip",   "min":  0.0, "max": 1.0, "default": 1.0, "smooth": 0.0,  "midi_cc": 75, "osc_addr": "/scheng/node/mtx/uniform/u_clip",    "description": "Enable output clipping" }
+      ]
+    },
+
+    "feedback": {
+      "node_label": "fb",
+      "description": "Video feedback with zoom, rotation, and drift — LZX Cadet VI style",
+      "params": [
+        { "name": "u_decay",      "min": 0.0, "max": 0.99, "default": 0.85, "smooth": 0.05, "midi_cc": 80, "osc_addr": "/scheng/node/fb/uniform/u_decay",      "description": "Feedback decay (0=off, 0.99=long tail)" },
+        { "name": "u_zoom",       "min": 0.9, "max": 1.1,  "default": 1.0,  "smooth": 0.05, "midi_cc": 81, "osc_addr": "/scheng/node/fb/uniform/u_zoom",       "description": "Zoom factor per frame" },
+        { "name": "u_rotation",   "min": -5,  "max": 5,    "default": 0.0,  "smooth": 0.05, "midi_cc": 82, "osc_addr": "/scheng/node/fb/uniform/u_rotation",   "description": "Rotation degrees per frame" },
+        { "name": "u_offset_x",   "min": -0.1,"max": 0.1,  "default": 0.0,  "smooth": 0.05, "midi_cc": 83, "osc_addr": "/scheng/node/fb/uniform/u_offset_x",   "description": "Horizontal drift per frame" },
+        { "name": "u_offset_y",   "min": -0.1,"max": 0.1,  "default": 0.0,  "smooth": 0.05, "midi_cc": 84, "osc_addr": "/scheng/node/fb/uniform/u_offset_y",   "description": "Vertical drift per frame" },
+        { "name": "u_blend_mode", "min":  0.0, "max": 1.0, "default": 0.0,  "smooth": 0.0,  "midi_cc": 85, "osc_addr": "/scheng/node/fb/uniform/u_blend_mode", "description": "0=additive, 1=mix" }
+      ]
+    },
+
+    "pattern-generator": {
+      "node_label": "pat",
+      "description": "SMPTE colour bars, grids, test cards, circles, checkerboard",
+      "params": [
+        { "name": "u_mode",   "min": 0, "max": 6,  "default": 0.0, "smooth": 0.0,  "midi_cc": 90, "osc_addr": "/scheng/node/pat/uniform/u_mode",   "description": "0=SMPTE75 1=full-bars 2=grid 3=crosshatch 4=testcard 5=circle 6=checker" },
+        { "name": "u_freq",   "min": 1, "max": 32, "default": 8.0, "smooth": 0.05, "midi_cc": 91, "osc_addr": "/scheng/node/pat/uniform/u_freq",   "description": "Pattern frequency / density" },
+        { "name": "u_line_w", "min": 0, "max": 0.1,"default": 0.02,"smooth": 0.05, "midi_cc": 92, "osc_addr": "/scheng/node/pat/uniform/u_line_w", "description": "Grid line width" },
+        { "name": "u_phase",  "min": 0, "max": 1,  "default": 0.0, "smooth": 0.05, "midi_cc": 93, "osc_addr": "/scheng/node/pat/uniform/u_phase",  "description": "Pattern phase / offset" }
+      ]
+    },
+
+    "waveform-monitor": {
+      "node_label": "wfm",
+      "description": "Broadcast waveform monitor: luma parade, RGB parade, overlay",
+      "params": [
+        { "name": "u_mode",        "min": 0, "max": 2,  "default": 0.0, "smooth": 0.0,  "midi_cc": 100, "osc_addr": "/scheng/node/wfm/uniform/u_mode",        "description": "0=luma 1=RGB parade 2=overlay" },
+        { "name": "u_intensity",   "min": 0, "max": 1,  "default": 0.8, "smooth": 0.05, "midi_cc": 101, "osc_addr": "/scheng/node/wfm/uniform/u_intensity",   "description": "Trace brightness" },
+        { "name": "u_persistence", "min": 0, "max": 32, "default": 1.5, "smooth": 0.05, "midi_cc": 102, "osc_addr": "/scheng/node/wfm/uniform/u_persistence", "description": "Trace thickness" }
+      ]
+    },
+
+    "vectorscope": {
+      "node_label": "vec",
+      "description": "Cb/Cr vectorscope with SMPTE targets, graticule, and skin-tone line",
+      "params": [
+        { "name": "u_gain",       "min": 0.1, "max": 4, "default": 1.0, "smooth": 0.05, "midi_cc": 110, "osc_addr": "/scheng/node/vec/uniform/u_gain",       "description": "Plot gain" },
+        { "name": "u_graticule",  "min": 0.0, "max": 1, "default": 1.0, "smooth": 0.0,  "midi_cc": 111, "osc_addr": "/scheng/node/vec/uniform/u_graticule",  "description": "Show reference targets and axes" },
+        { "name": "u_skin_line",  "min": 0.0, "max": 1, "default": 1.0, "smooth": 0.0,  "midi_cc": 112, "osc_addr": "/scheng/node/vec/uniform/u_skin_line",  "description": "Show broadcast skin-tone line" }
+      ]
+    }
+  }
+}

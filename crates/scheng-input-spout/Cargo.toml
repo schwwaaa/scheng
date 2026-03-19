@@ -1,0 +1,17 @@
+[package]
+name        = "scheng-input-spout"
+version     = "0.1.0"
+edition     = "2021"
+description = "Spout2 receive → wgpu texture for scheng instruments (Windows only)"
+license     = "MIT"
+
+[dependencies]
+wgpu      = "22"
+log       = "0.4"
+thiserror = "1"
+
+[build-dependencies]
+cc = "1"
+
+[features]
+default = []

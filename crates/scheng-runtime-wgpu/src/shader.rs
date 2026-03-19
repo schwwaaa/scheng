@@ -7,7 +7,7 @@ use crate::{compat, WgpuError};
 
 pub const VERTEX_SHADER_WGSL: &str = r#"
 struct VertexOut {
-    @builtin(position) pos:  vec4<f32>,
+    @builtin(position)                     pos:  vec4<f32>,
     @location(0) @interpolate(perspective) v_uv: vec2<f32>,
 };
 
@@ -43,9 +43,10 @@ impl ShaderSource {
     }
 }
 
-/// Caches compiled wgpu shader modules keyed by source hash.
+/// Caches compiled wgpu shader modules + their custom uniform name lists.
 pub struct ShaderCache {
-    frag_modules: HashMap<u64, wgpu::ShaderModule>,
+    /// (module, custom_uniform_names) keyed by source hash
+    frag_modules: HashMap<u64, (wgpu::ShaderModule, Vec<String>)>,
 }
 
 impl ShaderCache {
@@ -53,41 +54,43 @@ impl ShaderCache {
         Self { frag_modules: HashMap::new() }
     }
 
-    pub fn fragment_module<'a>(
+    /// Get or compile a fragment shader module.
+    /// Returns (&ShaderModule, &[custom_uniform_names]).
+    pub fn fragment_module_with_names<'a>(
         &'a mut self,
         device:     &wgpu::Device,
         frag_src:   &str,
         node_label: &str,
-    ) -> Result<&'a wgpu::ShaderModule, WgpuError> {
+    ) -> Result<(&'a wgpu::ShaderModule, Vec<String>), WgpuError> {
         let hash = fxhash(frag_src);
+
         if !self.frag_modules.contains_key(&hash) {
             let processed = compat::process(frag_src, node_label);
             log::debug!("Compiling shader '{}' via naga ({} bytes)", node_label, processed.source.len());
+
             let naga_module = compile_glsl_fragment(&processed.source, node_label)?;
             let mut v = Validator::new(ValidationFlags::all(), Capabilities::empty());
             v.validate(&naga_module).map_err(|e| WgpuError::NagaValidation(format!("{e:?}")))?;
+
             let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label:  Some(node_label),
                 source: wgpu::ShaderSource::Naga(std::borrow::Cow::Owned(naga_module)),
             });
-            self.frag_modules.insert(hash, module);
+            self.frag_modules.insert(hash, (module, processed.custom_uniform_names));
         }
-        Ok(self.frag_modules.get(&hash).unwrap())
+
+        let (module, names) = self.frag_modules.get(&hash).unwrap();
+        Ok((module, names.clone()))
     }
 
-    pub fn clear(&mut self) {
-        self.frag_modules.clear();
-    }
+    pub fn clear(&mut self) { self.frag_modules.clear(); }
 }
 
 fn compile_glsl_fragment(source: &str, node_label: &str) -> Result<naga::Module, WgpuError> {
     let mut fe = naga_glsl::Frontend::default();
-    let opts   = naga_glsl::Options {
-        stage:   naga::ShaderStage::Fragment,
-        defines: Default::default(),
-    };
+    let opts   = naga_glsl::Options { stage: naga::ShaderStage::Fragment, defines: Default::default() };
     fe.parse(&opts, source).map_err(|errors| {
-        let messages = errors.errors.iter()     // ← .errors.iter() not .iter()
+        let messages = errors.errors.iter()
             .map(|e| format!("  {e:?}"))
             .collect::<Vec<_>>()
             .join("\n");

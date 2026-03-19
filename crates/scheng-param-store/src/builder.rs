@@ -90,6 +90,7 @@ impl NodeConfigBuilder {
         for &node_id in self.label_to_id.values() {
             configs.entry(node_id).or_insert_with(|| NodeConfig {
                 frag_shader: self.shaders.get(&node_id).cloned(),
+                uniforms:    std::collections::HashMap::new(),
                 output_name: None,
             });
         }

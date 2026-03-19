@@ -1,0 +1,21 @@
+[package]
+name        = "scheng-input-ndi"
+version     = "0.1.0"
+edition     = "2021"
+description = "NDI receive → wgpu texture for scheng instruments"
+license     = "MIT"
+
+[dependencies]
+scheng-runtime-wgpu = { path = "../scheng-runtime-wgpu" }
+wgpu      = "22"
+log       = "0.4"
+thiserror = "1"
+
+# NDI SDK Rust bindings — add your preferred crate here.
+# Recommended: https://github.com/hansjorg/ndi-rs
+# ndi = { version = "0.4", optional = true }
+
+[features]
+default = []
+# Enable with NDI SDK installed and Rust bindings added above
+ndi-sdk = []

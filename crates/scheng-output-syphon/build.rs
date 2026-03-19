@@ -47,6 +47,7 @@ fn build_macos() {
         .file("native/syphon_metal_bridge.m")
         .flag("-fobjc-arc")
         .flag("-fmodules")
+        .flag(&format!("-F{}", workspace_root.join("vendor").display()))
         .compile("syphon_metal_bridge");
 
     // Link Syphon.framework from vendor/

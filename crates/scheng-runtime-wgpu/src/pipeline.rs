@@ -1,4 +1,10 @@
-//! RenderPipeline and BindGroupLayout cache.
+//! `pipeline.rs` — RenderPipeline and BindGroupLayout cache.
+//!
+//! Bind group layout (bindings 0–6):
+//! 0–3 = iChannel0..3 textures
+//!   4 = iSampler
+//!   5 = FrameBlock  (global uniforms)
+//!   6 = CustomBlock (per-node u_* uniforms) ← Phase 1.2
 
 use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::hash::{Hash, Hasher};
@@ -8,6 +14,8 @@ use crate::{render_target::RENDER_TARGET_FORMAT, shader::{ShaderCache, VERTEX_SH
 pub struct NodePipeline {
     pub pipeline:          wgpu::RenderPipeline,
     pub bind_group_layout: wgpu::BindGroupLayout,
+    /// Custom uniform names in declaration order — used to write CustomBlock.
+    pub custom_uniform_names: Vec<String>,
 }
 
 pub struct PipelineCache {
@@ -53,21 +61,26 @@ fn build_pipeline(
         label:  Some("scheng_vert"),
         source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(VERTEX_SHADER_WGSL)),
     });
-    let frag_module = shaders.fragment_module(device, frag_src, node_label)?;
-    let bgl         = build_bgl(device, node_label);
-    let layout      = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+
+    // Compile frag — also extracts custom_uniform_names
+    let (frag_module, custom_uniform_names) =
+        shaders.fragment_module_with_names(device, frag_src, node_label)?;
+
+    let bgl    = build_bgl(device, node_label);
+    let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label:                Some(&format!("{node_label}_layout")),
         bind_group_layouts:   &[&bgl],
         push_constant_ranges: &[],
     });
+
     let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label:  Some(&format!("{node_label}_pipeline")),
         layout: Some(&layout),
         vertex: wgpu::VertexState {
-            module:               &vert_module,
-            entry_point:          "vs_main",
-            compilation_options:  wgpu::PipelineCompilationOptions::default(),
-            buffers:              &[],
+            module:              &vert_module,
+            entry_point:         "vs_main",
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
+            buffers:             &[],
         },
         fragment: Some(wgpu::FragmentState {
             module:              frag_module,
@@ -89,7 +102,8 @@ fn build_pipeline(
         multiview:     None,
         cache:         None,
     });
-    Ok(NodePipeline { pipeline, bind_group_layout: bgl })
+
+    Ok(NodePipeline { pipeline, bind_group_layout: bgl, custom_uniform_names })
 }
 
 fn build_bgl(device: &wgpu::Device, label: &str) -> wgpu::BindGroupLayout {
@@ -97,22 +111,17 @@ fn build_bgl(device: &wgpu::Device, label: &str) -> wgpu::BindGroupLayout {
         label:   Some(&format!("{label}_bgl")),
         entries: &[
             tex(0), tex(1), tex(2), tex(3),
+            // binding 4 — iSampler
             wgpu::BindGroupLayoutEntry {
                 binding:    4,
                 visibility: wgpu::ShaderStages::FRAGMENT,
                 ty:         wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                 count:      None,
             },
-            wgpu::BindGroupLayoutEntry {
-                binding:    5,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty:         wgpu::BindingType::Buffer {
-                    ty:                wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size:  None,
-                },
-                count: None,
-            },
+            // binding 5 — FrameBlock
+            uniform_entry(5),
+            // binding 6 — CustomBlock (per-node u_* uniforms)
+            uniform_entry(6),
         ],
     })
 }
@@ -125,6 +134,19 @@ fn tex(binding: u32) -> wgpu::BindGroupLayoutEntry {
             sample_type:    wgpu::TextureSampleType::Float { filterable: true },
             view_dimension: wgpu::TextureViewDimension::D2,
             multisampled:   false,
+        },
+        count: None,
+    }
+}
+
+fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
+    wgpu::BindGroupLayoutEntry {
+        binding,
+        visibility: wgpu::ShaderStages::FRAGMENT,
+        ty:         wgpu::BindingType::Buffer {
+            ty:                 wgpu::BufferBindingType::Uniform,
+            has_dynamic_offset: false,
+            min_binding_size:   None,
         },
         count: None,
     }
