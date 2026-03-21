@@ -11,7 +11,6 @@ pub struct WgpuContext {
 }
 
 impl WgpuContext {
-    /// Headless init — no window surface required.
     pub fn new() -> Result<Self, WgpuError> {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(), ..Default::default()
@@ -19,17 +18,6 @@ impl WgpuContext {
         pollster::block_on(Self::init(instance, None))
     }
 
-    /// Surface-compatible init.
-    ///
-    /// The caller must create the instance AND surface first, then pass both in.
-    /// This guarantees the adapter is chosen from the same instance the surface
-    /// belongs to — mixing instances causes wgpu to panic.
-    ///
-    /// ```rust,ignore
-    /// let instance = wgpu::Instance::new(...);
-    /// let surface  = instance.create_surface(&window)?;
-    /// let ctx      = WgpuContext::new_with_surface(instance, &surface)?;
-    /// ```
     pub fn new_with_surface(
         instance: wgpu::Instance,
         surface:  &wgpu::Surface,
@@ -56,6 +44,8 @@ impl WgpuContext {
             adapter_info.name, adapter_info.device_type, adapter_info.backend
         );
 
+        // wgpu 23: request_device no longer takes a trace path argument.
+        // trace moved into DeviceDescriptor.
         let (device, queue) = adapter
             .request_device(
                 &wgpu::DeviceDescriptor {

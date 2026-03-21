@@ -28,29 +28,9 @@ pub trait OutputSink {
 }
 
 // ── NodeConfig ────────────────────────────────────────────────────────────
-
-/// Per-node configuration supplied by the instrument each frame.
-pub struct NodeConfig {
-    /// GLSL 330 fragment shader. `None` → use built-in for this NodeKind.
-    pub frag_shader: Option<String>,
-    /// Custom uniform values — maps u_* name → f32 value.
-    pub uniforms: HashMap<String, f32>,
-    /// Output name for PixelsOut nodes. `None` = primary output.
-    pub output_name: Option<String>,
-}
-
-impl Default for NodeConfig {
-    fn default() -> Self {
-        Self { frag_shader: None, uniforms: HashMap::new(), output_name: None }
-    }
-}
-
-impl NodeConfig {
-    pub fn set(&mut self, name: &str, value: f32) -> &mut Self {
-        self.uniforms.insert(name.to_owned(), value);
-        self
-    }
-}
+// Re-exported from scheng-param-store to break the dependency cycle.
+// scheng-runtime-wgpu depends on scheng-param-store, not the other way around.
+pub use scheng_param_store::NodeConfig;
 
 // ── Built-in shaders ──────────────────────────────────────────────────────
 

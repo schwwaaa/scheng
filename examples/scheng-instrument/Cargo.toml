@@ -17,11 +17,12 @@ scheng-control-osc-wgpu = { path = "../../crates/scheng-control-osc-wgpu" }
 scheng-hotreload        = { path = "../../crates/scheng-hotreload" }
 scheng-output-ffmpeg    = { path = "../../crates/scheng-output-ffmpeg" }
 scheng-input-midi       = { path = "../../crates/scheng-input-midi", optional = true }
-wgpu                    = "22"
-winit                   = "0.30"
-pollster                = "0.3"
-env_logger              = "0.11"
-log                     = "0.4"
+scheng-output-ndi       = { path = "../../crates/scheng-output-ndi", optional = true }
+wgpu       = "23"
+winit      = "0.30"
+pollster   = "0.3"
+env_logger = "0.11"
+log        = "0.4"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 scheng-output-syphon = { path = "../../crates/scheng-output-syphon", optional = true }
@@ -30,3 +31,4 @@ scheng-output-syphon = { path = "../../crates/scheng-output-syphon", optional = 
 default = ["midi", "syphon"]
 midi    = ["dep:scheng-input-midi"]
 syphon  = ["dep:scheng-output-syphon"]
+ndi     = ["dep:scheng-output-ndi", "scheng-output-ndi/ndi"]

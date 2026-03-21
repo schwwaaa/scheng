@@ -1,12 +1,15 @@
 //! # scheng instrument example
 //!
-//! Complete instrument with preview window, hot-reload, MIDI/OSC, Syphon + FFmpeg output.
+//! Complete instrument with preview window, hot-reload, MIDI/OSC,
+//! Syphon, NDI, and FFmpeg output.
 //!
 //! ```bash
-//! cargo run --release --no-default-features        # preview window only
-//! cargo run --release                              # preview + Syphon
+//! cargo run --release --no-default-features          # preview only
+//! cargo run --release                                # preview + Syphon
+//! cargo run --release --features ndi                 # + NDI output
 //! cargo run --release -- --stream rtsp://localhost:8554/live
 //! cargo run --release -- --record recording.mp4
+//! cargo run --release --features ndi -- --ndi-name "my source"
 //! ```
 
 mod preview;
@@ -22,7 +25,7 @@ use winit::{
 };
 
 use scheng_graph::{Graph, NodeId, NodeKind};
-use scheng_runtime_wgpu::{executor::{OutputSink}, FrameCtx, WgpuRuntime};
+use scheng_runtime_wgpu::{executor::OutputSink, FrameCtx, WgpuRuntime};
 use scheng_param_store::{NodeConfigBuilder, ParamStore};
 use scheng_control_osc_wgpu::OscReceiver;
 use scheng_hotreload::HotReloader;
@@ -31,27 +34,44 @@ use preview::PreviewSink;
 
 #[cfg(feature = "midi")]
 use scheng_input_midi::MidiInput;
+
 #[cfg(all(target_os = "macos", feature = "syphon"))]
 use scheng_output_syphon::SyphonSink;
 
-const ASSETS_DIR:    &str = "assets";
-const SHADER_PATH:   &str = "assets/shaders/main.frag";
-const PARAMS_PATH:   &str = "assets/params.json";
-const TARGET_FPS:    u32  = 30;
-const SYPHON_NAME:   &str = "scheng";
-const DEFAULT_WIDTH: u32  = 1280;
-const DEFAULT_HEIGHT: u32 = 720;
+#[cfg(feature = "ndi")]
+use scheng_output_ndi::{NdiSink, NdiConfig};
+
+const ASSETS_DIR:     &str = "assets";
+const SHADER_PATH:    &str = "assets/shaders/main.frag";
+const PARAMS_PATH:    &str = "assets/params.json";
+const TARGET_FPS:     u32  = 30;
+const SYPHON_NAME:    &str = "scheng";
+const NDI_NAME:       &str = "scheng";
+const DEFAULT_WIDTH:  u32  = 1280;
+const DEFAULT_HEIGHT: u32  = 720;
 
 fn frame_budget() -> Duration { Duration::from_nanos(1_000_000_000 / TARGET_FPS as u64) }
 
 // ── Args ──────────────────────────────────────────────────────────────────
 
-struct Args { width: u32, height: u32, stream_url: Option<String>, record: Option<String>, osc_port: u16 }
+struct Args {
+    width:      u32,
+    height:     u32,
+    stream_url: Option<String>,
+    record:     Option<String>,
+    osc_port:   u16,
+    ndi_name:   String,
+}
 
 impl Args {
     fn parse() -> Self {
         let args: Vec<String> = std::env::args().collect();
-        let mut a = Args { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, stream_url: None, record: None, osc_port: 9000 };
+        let mut a = Args {
+            width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT,
+            stream_url: None, record: None,
+            osc_port: 9000,
+            ndi_name: NDI_NAME.to_string(),
+        };
         let mut i = 1;
         while i < args.len() {
             match args[i].as_str() {
@@ -60,6 +80,7 @@ impl Args {
                 "--stream"   => { i+=1; a.stream_url = Some(args[i].clone()); }
                 "--record"   => { i+=1; a.record     = Some(args[i].clone()); }
                 "--osc-port" => { i+=1; a.osc_port   = args[i].parse().unwrap_or(9000); }
+                "--ndi-name" => { i+=1; a.ndi_name   = args[i].clone(); }
                 _ => {}
             }
             i += 1;
@@ -86,6 +107,8 @@ struct Instrument {
     ffmpeg:    Option<FfmpegSink>,
     #[cfg(all(target_os = "macos", feature = "syphon"))]
     syphon:    Option<SyphonSink>,
+    #[cfg(feature = "ndi")]
+    ndi:       Option<NdiSink>,
     #[cfg(feature = "midi")]
     _midi:     Option<MidiInput>,
     start:     Instant,
@@ -99,6 +122,7 @@ impl Instrument {
                 log::warn!("No {PARAMS_PATH}: {e}"); ParamStore::empty()
             })
         ));
+
         #[cfg(feature = "midi")]
         let _midi = MidiInput::connect_first(Arc::clone(&store))
             .map(|m| { log::info!("MIDI: {}", m.port_name()); m })
@@ -119,6 +143,8 @@ impl Instrument {
             preview: None, ffmpeg: None,
             #[cfg(all(target_os = "macos", feature = "syphon"))]
             syphon: None,
+            #[cfg(feature = "ndi")]
+            ndi: None,
             #[cfg(feature = "midi")]
             _midi,
             start: Instant::now(), frame: 0,
@@ -173,6 +199,8 @@ impl Instrument {
         if let Some(ref mut s) = self.ffmpeg  { multi.add(s); }
         #[cfg(all(target_os = "macos", feature = "syphon"))]
         if let Some(ref mut s) = self.syphon  { multi.add(s); }
+        #[cfg(feature = "ndi")]
+        if let Some(ref mut s) = self.ndi     { multi.add(s); }
 
         if let Err(e) = runtime.execute_frame(graph, plan, &configs, &ctx, &mut multi) {
             log::error!("execute_frame: {e}");
@@ -192,37 +220,26 @@ impl ApplicationHandler for Instrument {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.window.is_some() { return; }
 
-        // Window
         let win = Arc::new(event_loop.create_window(
             WindowAttributes::default()
                 .with_title("scheng")
                 .with_inner_size(winit::dpi::LogicalSize::new(self.args.width, self.args.height))
         ).expect("Window creation failed"));
 
-        // SAFETY: Arc<Window> is kept alive in self.window for the app lifetime
         let win_ref: &'static Window = unsafe { &*(Arc::as_ptr(&win)) };
 
-        // Step 1: create Instance + surface BEFORE WgpuRuntime.
-        // The instance must be passed INTO the runtime so both the surface
-        // and the device live in the same wgpu instance registry.
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::PRIMARY, ..Default::default()
         });
-        // Borrow instance to create surface, then move instance into runtime below.
         let surface = instance.create_surface(win_ref)
             .expect("Surface creation failed");
 
-        // Step 2: build graph
         self.build_graph();
 
-        // Step 3: create runtime — instance is MOVED in here, keeping surface valid.
         let runtime = WgpuRuntime::new_with_surface(instance, &surface, self.args.width, self.args.height)
             .expect("WgpuRuntime failed");
         log::info!("GPU: {}", runtime.ctx.adapter_info.name);
 
-        // Step 4: finish PreviewSink — uses the runtime's device/queue/adapter.
-        // The surface was created from the same instance the runtime owns, so
-        // device and surface share the same wgpu internal registry.
         let preview = PreviewSink::new(
             surface,
             &runtime.ctx.device,
@@ -233,12 +250,25 @@ impl ApplicationHandler for Instrument {
             self.args.height,
         );
 
-        // Syphon — zero-copy Metal texture path
+        // Syphon
         #[cfg(all(target_os = "macos", feature = "syphon"))]
         {
             self.syphon = SyphonSink::new(SYPHON_NAME)
                 .map(|s| { log::info!("Syphon: '{}' ready", SYPHON_NAME); s })
                 .map_err(|e| log::warn!("Syphon: {e}")).ok();
+        }
+
+        // NDI
+        #[cfg(feature = "ndi")]
+        {
+            self.ndi = NdiSink::new(NdiConfig {
+                source_name:   self.args.ndi_name.clone(),
+                group:         None,
+                framerate_num: TARGET_FPS,
+                framerate_den: 1,
+            })
+            .map(|s| { log::info!("NDI: '{}' ready", self.args.ndi_name); s })
+            .map_err(|e| log::warn!("NDI: {e}")).ok();
         }
 
         // FFmpeg

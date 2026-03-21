@@ -78,13 +78,13 @@ fn build_pipeline(
         layout: Some(&layout),
         vertex: wgpu::VertexState {
             module:              &vert_module,
-            entry_point:         "vs_main",
+            entry_point:         Some("vs_main"),
             compilation_options: wgpu::PipelineCompilationOptions::default(),
             buffers:             &[],
         },
         fragment: Some(wgpu::FragmentState {
             module:              frag_module,
-            entry_point:         "main",
+            entry_point:         Some("main"),
             compilation_options: wgpu::PipelineCompilationOptions::default(),
             targets: &[Some(wgpu::ColorTargetState {
                 format:     RENDER_TARGET_FORMAT,

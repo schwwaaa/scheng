@@ -112,11 +112,11 @@ impl PreviewSink {
             label:  Some("blit_pipeline"),
             layout: Some(&layout),
             vertex: wgpu::VertexState {
-                module: &vert, entry_point: "vs",
+                module: &vert, entry_point: Some("vs"),
                 compilation_options: Default::default(), buffers: &[],
             },
             fragment: Some(wgpu::FragmentState {
-                module: &frag, entry_point: "fs",
+                module: &frag, entry_point: Some("fs"),
                 compilation_options: Default::default(),
                 targets: &[Some(wgpu::ColorTargetState {
                     format,

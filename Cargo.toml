@@ -10,12 +10,10 @@ members = [
   "crates/scheng-host-winit",
   "crates/scheng-passes",
   "crates/scheng-runtime",
-  "crates/scheng-runtime-glow",
   "crates/scheng-contract-tests",
   "crates/scheng-input-webcam",
   "crates/scheng-input-video",
   "crates/scrubbable_controls",
-  "crates/scheng-bridge",
   "crates/scheng-runtime-wgpu",
   "crates/scheng-output-ffmpeg",
   "crates/scheng-output-syphon",
@@ -23,14 +21,7 @@ members = [
   "crates/scheng-output-ndi",
   "crates/scheng-param-store",
   "crates/scheng-input-midi",
-  "crates/scheng-control-osc-wgpu",
   "crates/scheng-hotreload",
-  "crates/scheng-tauri",
-  "crates/scheng-input-ndi",
-  "crates/scheng-input-video",
-  "crates/scheng-input-webcam",
-  "crates/scheng-input-syphon",
-  "crates/scheng-input-spout",
   "examples/minimal",
   "examples/pure_single_pass",
   "examples/render_target_only",
@@ -43,7 +34,6 @@ members = [
   "examples/graph_matrix_mix4",
   "examples/graph_matrix_mix4_webcam",
   "examples/graph_webcam_luma_key",
-  "examples/syphon_builtin_legacy",
   "examples/syphon_minimal",
   "examples/syphon_patchbay",
   "examples/readback_minimal",
@@ -58,7 +48,11 @@ members = [
   "examples/scheng-instrument",
 ]
 
-exclude = ["examples/syphon_builtin_legacy"]
+exclude = [
+  "examples/syphon_builtin_legacy",
+  "crates/scheng-bridge",
+  "crates/scheng-runtime-glow",
+]
 
 [workspace.package]
 edition = "2021"

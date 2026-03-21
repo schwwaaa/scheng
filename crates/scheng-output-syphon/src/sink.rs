@@ -1,3 +1,6 @@
+//! SyphonSink — publishes wgpu frames to a Syphon Metal server.
+//! Uses CPU readback path (wgpu 23). Zero-copy available in wgpu 24+.
+
 use std::ffi::CString;
 use scheng_graph::NodeId;
 use scheng_runtime_wgpu::{executor::OutputSink, FrameCtx, RenderTarget};
@@ -13,7 +16,8 @@ unsafe impl Sync for SyphonSink {}
 
 impl SyphonSink {
     pub fn new(name: &str) -> Result<Self, SyphonError> {
-        let c_name = CString::new(name).unwrap_or_else(|_| CString::new("scheng").unwrap());
+        let c_name = CString::new(name)
+            .unwrap_or_else(|_| CString::new("scheng").unwrap());
         let server = unsafe { ffi::scheng_syphon_create(c_name.as_ptr()) };
         if server.is_null() {
             return Err(SyphonError::CreateFailed);
@@ -30,13 +34,20 @@ impl Drop for SyphonSink {
         if !self.server.is_null() {
             unsafe { ffi::scheng_syphon_destroy(self.server) };
             self.server = std::ptr::null_mut();
+            log::info!("Syphon server '{}' stopped", self.name);
         }
     }
 }
 
 impl OutputSink for SyphonSink {
-    fn present(&mut self, _node_id: NodeId, target: &RenderTarget,
-               _ctx: &FrameCtx, device: &wgpu::Device, queue: &wgpu::Queue) {
+    fn present(
+        &mut self,
+        _node_id: NodeId,
+        target:   &RenderTarget,
+        _ctx:     &FrameCtx,
+        device:   &wgpu::Device,
+        queue:    &wgpu::Queue,
+    ) {
         if self.server.is_null() { return; }
 
         let pixels = target.readback(device, queue);
