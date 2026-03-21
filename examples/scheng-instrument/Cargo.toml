@@ -27,8 +27,13 @@ log        = "0.4"
 [target.'cfg(target_os = "macos")'.dependencies]
 scheng-output-syphon = { path = "../../crates/scheng-output-syphon", optional = true }
 
+[target.'cfg(target_os = "windows")'.dependencies]
+scheng-output-spout = { path = "../../crates/scheng-output-spout", optional = true }
+scheng-input-spout  = { path = "../../crates/scheng-input-spout",  optional = true }
+
 [features]
 default = ["midi", "syphon"]
 midi    = ["dep:scheng-input-midi"]
 syphon  = ["dep:scheng-output-syphon"]
 ndi     = ["dep:scheng-output-ndi", "scheng-output-ndi/ndi"]
+spout   = ["dep:scheng-output-spout"]

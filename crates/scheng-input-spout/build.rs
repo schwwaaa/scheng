@@ -3,16 +3,18 @@ fn main() {
         return;
     }
 
-    // Port the spout_bridge from scheng-output-spout/native/ (which itself
-    // was ported from scheng-runtime-glow/native/spout_bridge/).
-    // The receiver bridge follows the same pattern as the sender.
+    let spout_sdk = std::path::PathBuf::from(
+        std::env::var("CARGO_MANIFEST_DIR").unwrap()
+    )
+    .join("../../vendor/Spout2/SPOUT_SDK");
+
     cc::Build::new()
         .cpp(true)
         .file("native/spout_receiver_bridge.cpp")
-        // Spout2 headers — place Spout2 source at vendor/Spout2/
-        .include("vendor/Spout2/SPOUT_SDK")
+        .include(&spout_sdk)
         .compile("spout_receiver_bridge");
 
+    println!("cargo:rustc-link-lib=opengl32");
     println!("cargo:rustc-link-lib=user32");
     println!("cargo:rustc-link-lib=gdi32");
     println!("cargo:rerun-if-changed=native/spout_receiver_bridge.cpp");

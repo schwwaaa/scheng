@@ -41,12 +41,16 @@ use scheng_output_syphon::SyphonSink;
 #[cfg(feature = "ndi")]
 use scheng_output_ndi::{NdiSink, NdiConfig};
 
+#[cfg(all(target_os = "windows", feature = "spout"))]
+use scheng_output_spout::SpoutSink;
+
 const ASSETS_DIR:     &str = "assets";
 const SHADER_PATH:    &str = "assets/shaders/main.frag";
 const PARAMS_PATH:    &str = "assets/params.json";
 const TARGET_FPS:     u32  = 30;
 const SYPHON_NAME:    &str = "scheng";
 const NDI_NAME:       &str = "scheng";
+const SPOUT_NAME:     &str = "scheng";
 const DEFAULT_WIDTH:  u32  = 1280;
 const DEFAULT_HEIGHT: u32  = 720;
 
@@ -61,6 +65,7 @@ struct Args {
     record:     Option<String>,
     osc_port:   u16,
     ndi_name:   String,
+    spout_name: String,
 }
 
 impl Args {
@@ -71,6 +76,7 @@ impl Args {
             stream_url: None, record: None,
             osc_port: 9000,
             ndi_name: NDI_NAME.to_string(),
+            spout_name: SPOUT_NAME.to_string(),
         };
         let mut i = 1;
         while i < args.len() {
@@ -80,7 +86,8 @@ impl Args {
                 "--stream"   => { i+=1; a.stream_url = Some(args[i].clone()); }
                 "--record"   => { i+=1; a.record     = Some(args[i].clone()); }
                 "--osc-port" => { i+=1; a.osc_port   = args[i].parse().unwrap_or(9000); }
-                "--ndi-name" => { i+=1; a.ndi_name   = args[i].clone(); }
+                "--ndi-name"   => { i+=1; a.ndi_name   = args[i].clone(); }
+                "--spout-name" => { i+=1; a.spout_name = args[i].clone(); }
                 _ => {}
             }
             i += 1;
@@ -109,6 +116,8 @@ struct Instrument {
     syphon:    Option<SyphonSink>,
     #[cfg(feature = "ndi")]
     ndi:       Option<NdiSink>,
+    #[cfg(all(target_os = "windows", feature = "spout"))]
+    spout:     Option<SpoutSink>,
     #[cfg(feature = "midi")]
     _midi:     Option<MidiInput>,
     start:     Instant,
@@ -145,6 +154,8 @@ impl Instrument {
             syphon: None,
             #[cfg(feature = "ndi")]
             ndi: None,
+            #[cfg(all(target_os = "windows", feature = "spout"))]
+            spout: None,
             #[cfg(feature = "midi")]
             _midi,
             start: Instant::now(), frame: 0,
@@ -201,6 +212,8 @@ impl Instrument {
         if let Some(ref mut s) = self.syphon  { multi.add(s); }
         #[cfg(feature = "ndi")]
         if let Some(ref mut s) = self.ndi     { multi.add(s); }
+        #[cfg(all(target_os = "windows", feature = "spout"))]
+        if let Some(ref mut s) = self.spout   { multi.add(s); }
 
         if let Err(e) = runtime.execute_frame(graph, plan, &configs, &ctx, &mut multi) {
             log::error!("execute_frame: {e}");
@@ -269,6 +282,14 @@ impl ApplicationHandler for Instrument {
             })
             .map(|s| { log::info!("NDI: '{}' ready", self.args.ndi_name); s })
             .map_err(|e| log::warn!("NDI: {e}")).ok();
+        }
+
+        // Spout (Windows only)
+        #[cfg(all(target_os = "windows", feature = "spout"))]
+        {
+            self.spout = SpoutSink::new(&self.args.spout_name)
+                .map(|s| { log::info!("Spout: '{}' ready", self.args.spout_name); s })
+                .map_err(|e| log::warn!("Spout: {e}")).ok();
         }
 
         // FFmpeg

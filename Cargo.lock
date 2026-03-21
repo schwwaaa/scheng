@@ -2886,8 +2886,10 @@ dependencies = [
  "scheng-graph",
  "scheng-hotreload",
  "scheng-input-midi",
+ "scheng-input-spout",
  "scheng-output-ffmpeg",
  "scheng-output-ndi",
+ "scheng-output-spout",
  "scheng-output-syphon",
  "scheng-param-store",
  "scheng-runtime-wgpu",
@@ -3138,6 +3140,16 @@ dependencies = [
  "midir",
  "scheng-param-store",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "scheng-input-spout"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "log",
+ "thiserror 1.0.69",
+ "wgpu 23.0.1",
 ]
 
 [[package]]
