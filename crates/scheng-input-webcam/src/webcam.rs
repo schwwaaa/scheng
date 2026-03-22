@@ -9,6 +9,7 @@ pub struct Webcam;
 
 #[cfg(not(feature = "native"))]
 impl Webcam {
+    pub fn list_cameras() -> Vec<String> { vec![] }
     pub fn open(_index: u32, _width: u32, _height: u32,
                 _device: &wgpu::Device, _queue: &wgpu::Queue)
         -> Result<Self, WebcamError>
@@ -17,6 +18,7 @@ impl Webcam {
     }
     pub fn poll(&mut self, _queue: &wgpu::Queue) -> bool { false }
     pub fn texture_view(&self) -> Option<wgpu::TextureView> { None }
+    pub fn texture_arc(&self) -> Option<std::sync::Arc<wgpu::Texture>> { None }
     pub fn width(&self)  -> u32 { 0 }
     pub fn height(&self) -> u32 { 0 }
 }
@@ -26,86 +28,113 @@ impl Webcam {
 #[cfg(feature = "native")]
 use nokhwa::{
     pixel_format::RgbAFormat,
-    utils::{CameraIndex, RequestedFormat, RequestedFormatType, Resolution},
+    utils::{ApiBackend, CameraFormat, CameraIndex, FrameFormat,
+            RequestedFormat, RequestedFormatType, Resolution},
     Camera,
 };
 
 #[cfg(feature = "native")]
 pub struct Webcam {
-    camera:    Camera,
-    texture:   wgpu::Texture,
-    width:     u32,
-    height:    u32,
-    new_frame: bool,
+    camera:  Camera,
+    texture: std::sync::Arc<wgpu::Texture>,
+    width:   u32,
+    height:  u32,
 }
 
 #[cfg(feature = "native")]
 impl Webcam {
-    /// Open the camera at `index` (0 = first/default camera).
+    /// List all available cameras by name.
+    pub fn list_cameras() -> Vec<String> {
+        nokhwa::query(ApiBackend::Auto)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|info| format!("[{}] {}", info.index(), info.human_name()))
+            .collect()
+    }
+
+    /// Open camera at `index`. Tries MJPEG first (most compatible on macOS),
+    /// then YUYV, then lets the driver choose.
     pub fn open(index: u32, width: u32, height: u32,
                 device: &wgpu::Device, queue: &wgpu::Queue)
         -> Result<Self, WebcamError>
     {
-        let fmt = RequestedFormat::new::<RgbAFormat>(
-            RequestedFormatType::Closest(Resolution::new(width, height))
-        );
-        let mut camera = Camera::new(CameraIndex::Index(index), fmt)
-            .map_err(|e| WebcamError::OpenFailed(e.to_string()))?;
+        // Log all supported formats so we know exactly what the camera accepts
+        if let Ok(mut probe) = Camera::new(
+            CameraIndex::Index(index),
+            RequestedFormat::new::<RgbAFormat>(RequestedFormatType::AbsoluteHighestResolution),
+        ) {
+            for fmt in probe.compatible_camera_formats().unwrap_or_default() {
+                log::info!("Webcam {index} supports: {:?}", fmt);
+            }
+        }
+
+        // Try formats in order of macOS compatibility
+        let candidates = [
+            RequestedFormat::new::<RgbAFormat>(RequestedFormatType::Closest(
+                CameraFormat::new_from(width, height, FrameFormat::MJPEG, 30)
+            )),
+            RequestedFormat::new::<RgbAFormat>(RequestedFormatType::Closest(
+                CameraFormat::new_from(width, height, FrameFormat::YUYV, 30)
+            )),
+            RequestedFormat::new::<RgbAFormat>(RequestedFormatType::Closest(
+                CameraFormat::new_from(640, 480, FrameFormat::MJPEG, 30)
+            )),
+        ];
+
+        let mut camera = None;
+        for fmt in &candidates {
+            match Camera::new(CameraIndex::Index(index), *fmt) {
+                Ok(c) => { camera = Some(c); break; }
+                Err(_) => continue,
+            }
+        }
+        let mut camera = camera
+            .ok_or_else(|| WebcamError::OpenFailed("no compatible format found".into()))?;
 
         camera.open_stream()
             .map_err(|e| WebcamError::OpenFailed(e.to_string()))?;
 
-        // Get actual resolution after negotiation
-        let fmt      = camera.camera_format();
-        let actual_w = fmt.width();
-        let actual_h = fmt.height();
+        let cam_fmt  = camera.camera_format();
+        let actual_w = cam_fmt.width();
+        let actual_h = cam_fmt.height();
 
         let texture = Self::make_texture(device, actual_w, actual_h);
-
-        // Upload a black frame so the texture is valid before the first poll
         let black = vec![0u8; (actual_w * actual_h * 4) as usize];
         Self::upload_pixels(queue, &texture, &black, actual_w, actual_h);
 
-        log::info!("Webcam {}: {}×{} opened", index, actual_w, actual_h);
-
-        Ok(Self { camera, texture, width: actual_w, height: actual_h, new_frame: false })
+        log::info!("Webcam {index}: {}×{} opened ({:?})", actual_w, actual_h, cam_fmt.format());
+        Ok(Self { camera, texture, width: actual_w, height: actual_h })
     }
 
-    /// Poll for a new frame and upload if available. Returns true if a new frame arrived.
-    ///
-    /// Non-blocking — if the camera has no new frame ready, returns immediately.
+    /// Poll for a new frame and upload to GPU. Non-blocking.
     pub fn poll(&mut self, queue: &wgpu::Queue) -> bool {
         match self.camera.frame() {
-            Ok(raw) => {
-                match raw.decode_image::<RgbAFormat>() {
-                    Ok(img) => {
-                        Self::upload_pixels(
-                            queue, &self.texture,
-                            img.as_raw(), self.width, self.height
-                        );
-                        self.new_frame = true;
-                        true
-                    }
-                    Err(e) => {
-                        log::warn!("Webcam decode failed: {e}");
-                        false
-                    }
+            Ok(raw) => match raw.decode_image::<RgbAFormat>() {
+                Ok(img) => {
+                    Self::upload_pixels(queue, &self.texture, img.as_raw(), self.width, self.height);
+                    true
                 }
-            }
-            Err(_) => false, // no new frame ready
+                Err(e) => { log::warn!("Webcam decode: {e}"); false }
+            },
+            Err(_) => false,
         }
     }
 
-    /// A wgpu texture view ready to bind as iChannel0.
+    /// Texture view ready to bind as iChannel0.
     pub fn texture_view(&self) -> Option<wgpu::TextureView> {
         Some(self.texture.create_view(&wgpu::TextureViewDescriptor::default()))
+    }
+
+    /// Arc<Texture> for injection into NodeConfig::input_textures.
+    pub fn texture_arc(&self) -> Option<std::sync::Arc<wgpu::Texture>> {
+        Some(std::sync::Arc::clone(&self.texture))
     }
 
     pub fn width(&self)  -> u32 { self.width }
     pub fn height(&self) -> u32 { self.height }
 
-    fn make_texture(device: &wgpu::Device, w: u32, h: u32) -> wgpu::Texture {
-        device.create_texture(&wgpu::TextureDescriptor {
+    fn make_texture(device: &wgpu::Device, w: u32, h: u32) -> std::sync::Arc<wgpu::Texture> {
+        std::sync::Arc::new(device.create_texture(&wgpu::TextureDescriptor {
             label:           Some("webcam_frame"),
             size:            wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
             mip_level_count: 1,
@@ -114,7 +143,7 @@ impl Webcam {
             format:          wgpu::TextureFormat::Rgba8Unorm,
             usage:           wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats:    &[],
-        })
+        }))
     }
 
     fn upload_pixels(queue: &wgpu::Queue, texture: &wgpu::Texture,
@@ -140,7 +169,7 @@ impl Webcam {
 impl Drop for Webcam {
     fn drop(&mut self) {
         if let Err(e) = self.camera.stop_stream() {
-            log::warn!("Webcam stop_stream failed: {e}");
+            log::warn!("Webcam stop_stream: {e}");
         }
     }
 }

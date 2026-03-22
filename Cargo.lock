@@ -2417,6 +2417,7 @@ dependencies = [
  "scheng-hotreload",
  "scheng-input-midi",
  "scheng-input-spout",
+ "scheng-input-webcam",
  "scheng-output-ffmpeg",
  "scheng-output-ndi",
  "scheng-output-spout",
@@ -2494,9 +2495,8 @@ version = "0.1.0"
 dependencies = [
  "log",
  "nokhwa",
- "scheng-runtime-wgpu",
  "thiserror 1.0.69",
- "wgpu 22.1.0",
+ "wgpu 23.0.1",
 ]
 
 [[package]]
@@ -2558,6 +2558,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 1.0.69",
+ "wgpu 23.0.1",
 ]
 
 [[package]]

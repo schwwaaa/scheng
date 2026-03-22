@@ -5,8 +5,8 @@
 //!
 //! scheng-runtime-wgpu re-exports this type from its executor module
 //! for backward compatibility.
-
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// Per-node configuration supplied by the instrument each frame.
 #[derive(Debug, Clone, Default)]
@@ -17,6 +17,9 @@ pub struct NodeConfig {
     pub uniforms: HashMap<String, f32>,
     /// Output name for PixelsOut nodes. `None` = primary output.
     pub output_name: Option<String>,
+    /// Override iChannel0..3 with external textures (webcam, NDI, Syphon receive, etc.)
+    /// Graph edges are used as fallback when a slot is None.
+    pub input_textures: [Option<Arc<wgpu::Texture>>; 4],
 }
 
 impl NodeConfig {

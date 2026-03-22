@@ -6,14 +6,15 @@ description = "wgpu (Metal/DX12/Vulkan) backend for scheng"
 license     = "MIT"
 
 [dependencies]
-scheng-core        = { path = "../scheng-core" }
-scheng-graph       = { path = "../scheng-graph" }
-scheng-runtime     = { path = "../scheng-runtime" }
+scheng-core       = { path = "../scheng-core" }
+scheng-graph      = { path = "../scheng-graph" }
+scheng-runtime    = { path = "../scheng-runtime" }
 scheng-param-store = { path = "../scheng-param-store" }
 
-wgpu      = { version = "23", features = ["naga-ir"] }
-naga      = { version = "23", features = ["glsl-in"] }
-bytemuck  = { version = "1",  features = ["derive"] }
+wgpu     = { version = "23", features = ["naga-ir"] }
+naga     = { version = "23", features = ["glsl-in"] }
+
+bytemuck  = { version = "1", features = ["derive"] }
 pollster  = "0.3"
 once_cell = "1"
 log       = "0.4"
@@ -22,3 +23,6 @@ regex     = "1"
 
 [dev-dependencies]
 env_logger = "0.11"
+
+[features]
+default = []

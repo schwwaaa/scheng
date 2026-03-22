@@ -18,6 +18,7 @@ scheng-hotreload        = { path = "../../crates/scheng-hotreload" }
 scheng-output-ffmpeg    = { path = "../../crates/scheng-output-ffmpeg" }
 scheng-input-midi       = { path = "../../crates/scheng-input-midi", optional = true }
 scheng-output-ndi       = { path = "../../crates/scheng-output-ndi", optional = true }
+scheng-input-webcam     = { path = "../../crates/scheng-input-webcam",  optional = true }
 wgpu       = "23"
 winit      = "0.30"
 pollster   = "0.3"
@@ -36,4 +37,5 @@ default = ["midi", "syphon"]
 midi    = ["dep:scheng-input-midi"]
 syphon  = ["dep:scheng-output-syphon"]
 ndi     = ["dep:scheng-output-ndi", "scheng-output-ndi/ndi"]
+webcam  = ["dep:scheng-input-webcam", "scheng-input-webcam/native"]
 spout   = ["dep:scheng-output-spout"]

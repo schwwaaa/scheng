@@ -44,6 +44,9 @@ use scheng_output_ndi::{NdiSink, NdiConfig};
 #[cfg(all(target_os = "windows", feature = "spout"))]
 use scheng_output_spout::SpoutSink;
 
+#[cfg(feature = "webcam")]
+use scheng_input_webcam::Webcam;
+
 const ASSETS_DIR:     &str = "assets";
 const SHADER_PATH:    &str = "assets/shaders/main.frag";
 const PARAMS_PATH:    &str = "assets/params.json";
@@ -65,7 +68,8 @@ struct Args {
     record:     Option<String>,
     osc_port:   u16,
     ndi_name:   String,
-    spout_name: String,
+    spout_name:    String,
+    webcam_index:  Option<u32>,
 }
 
 impl Args {
@@ -76,7 +80,8 @@ impl Args {
             stream_url: None, record: None,
             osc_port: 9000,
             ndi_name: NDI_NAME.to_string(),
-            spout_name: SPOUT_NAME.to_string(),
+            spout_name:   SPOUT_NAME.to_string(),
+            webcam_index: None,
         };
         let mut i = 1;
         while i < args.len() {
@@ -87,7 +92,8 @@ impl Args {
                 "--record"   => { i+=1; a.record     = Some(args[i].clone()); }
                 "--osc-port" => { i+=1; a.osc_port   = args[i].parse().unwrap_or(9000); }
                 "--ndi-name"   => { i+=1; a.ndi_name   = args[i].clone(); }
-                "--spout-name" => { i+=1; a.spout_name = args[i].clone(); }
+                "--spout-name"   => { i+=1; a.spout_name   = args[i].clone(); }
+                "--webcam"       => { i+=1; a.webcam_index = Some(args[i].parse().unwrap_or(0)); }
                 _ => {}
             }
             i += 1;
@@ -118,6 +124,8 @@ struct Instrument {
     ndi:       Option<NdiSink>,
     #[cfg(all(target_os = "windows", feature = "spout"))]
     spout:     Option<SpoutSink>,
+    #[cfg(feature = "webcam")]
+    webcam:    Option<Webcam>,
     #[cfg(feature = "midi")]
     _midi:     Option<MidiInput>,
     start:     Instant,
@@ -145,6 +153,20 @@ impl Instrument {
             .map(|r| { log::info!("Hot-reload: {ASSETS_DIR}/"); r })
             .map_err(|e| log::warn!("Hot-reload: {e}")).ok();
 
+        // Print available cameras on startup
+        #[cfg(feature = "webcam")]
+        {
+            use scheng_input_webcam::Webcam;
+            let cams = Webcam::list_cameras();
+            if cams.is_empty() {
+                log::info!("Webcam: no cameras found");
+            } else {
+                for (i, name) in cams.iter().enumerate() {
+                    log::info!("Webcam {i}: {name}  (use --webcam {i})");
+                }
+            }
+        }
+
         Self {
             args, window: None, runtime: None, graph: None, plan: None,
             main_node: None, out_node: None,
@@ -156,6 +178,8 @@ impl Instrument {
             ndi: None,
             #[cfg(all(target_os = "windows", feature = "spout"))]
             spout: None,
+            #[cfg(feature = "webcam")]
+            webcam: None,
             #[cfg(feature = "midi")]
             _midi,
             start: Instant::now(), frame: 0,
@@ -198,11 +222,35 @@ impl Instrument {
         }
         self.store.lock().unwrap().step_frame();
 
-        let configs = { let s = self.store.lock().unwrap(); self.builder.build(&*s) };
+        let mut configs = { let s = self.store.lock().unwrap(); self.builder.build(&*s) };
+
+        // Inject webcam texture as iChannel0 on main_node.
+        // Also inject a passthrough shader if no custom shader is loaded —
+        // the built-in gradient shader ignores iChannel0, passthrough shows the camera.
+        #[cfg(feature = "webcam")]
+        if let (Some(ref cam), Some(main)) = (&self.webcam, self.main_node) {
+            if let Some(view_tex) = cam.texture_arc() {
+                if let Some(cfg) = configs.get_mut(&main) {
+                    cfg.input_textures[0] = Some(view_tex);
+                    // Only inject passthrough if no shader file is loaded
+                    if cfg.frag_shader.is_none() {
+                        cfg.frag_shader = Some(
+                            "void main() { fragColor = texture(iChannel0, vec2(v_uv.x, 1.0 - v_uv.y)); }".to_string()
+                        );
+                    }
+                }
+            }
+        }
         let ctx = FrameCtx {
             width: self.args.width, height: self.args.height,
             time: self.start.elapsed().as_secs_f32(), frame: self.frame,
         };
+
+        // Poll webcam frame into texture before rendering
+        #[cfg(feature = "webcam")]
+        if let (Some(ref mut cam), Some(ref r)) = (&mut self.webcam, &self.runtime) {
+            cam.poll(&r.ctx.queue);
+        }
 
         let runtime = match &mut self.runtime { Some(r) => r, None => return };
         let mut multi = MultiSink::default();
@@ -241,17 +289,18 @@ impl ApplicationHandler for Instrument {
 
         let win_ref: &'static Window = unsafe { &*(Arc::as_ptr(&win)) };
 
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::PRIMARY, ..Default::default()
-        });
-        let surface = instance.create_surface(win_ref)
-            .expect("Surface creation failed");
-
         self.build_graph();
 
-        let runtime = WgpuRuntime::new_with_surface(instance, &surface, self.args.width, self.args.height)
+        // Create runtime first — it owns the wgpu Instance.
+        // Surface MUST come from the same instance the runtime uses,
+        // otherwise adapter IDs won't match and wgpu panics.
+        let runtime = WgpuRuntime::new(self.args.width, self.args.height)
             .expect("WgpuRuntime failed");
         log::info!("GPU: {}", runtime.ctx.adapter_info.name);
+
+        // Create surface from the runtime's own instance.
+        let surface = runtime.ctx.instance.create_surface(win_ref)
+            .expect("Surface creation failed");
 
         let preview = PreviewSink::new(
             surface,
@@ -290,6 +339,17 @@ impl ApplicationHandler for Instrument {
             self.spout = SpoutSink::new(&self.args.spout_name)
                 .map(|s| { log::info!("Spout: '{}' ready", self.args.spout_name); s })
                 .map_err(|e| log::warn!("Spout: {e}")).ok();
+        }
+
+        // Webcam input
+        #[cfg(feature = "webcam")]
+        {
+            if let Some(idx) = self.args.webcam_index {
+                self.webcam = Webcam::open(idx, self.args.width, self.args.height,
+                                           &runtime.ctx.device, &runtime.ctx.queue)
+                    .map(|c| { log::info!("Webcam {}: {}×{} ready", idx, c.width(), c.height()); c })
+                    .map_err(|e| log::warn!("Webcam: {e}")).ok();
+            }
         }
 
         // FFmpeg
