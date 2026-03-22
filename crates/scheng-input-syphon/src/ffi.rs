@@ -2,6 +2,7 @@
 
 #[cfg(all(target_os = "macos", feature = "syphon-framework"))]
 extern "C" {
+    pub fn scheng_syphon_directory_init();
     pub fn scheng_syphon_directory_create() -> *mut std::ffi::c_void;
     pub fn scheng_syphon_server_count(directory: *mut std::ffi::c_void) -> u32;
     pub fn scheng_syphon_server_name(

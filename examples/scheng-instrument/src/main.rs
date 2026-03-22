@@ -50,6 +50,9 @@ use scheng_input_webcam::Webcam;
 #[cfg(feature = "video")]
 use scheng_input_video::VideoDecoder;
 
+#[cfg(all(target_os = "macos", feature = "syphon-receive"))]
+use scheng_input_syphon::SyphonReceiver;
+
 const ASSETS_DIR:     &str = "assets";
 const SHADER_PATH:    &str = "assets/shaders/main.frag";
 const PARAMS_PATH:    &str = "assets/params.json";
@@ -73,7 +76,8 @@ struct Args {
     ndi_name:   String,
     spout_name:    String,
     webcam_index:  Option<u32>,
-    video_path:    Option<String>,
+    video_path:      Option<String>,
+    syphon_receive:  Option<String>,
 }
 
 impl Args {
@@ -86,7 +90,8 @@ impl Args {
             ndi_name: NDI_NAME.to_string(),
             spout_name:   SPOUT_NAME.to_string(),
             webcam_index: None,
-            video_path:   None,
+            video_path:      None,
+            syphon_receive:  None,
         };
         let mut i = 1;
         while i < args.len() {
@@ -99,7 +104,8 @@ impl Args {
                 "--ndi-name"   => { i+=1; a.ndi_name   = args[i].clone(); }
                 "--spout-name"   => { i+=1; a.spout_name   = args[i].clone(); }
                 "--webcam"       => { i+=1; a.webcam_index = Some(args[i].parse().unwrap_or(0)); }
-                "--video"        => { i+=1; a.video_path    = Some(args[i].clone()); }
+                "--video"          => { i+=1; a.video_path     = Some(args[i].clone()); }
+                "--syphon-receive"  => { i+=1; a.syphon_receive = Some(args[i].clone()); }
                 _ => {}
             }
             i += 1;
@@ -133,7 +139,13 @@ struct Instrument {
     #[cfg(feature = "webcam")]
     webcam:    Option<Webcam>,
     #[cfg(feature = "video")]
-    video:     Option<VideoDecoder>,
+    video:          Option<VideoDecoder>,
+    #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
+    syphon_recv:        Option<SyphonReceiver>,
+    #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
+    mtl_device_ptr:     *mut std::ffi::c_void,
+    #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
+    syphon_initialized: bool,
     #[cfg(feature = "midi")]
     _midi:     Option<MidiInput>,
     start:     Instant,
@@ -190,6 +202,12 @@ impl Instrument {
             webcam: None,
             #[cfg(feature = "video")]
             video: None,
+            #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
+            syphon_recv: None,
+            #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
+            mtl_device_ptr: std::ptr::null_mut(),
+            #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
+            syphon_initialized: false,
             #[cfg(feature = "midi")]
             _midi,
             start: Instant::now(), frame: 0,
@@ -234,6 +252,21 @@ impl Instrument {
 
         let mut configs = { let s = self.store.lock().unwrap(); self.builder.build(&*s) };
 
+        // Inject Syphon receive texture as iChannel0
+        #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
+        if let (Some(ref recv), Some(main)) = (&self.syphon_recv, self.main_node) {
+            if let Some(tex) = recv.texture_arc() {
+                if let Some(cfg) = configs.get_mut(&main) {
+                    cfg.input_textures[0] = Some(tex);
+                    if cfg.frag_shader.is_none() {
+                        cfg.frag_shader = Some(
+                            "void main() { fragColor = texture(iChannel0, v_uv); }".to_string()
+                        );
+                    }
+                }
+            }
+        }
+
         // Inject video texture as iChannel0 on main_node (webcam takes priority if both active)
         #[cfg(feature = "video")]
         if let (Some(ref vid), Some(main)) = (&self.video, self.main_node) {
@@ -275,6 +308,38 @@ impl Instrument {
         #[cfg(feature = "webcam")]
         if let (Some(ref mut cam), Some(ref r)) = (&mut self.webcam, &self.runtime) {
             cam.poll(&r.ctx.queue);
+        }
+
+        // Deferred Syphon init — wait for run loop so directory is populated
+        #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
+        if !self.syphon_initialized && self.mtl_device_ptr.is_null() == false && self.frame >= 5 {
+            self.syphon_initialized = true;
+            // Run loop is now running — directory has had time to discover
+            // Directory already pre-warmed in resumed()
+            let servers = SyphonReceiver::list_servers(self.mtl_device_ptr);
+            if servers.is_empty() {
+                log::info!("Syphon: no sources found");
+            } else {
+                log::info!("Syphon sources ({}):", servers.len());
+                for s in &servers {
+                    log::info!("  '{}' from '{}'  → use --syphon-receive \"{}\"", s.name, s.app, s.name);
+                }
+            }
+            if let Some(ref name) = self.args.syphon_receive.clone() {
+                if let Some(ref r) = self.runtime {
+                    self.syphon_recv = SyphonReceiver::connect(
+                        name, self.mtl_device_ptr, &r.ctx.device, &r.ctx.queue
+                    )
+                    .map(|r| { log::info!("Syphon receive: '{name}' connected"); r })
+                    .map_err(|e| log::warn!("Syphon receive: {e}")).ok();
+                }
+            }
+        }
+
+        // Poll Syphon receive frame
+        #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
+        if let (Some(ref mut recv), Some(ref r)) = (&mut self.syphon_recv, &self.runtime) {
+            recv.poll_with_device(&r.ctx.device, &r.ctx.queue);
         }
 
         // Poll video frame
@@ -389,6 +454,64 @@ impl ApplicationHandler for Instrument {
             self.video = VideoDecoder::open(path, &runtime.ctx.device, &runtime.ctx.queue)
                 .map(|v| { log::info!("Video: '{}' {}×{} {:.1}fps", path, v.width(), v.height(), v.fps()); v })
                 .map_err(|e| log::warn!("Video: {e}")).ok();
+        }
+
+        // Syphon receive (macOS only) — always list available servers
+        #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
+        {
+            let mut list_ptr: *mut std::ffi::c_void = std::ptr::null_mut();
+            unsafe {
+                use foreign_types_shared::ForeignType;
+                runtime.ctx.device.as_hal::<wgpu::hal::api::Metal, _, ()>(|hal| {
+                    if let Some(d) = hal {
+                        let guard = d.raw_device().lock();
+                        list_ptr = guard.as_ptr() as *mut std::ffi::c_void;
+                    }
+                });
+            }
+            let servers = SyphonReceiver::list_servers(list_ptr);
+            if servers.is_empty() {
+                log::info!("Syphon: no sources found on this machine");
+            } else {
+                log::info!("Syphon sources available ({}):", servers.len());
+                for s in &servers {
+                    log::info!("  '{}' from '{}'", s.name, s.app);
+                }
+            }
+        }
+
+        // Syphon receive (macOS only)
+        #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
+        if let Some(ref name) = self.args.syphon_receive.clone() {
+            // Extract MTL device pointer from wgpu Metal HAL
+            let mut mtl_ptr: *mut std::ffi::c_void = std::ptr::null_mut();
+unsafe {
+                use foreign_types_shared::ForeignType;
+                runtime.ctx.device.as_hal::<wgpu::hal::api::Metal, _, ()>(|hal| {
+                    if let Some(d) = hal {
+                        let guard = d.raw_device().lock();
+                        mtl_ptr = guard.as_ptr() as *mut std::ffi::c_void;
+                    }
+                });
+            }
+            self.mtl_device_ptr = mtl_ptr;
+
+            // Print all available Syphon servers
+            let servers = SyphonReceiver::list_servers(mtl_ptr);
+            if servers.is_empty() {
+                log::info!("Syphon: no servers found on this machine");
+            } else {
+                log::info!("Syphon sources available ({}):", servers.len());
+                for s in &servers {
+                    log::info!("  '{}' from '{}'  (use --syphon-receive \"{}\")", s.name, s.app, s.name);
+                }
+            }
+
+            self.syphon_recv = SyphonReceiver::connect(
+                name, mtl_ptr, &runtime.ctx.device, &runtime.ctx.queue
+            )
+            .map(|r| { log::info!("Syphon receive: '{name}' connected"); r })
+            .map_err(|e| log::warn!("Syphon receive: {e}")).ok();
         }
 
         // FFmpeg

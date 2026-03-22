@@ -2292,6 +2292,7 @@ name = "scheng-example-instrument"
 version = "0.1.0"
 dependencies = [
  "env_logger",
+ "foreign-types-shared 0.3.1",
  "log",
  "pollster",
  "scheng-control-osc-wgpu",
@@ -2299,6 +2300,7 @@ dependencies = [
  "scheng-hotreload",
  "scheng-input-midi",
  "scheng-input-spout",
+ "scheng-input-syphon",
  "scheng-input-video",
  "scheng-input-webcam",
  "scheng-output-ffmpeg",
@@ -2352,6 +2354,16 @@ dependencies = [
 
 [[package]]
 name = "scheng-input-spout"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "log",
+ "thiserror 1.0.69",
+ "wgpu",
+]
+
+[[package]]
+name = "scheng-input-syphon"
 version = "0.1.0"
 dependencies = [
  "cc",

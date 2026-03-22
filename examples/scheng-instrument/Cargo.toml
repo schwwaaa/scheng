@@ -24,10 +24,12 @@ wgpu       = "23"
 winit      = "0.30"
 pollster   = "0.3"
 env_logger = "0.11"
+foreign-types-shared = { version = "0.3", optional = true }
 log        = "0.4"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 scheng-output-syphon = { path = "../../crates/scheng-output-syphon", optional = true }
+scheng-input-syphon  = { path = "../../crates/scheng-input-syphon",  optional = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 scheng-output-spout = { path = "../../crates/scheng-output-spout", optional = true }
@@ -36,7 +38,8 @@ scheng-input-spout  = { path = "../../crates/scheng-input-spout",  optional = tr
 [features]
 default = ["midi", "syphon"]
 midi    = ["dep:scheng-input-midi"]
-syphon  = ["dep:scheng-output-syphon"]
+syphon          = ["dep:scheng-output-syphon"]
+syphon-receive  = ["dep:scheng-input-syphon", "scheng-input-syphon/syphon-framework", "dep:foreign-types-shared"]
 ndi     = ["dep:scheng-output-ndi", "scheng-output-ndi/ndi"]
 webcam  = ["dep:scheng-input-webcam", "scheng-input-webcam/native"]
 video   = ["dep:scheng-input-video",   "scheng-input-video/decode"]

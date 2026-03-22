@@ -28,6 +28,7 @@ impl SyphonReceiver {
     pub fn poll(&mut self, _queue: &wgpu::Queue) -> bool { false }
     pub fn poll_with_device(&mut self, _device: &wgpu::Device, _queue: &wgpu::Queue) -> bool { false }
     pub fn texture_view(&self) -> Option<wgpu::TextureView> { None }
+    pub fn texture_arc(&self) -> Option<std::sync::Arc<wgpu::Texture>> { None }
     pub fn width(&self)        -> u32 { 0 }
     pub fn height(&self)       -> u32 { 0 }
     pub fn is_connected(&self) -> bool { false }
@@ -55,6 +56,7 @@ impl SyphonReceiver {
     pub fn poll(&mut self, _queue: &wgpu::Queue) -> bool { false }
     pub fn poll_with_device(&mut self, _device: &wgpu::Device, _queue: &wgpu::Queue) -> bool { false }
     pub fn texture_view(&self) -> Option<wgpu::TextureView> { None }
+    pub fn texture_arc(&self) -> Option<std::sync::Arc<wgpu::Texture>> { None }
     pub fn width(&self)        -> u32 { 0 }
     pub fn height(&self)       -> u32 { 0 }
     pub fn is_connected(&self) -> bool { false }
@@ -75,8 +77,8 @@ pub struct SyphonReceiver {
     /// Current frame dimensions (updated on each successful pull).
     width:      u32,
     height:     u32,
-    /// wgpu texture — reallocated when dimensions change.
-    texture:    Option<wgpu::Texture>,
+    /// wgpu texture — wrapped in Arc for NodeConfig injection.
+    texture:    Option<std::sync::Arc<wgpu::Texture>>,
 }
 
 #[cfg(all(target_os = "macos", feature = "syphon-framework"))]
@@ -255,7 +257,7 @@ impl SyphonReceiver {
 
         // Reallocate texture if dimensions changed
         if self.texture.is_none() || self.width != w || self.height != h {
-            self.texture = Some(device.create_texture(&wgpu::TextureDescriptor {
+            self.texture = Some(std::sync::Arc::new(device.create_texture(&wgpu::TextureDescriptor {
                 label:           Some("syphon_input_frame"),
                 size:            wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
                 mip_level_count: 1,
@@ -264,7 +266,7 @@ impl SyphonReceiver {
                 format:          wgpu::TextureFormat::Rgba8Unorm,
                 usage:           wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
                 view_formats:    &[],
-            }));
+            })));
             self.width  = w;
             self.height = h;
             log::info!("SyphonReceiver: texture (re)allocated {}×{}", w, h);
@@ -296,6 +298,11 @@ impl SyphonReceiver {
         self.texture.as_ref().map(|t| {
             t.create_view(&wgpu::TextureViewDescriptor::default())
         })
+    }
+
+    /// Arc<Texture> for injection into NodeConfig::input_textures.
+    pub fn texture_arc(&self) -> Option<std::sync::Arc<wgpu::Texture>> {
+        self.texture.as_ref().map(|t| std::sync::Arc::clone(t))
     }
 
     pub fn width(&self)        -> u32  { self.width }

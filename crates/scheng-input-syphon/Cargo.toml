@@ -6,19 +6,15 @@ description = "Syphon Metal receive → wgpu texture for scheng instruments (mac
 license     = "MIT"
 
 [dependencies]
-wgpu = "23"
+wgpu      = "23"
 log       = "0.4"
 thiserror = "1"
 
 [build-dependencies]
 cc = "1"
 
-[target.'cfg(target_os = "macos")'.dependencies]
-# No extra Rust deps — Metal interop is pure ObjC via the C bridge
-
 [features]
 default = []
 # Enable to compile the ObjC Metal bridge and link Syphon.framework.
-# Requires vendor/Syphon.framework to be present.
-# Download: https://github.com/Syphon/Syphon-Framework/releases
+# Requires vendor/Syphon.framework at workspace root.
 syphon-framework = []
