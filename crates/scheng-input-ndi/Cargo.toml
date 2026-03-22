@@ -6,10 +6,9 @@ description = "NDI source receiver → wgpu texture for scheng instruments"
 license     = "MIT"
 
 [dependencies]
-scheng-graph = { path = "../scheng-graph" }
-log          = "0.4"
-wgpu         = "23"
-thiserror    = "1"
+log       = "0.4"
+wgpu      = "23"
+thiserror = "1"
 
 grafton-ndi = { version = "0.11", optional = true }
 

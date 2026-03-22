@@ -1,10 +1,11 @@
-//! `scheng-input-ndi` — NDI source receiver → wgpu texture.
+//! `scheng-input-ndi` — NDI source receiver → wgpu RGBA texture.
 //!
 //! Discover and receive NDI sources on the local network as live video
 //! inputs to any node in the scheng graph.
 //!
 //! # Requirements
-//! Install NDI 6 SDK: https://ndi.video/download-ndi-sdk/
+//! Install NDI 6 SDK from https://ndi.video/download-ndi-sdk/
+//! macOS: /Library/NDI SDK for Apple  (or set NDI_SDK_DIR)
 //!
 //! # Enabling
 //! ```toml
@@ -15,15 +16,18 @@
 //! ```rust,ignore
 //! use scheng_input_ndi::NdiReceiver;
 //!
+//! // Discover sources (blocks for timeout_ms)
 //! let sources = NdiReceiver::find_sources(2000)?;
-//! println!("Found: {:?}", sources);
+//! for s in &sources { println!("  {}", s.name); }
 //!
+//! // Open a source
 //! let mut recv = NdiReceiver::open(&sources[0], &device, &queue)?;
 //!
 //! // In render loop:
-//! recv.poll(&device, &queue);
-//! if let Some(view) = recv.texture_view() {
-//!     // bind as iChannel0
+//! if recv.poll(&device, &queue) {
+//!     if let Some(view) = recv.texture_view() {
+//!         // bind view as iChannel0 in NodeConfig
+//!     }
 //! }
 //! ```
 
@@ -34,11 +38,11 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum NdiError {
-    #[error("NDI SDK not available — install from ndi.video and enable the 'ndi' feature")]
+    #[error("NDI SDK not available — install from ndi.video and build with features = [\"ndi\"]")]
     SdkNotFound,
 
-    #[error("NDI source '{name}' not found or timed out")]
-    SourceNotFound { name: String },
+    #[error("NDI source '{name}' not found on network (waited {timeout_ms}ms)")]
+    SourceNotFound { name: String, timeout_ms: u32 },
 
     #[error("NDI receive error: {0}")]
     ReceiveError(String),
