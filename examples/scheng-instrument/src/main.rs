@@ -47,6 +47,9 @@ use scheng_output_spout::SpoutSink;
 #[cfg(feature = "webcam")]
 use scheng_input_webcam::Webcam;
 
+#[cfg(feature = "video")]
+use scheng_input_video::VideoDecoder;
+
 const ASSETS_DIR:     &str = "assets";
 const SHADER_PATH:    &str = "assets/shaders/main.frag";
 const PARAMS_PATH:    &str = "assets/params.json";
@@ -70,6 +73,7 @@ struct Args {
     ndi_name:   String,
     spout_name:    String,
     webcam_index:  Option<u32>,
+    video_path:    Option<String>,
 }
 
 impl Args {
@@ -82,6 +86,7 @@ impl Args {
             ndi_name: NDI_NAME.to_string(),
             spout_name:   SPOUT_NAME.to_string(),
             webcam_index: None,
+            video_path:   None,
         };
         let mut i = 1;
         while i < args.len() {
@@ -94,6 +99,7 @@ impl Args {
                 "--ndi-name"   => { i+=1; a.ndi_name   = args[i].clone(); }
                 "--spout-name"   => { i+=1; a.spout_name   = args[i].clone(); }
                 "--webcam"       => { i+=1; a.webcam_index = Some(args[i].parse().unwrap_or(0)); }
+                "--video"        => { i+=1; a.video_path    = Some(args[i].clone()); }
                 _ => {}
             }
             i += 1;
@@ -126,6 +132,8 @@ struct Instrument {
     spout:     Option<SpoutSink>,
     #[cfg(feature = "webcam")]
     webcam:    Option<Webcam>,
+    #[cfg(feature = "video")]
+    video:     Option<VideoDecoder>,
     #[cfg(feature = "midi")]
     _midi:     Option<MidiInput>,
     start:     Instant,
@@ -180,6 +188,8 @@ impl Instrument {
             spout: None,
             #[cfg(feature = "webcam")]
             webcam: None,
+            #[cfg(feature = "video")]
+            video: None,
             #[cfg(feature = "midi")]
             _midi,
             start: Instant::now(), frame: 0,
@@ -224,6 +234,21 @@ impl Instrument {
 
         let mut configs = { let s = self.store.lock().unwrap(); self.builder.build(&*s) };
 
+        // Inject video texture as iChannel0 on main_node (webcam takes priority if both active)
+        #[cfg(feature = "video")]
+        if let (Some(ref vid), Some(main)) = (&self.video, self.main_node) {
+            if let Some(tex) = vid.texture_arc() {
+                if let Some(cfg) = configs.get_mut(&main) {
+                    cfg.input_textures[0] = Some(tex);
+                    if cfg.frag_shader.is_none() {
+                        cfg.frag_shader = Some(
+                            "void main() { fragColor = texture(iChannel0, vec2(v_uv.x, 1.0 - v_uv.y)); }".to_string()
+                        );
+                    }
+                }
+            }
+        }
+
         // Inject webcam texture as iChannel0 on main_node.
         // Also inject a passthrough shader if no custom shader is loaded —
         // the built-in gradient shader ignores iChannel0, passthrough shows the camera.
@@ -250,6 +275,12 @@ impl Instrument {
         #[cfg(feature = "webcam")]
         if let (Some(ref mut cam), Some(ref r)) = (&mut self.webcam, &self.runtime) {
             cam.poll(&r.ctx.queue);
+        }
+
+        // Poll video frame
+        #[cfg(feature = "video")]
+        if let (Some(ref mut vid), Some(ref r)) = (&mut self.video, &self.runtime) {
+            vid.upload_frame(ctx.time, &r.ctx.queue);
         }
 
         let runtime = match &mut self.runtime { Some(r) => r, None => return };
@@ -350,6 +381,14 @@ impl ApplicationHandler for Instrument {
                     .map(|c| { log::info!("Webcam {}: {}×{} ready", idx, c.width(), c.height()); c })
                     .map_err(|e| log::warn!("Webcam: {e}")).ok();
             }
+        }
+
+        // Video file input
+        #[cfg(feature = "video")]
+        if let Some(ref path) = self.args.video_path.clone() {
+            self.video = VideoDecoder::open(path, &runtime.ctx.device, &runtime.ctx.queue)
+                .map(|v| { log::info!("Video: '{}' {}×{} {:.1}fps", path, v.width(), v.height(), v.fps()); v })
+                .map_err(|e| log::warn!("Video: {e}")).ok();
         }
 
         // FFmpeg
