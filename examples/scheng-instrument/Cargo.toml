@@ -20,6 +20,7 @@ scheng-input-midi       = { path = "../../crates/scheng-input-midi", optional = 
 scheng-output-ndi       = { path = "../../crates/scheng-output-ndi", optional = true }
 scheng-input-webcam     = { path = "../../crates/scheng-input-webcam",  optional = true }
 scheng-input-video      = { path = "../../crates/scheng-input-video",    optional = true }
+scheng-input-rtmp       = { path = "../../crates/scheng-input-rtmp",     optional = true }
 wgpu       = "23"
 winit      = "0.30"
 pollster   = "0.3"
@@ -43,4 +44,5 @@ syphon-receive  = ["dep:scheng-input-syphon", "scheng-input-syphon/syphon-framew
 ndi     = ["dep:scheng-output-ndi", "scheng-output-ndi/ndi"]
 webcam  = ["dep:scheng-input-webcam", "scheng-input-webcam/native"]
 video   = ["dep:scheng-input-video",   "scheng-input-video/decode"]
+rtmp    = ["dep:scheng-input-rtmp"]
 spout   = ["dep:scheng-output-spout"]

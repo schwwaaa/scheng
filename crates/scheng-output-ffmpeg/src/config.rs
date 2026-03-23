@@ -100,6 +100,9 @@ impl FfmpegConfig {
             "-hide_banner".into(),
         ];
 
+        // No audio input — suppress audio stream
+        args.push("-an".into());
+
         // Encoding
         args.extend([
             "-c:v".into(), self.encoding.codec.clone(),
@@ -122,9 +125,17 @@ impl FfmpegConfig {
         // Output target
         match &self.target {
             OutputTarget::Rtsp { url } => {
-                args.extend(["-f".into(), "rtsp".into(), url.clone()]);
+                // Push to RTSP server (e.g. MediaMTX). Requires server running at URL.
+                args.extend([
+                    "-f".into(), "rtsp".into(),
+                    "-rtsp_transport".into(), "tcp".into(),
+                    "-muxdelay".into(), "0.1".into(),
+                    url.clone(),
+                ]);
             }
             OutputTarget::Rtmp { url } => {
+                // Push to RTMP ingest (OBS, nginx-rtmp, YouTube, Twitch etc.)
+                // Most platforms expect FLV container over RTMP.
                 args.extend(["-f".into(), "flv".into(), url.clone()]);
             }
             OutputTarget::File { path, overwrite } => {
@@ -178,7 +189,7 @@ impl Default for EncodingConfig {
     fn default() -> Self {
         Self {
             codec:             "libx264".into(),
-            preset:            "ultrafast".into(),
+            preset:            "veryfast".into(),
             bitrate:           "4M".into(),
             pixel_format:      "yuv420p".into(),
             tune_zerolatency:  true,

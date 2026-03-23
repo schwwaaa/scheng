@@ -50,6 +50,9 @@ use scheng_input_webcam::Webcam;
 #[cfg(feature = "video")]
 use scheng_input_video::VideoDecoder;
 
+#[cfg(feature = "rtmp")]
+use scheng_input_rtmp::RtmpReceiver;
+
 #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
 use scheng_input_syphon::SyphonReceiver;
 
@@ -78,6 +81,7 @@ struct Args {
     webcam_index:  Option<u32>,
     video_path:      Option<String>,
     syphon_receive:  Option<String>,
+    rtmp_url:        Option<String>,
 }
 
 impl Args {
@@ -92,6 +96,7 @@ impl Args {
             webcam_index: None,
             video_path:      None,
             syphon_receive:  None,
+            rtmp_url:        None,
         };
         let mut i = 1;
         while i < args.len() {
@@ -106,6 +111,7 @@ impl Args {
                 "--webcam"       => { i+=1; a.webcam_index = Some(args[i].parse().unwrap_or(0)); }
                 "--video"          => { i+=1; a.video_path     = Some(args[i].clone()); }
                 "--syphon-receive"  => { i+=1; a.syphon_receive = Some(args[i].clone()); }
+                "--rtmp-in"         => { i+=1; a.rtmp_url        = Some(args[i].clone()); }
                 _ => {}
             }
             i += 1;
@@ -140,6 +146,8 @@ struct Instrument {
     webcam:    Option<Webcam>,
     #[cfg(feature = "video")]
     video:          Option<VideoDecoder>,
+    #[cfg(feature = "rtmp")]
+    rtmp:           Option<RtmpReceiver>,
     #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
     syphon_recv:        Option<SyphonReceiver>,
     #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
@@ -202,6 +210,8 @@ impl Instrument {
             webcam: None,
             #[cfg(feature = "video")]
             video: None,
+            #[cfg(feature = "rtmp")]
+            rtmp: None,
             #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
             syphon_recv: None,
             #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
@@ -251,6 +261,21 @@ impl Instrument {
         self.store.lock().unwrap().step_frame();
 
         let mut configs = { let s = self.store.lock().unwrap(); self.builder.build(&*s) };
+
+        // Inject RTMP receive texture as iChannel0
+        #[cfg(feature = "rtmp")]
+        if let (Some(ref r), Some(main)) = (&self.rtmp, self.main_node) {
+            if let Some(tex) = r.texture_arc() {
+                if let Some(cfg) = configs.get_mut(&main) {
+                    cfg.input_textures[0] = Some(tex);
+                    if cfg.frag_shader.is_none() {
+                        cfg.frag_shader = Some(
+                            "void main() { fragColor = texture(iChannel0, vec2(v_uv.x, 1.0 - v_uv.y)); }".to_string()
+                        );
+                    }
+                }
+            }
+        }
 
         // Inject Syphon receive texture as iChannel0
         #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
@@ -340,6 +365,12 @@ impl Instrument {
         #[cfg(all(target_os = "macos", feature = "syphon-receive"))]
         if let (Some(ref mut recv), Some(ref r)) = (&mut self.syphon_recv, &self.runtime) {
             recv.poll_with_device(&r.ctx.device, &r.ctx.queue);
+        }
+
+        // Poll RTMP frame
+        #[cfg(feature = "rtmp")]
+        if let (Some(ref mut r), Some(ref rt)) = (&mut self.rtmp, &self.runtime) {
+            r.poll(&rt.ctx.device, &rt.ctx.queue);
         }
 
         // Poll video frame
@@ -516,10 +547,16 @@ unsafe {
 
         // FFmpeg
         self.ffmpeg = if let Some(url) = &self.args.stream_url {
-            log::info!("FFmpeg: → {url}");
+            let target = if url.starts_with("rtmp://") || url.starts_with("rtmps://") {
+                log::info!("FFmpeg: RTMP → {url}");
+                OutputTarget::Rtmp { url: url.clone() }
+            } else {
+                log::info!("FFmpeg: RTSP → {url}");
+                OutputTarget::Rtsp { url: url.clone() }
+            };
             FfmpegSink::new(FfmpegConfig {
                 width: self.args.width, height: self.args.height, framerate: TARGET_FPS,
-                target: OutputTarget::Rtsp { url: url.clone() }, ..Default::default()
+                target, ..Default::default()
             }).map_err(|e| log::error!("FFmpeg: {e}")).ok()
         } else if let Some(path) = &self.args.record {
             log::info!("FFmpeg: → {path}");

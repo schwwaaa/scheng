@@ -41,6 +41,22 @@ impl FfmpegWorker {
         let args = config.build_args();
         log::info!("Starting ffmpeg: {} {}", config.ffmpeg_path, args.join(" "));
 
+        // Log helpful notes for streaming targets
+        match &config.target {
+            crate::config::OutputTarget::Rtsp { url } => {
+                log::info!("RTSP output: pushing to {url}");
+                log::info!("  → Requires an RTSP server (e.g. MediaMTX: https://github.com/bluenviron/mediamtx)");
+                log::info!("  → Then open {url} in VLC or OBS");
+            }
+            crate::config::OutputTarget::Rtmp { url } => {
+                log::info!("RTMP output: pushing to {url}");
+                log::info!("  → Requires an RTMP server (nginx-rtmp, OBS, Twitch/YouTube ingest etc.)");
+            }
+            crate::config::OutputTarget::File { path, .. } => {
+                log::info!("Recording to file: {path}");
+            }
+        }
+
         let mut child = Command::new(&config.ffmpeg_path)
             .args(&args)
             .stdin(Stdio::piped())

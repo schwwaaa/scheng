@@ -2299,6 +2299,7 @@ dependencies = [
  "scheng-graph",
  "scheng-hotreload",
  "scheng-input-midi",
+ "scheng-input-rtmp",
  "scheng-input-spout",
  "scheng-input-syphon",
  "scheng-input-video",
@@ -2347,6 +2348,16 @@ name = "scheng-input-ndi"
 version = "0.1.0"
 dependencies = [
  "grafton-ndi",
+ "log",
+ "thiserror 1.0.69",
+ "wgpu",
+]
+
+[[package]]
+name = "scheng-input-rtmp"
+version = "0.1.0"
+dependencies = [
+ "crossbeam-channel",
  "log",
  "thiserror 1.0.69",
  "wgpu",
