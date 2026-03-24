@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Per-node configuration supplied by the instrument each frame.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct NodeConfig {
     /// GLSL 330 fragment shader source. `None` → use built-in for this NodeKind.
     pub frag_shader: Option<String>,
@@ -20,6 +20,17 @@ pub struct NodeConfig {
     /// Override iChannel0..3 with external textures (webcam, NDI, Syphon receive, etc.)
     /// Graph edges are used as fallback when a slot is None.
     pub input_textures: [Option<Arc<wgpu::Texture>>; 4],
+}
+
+impl Default for NodeConfig {
+    fn default() -> Self {
+        Self {
+            frag_shader:    None,
+            uniforms:       HashMap::new(),
+            output_name:    None,
+            input_textures: [None, None, None, None],
+        }
+    }
 }
 
 impl NodeConfig {

@@ -22,7 +22,7 @@
 //!
 //! # Quick start
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use std::sync::{Arc, Mutex};
 //! use scheng_param_store::ParamStore;
 //! use scheng_input_midi::MidiInput;

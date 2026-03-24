@@ -295,16 +295,8 @@ impl WgpuRuntime {
             )?;
             let kind = &node.kind;
 
-            if is_output_kind(kind) {
-                let upstream_id = plan.edges.iter()
-                    .find(|e| e.to.node == node_id)
-                    .map(|e| e.from.node);
-                let target = upstream_id
-                    .and_then(|id| self.render_targets.get(&id))
-                    .ok_or(WgpuError::NoRenderTarget(node_id))?;
-                sink.present(node_id, target, ctx, &self.ctx.device, &self.ctx.queue);
-                continue;
-            }
+            // Output nodes are presented after queue.submit() below
+            if is_output_kind(kind) { continue; }
 
             let config = configs.get(&node_id)
                 .ok_or(WgpuError::MissingNodeConfig(node_id))?;
@@ -385,6 +377,22 @@ impl WgpuRuntime {
         }
 
         self.ctx.queue.submit(std::iter::once(encoder.finish()));
+
+        // ── Phase C: present output nodes (after GPU work is submitted) ──────
+        for &node_id in &plan.nodes {
+            let node = graph.node(node_id).ok_or_else(||
+                WgpuError::Wgpu(format!("Plan references unknown NodeId {node_id:?}"))
+            )?;
+            if !is_output_kind(&node.kind) { continue; }
+            let upstream_id = plan.edges.iter()
+                .find(|e| e.to.node == node_id)
+                .map(|e| e.from.node);
+            let target = upstream_id
+                .and_then(|id| self.render_targets.get(&id))
+                .ok_or(WgpuError::NoRenderTarget(node_id))?;
+            sink.present(node_id, target, ctx, &self.ctx.device, &self.ctx.queue);
+        }
+
         Ok(())
     }
 

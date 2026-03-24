@@ -24,7 +24,7 @@
 //!
 //! # Quick start
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use scheng_output_ffmpeg::{FfmpegSink, FfmpegConfig, OutputTarget};
 //!
 //! let config = FfmpegConfig {

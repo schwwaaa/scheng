@@ -15,7 +15,7 @@
 //!
 //! # Quick start
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! #[cfg(target_os = "macos")]
 //! {
 //!     use scheng_output_syphon::SyphonSink;

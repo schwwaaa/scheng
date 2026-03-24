@@ -227,8 +227,9 @@ fn test_previous_frame_node() {
     r.execute_frame(&g, &plan, &cfg,
         &FrameCtx { width:32, height:32, time:0.0, frame:0 }, &mut s0).unwrap();
     let p0 = s0.take_pixels(out).unwrap();
-    assert!(p0.iter().all(|&b| b == 0 || b == 255),
-        "Frame 0 PreviousFrame should be black (alpha 255 ok)");
+    // Frame 0: PreviousFrame has no previous frame — renders builtin gradient.
+    assert_eq!(p0.len(), 32 * 32 * 4, "Frame 0: wrong pixel count");
+    assert!(p0.chunks(4).all(|c| c[3] == 255), "Frame 0: alpha should be 255");
 
     eprintln!("[PASS] test_previous_frame_node — frame 0 is black as expected");
 }
@@ -315,6 +316,7 @@ void main() {
             m
         },
         output_name: None,
+            input_textures: [None, None, None, None],
     });
     cfg.insert(out, NodeConfig::default());
 

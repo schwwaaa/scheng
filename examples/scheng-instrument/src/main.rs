@@ -60,6 +60,7 @@ const ASSETS_DIR:     &str = "assets";
 const SHADER_PATH:    &str = "assets/shaders/main.frag";
 const PARAMS_PATH:    &str = "assets/params.json";
 const TARGET_FPS:     u32  = 30;
+const DEFAULT_MSAA:   u32  = 4;
 const SYPHON_NAME:    &str = "scheng";
 const NDI_NAME:       &str = "scheng";
 const SPOUT_NAME:     &str = "scheng";
@@ -73,6 +74,7 @@ fn frame_budget() -> Duration { Duration::from_nanos(1_000_000_000 / TARGET_FPS 
 struct Args {
     width:      u32,
     height:     u32,
+    msaa:       u32,
     stream_url: Option<String>,
     record:     Option<String>,
     osc_port:   u16,
@@ -88,7 +90,7 @@ impl Args {
     fn parse() -> Self {
         let args: Vec<String> = std::env::args().collect();
         let mut a = Args {
-            width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT,
+            width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, msaa: DEFAULT_MSAA,
             stream_url: None, record: None,
             osc_port: 9000,
             ndi_name: NDI_NAME.to_string(),
@@ -103,6 +105,7 @@ impl Args {
             match args[i].as_str() {
                 "--width"    => { i+=1; a.width      = args[i].parse().unwrap_or(DEFAULT_WIDTH); }
                 "--height"   => { i+=1; a.height     = args[i].parse().unwrap_or(DEFAULT_HEIGHT); }
+                "--msaa"     => { i+=1; a.msaa       = args[i].parse().unwrap_or(DEFAULT_MSAA); }
                 "--stream"   => { i+=1; a.stream_url = Some(args[i].clone()); }
                 "--record"   => { i+=1; a.record     = Some(args[i].clone()); }
                 "--osc-port" => { i+=1; a.osc_port   = args[i].parse().unwrap_or(9000); }
@@ -571,8 +574,8 @@ unsafe {
         self.window  = Some(win);
         self.start   = Instant::now();
 
-        log::info!("{}×{} @ {}fps | edit {SHADER_PATH} to hot-reload",
-            self.args.width, self.args.height, TARGET_FPS);
+        log::info!("{}×{} @ {}fps | MSAA {}x | edit {SHADER_PATH} to hot-reload",
+            self.args.width, self.args.height, TARGET_FPS, self.args.msaa);
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {

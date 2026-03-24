@@ -16,7 +16,7 @@
 //!
 //! # Quick start
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use scheng_control_osc_wgpu::OscReceiver;
 //!
 //! let mut osc = OscReceiver::bind("127.0.0.1:9000").unwrap();

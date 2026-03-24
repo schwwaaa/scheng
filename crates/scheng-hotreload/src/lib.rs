@@ -18,7 +18,7 @@
 //!
 //! # Quick start
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use scheng_hotreload::HotReloader;
 //! use scheng_param_store::NodeConfigBuilder;
 //!

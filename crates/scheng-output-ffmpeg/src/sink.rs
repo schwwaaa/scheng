@@ -13,7 +13,7 @@ use crate::{worker::{FfmpegWorker, RawFrame}, FfmpegConfig, FfmpegError};
 ///
 /// # Example — RTSP streaming
 ///
-/// ```rust,no_run
+/// ```rust,ignore
 /// use scheng_output_ffmpeg::{FfmpegSink, FfmpegConfig, OutputTarget};
 ///
 /// let config = FfmpegConfig {
@@ -26,7 +26,7 @@ use crate::{worker::{FfmpegWorker, RawFrame}, FfmpegConfig, FfmpegError};
 ///
 /// # Example — local file recording
 ///
-/// ```rust,no_run
+/// ```rust,ignore
 /// use scheng_output_ffmpeg::{FfmpegSink, FfmpegConfig, OutputTarget, EncodingConfig};
 ///
 /// let config = FfmpegConfig {

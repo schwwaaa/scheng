@@ -92,7 +92,7 @@ fn render_source(
 ) -> Vec<u8> {
     let (g, plan, src, out) = source_graph();
     let mut cfg = HashMap::new();
-    cfg.insert(src, NodeConfig { frag_shader: Some(frag.to_owned()), uniforms, output_name: None });
+    cfg.insert(src, NodeConfig { frag_shader: Some(frag.to_owned()), uniforms, output_name: None, input_textures: [None, None, None, None] });
     cfg.insert(out, NodeConfig::default());
     let mut sink = PixelReadbackSink::new();
     r.execute_frame(&g, &plan, &cfg, &ctx_t(time), &mut sink).unwrap();
@@ -147,6 +147,7 @@ fn test_proc_amp() {
                 m
             },
             output_name: None,
+            input_textures: [None, None, None, None],
         });
         cfg.insert(out, NodeConfig::default());
         cfg
@@ -244,6 +245,7 @@ fn test_luma_keyer() {
             m
         },
         output_name: None,
+            input_textures: [None, None, None, None],
     });
     cfg.insert(out, NodeConfig::default());
 
@@ -275,6 +277,7 @@ fn test_chroma_keyer() {
             m
         },
         output_name: None,
+            input_textures: [None, None, None, None],
     });
     cfg.insert(out, NodeConfig::default());
 
@@ -307,6 +310,7 @@ fn test_crossfader() {
                 m
             },
             output_name: None,
+            input_textures: [None, None, None, None],
         });
         cfg.insert(out, NodeConfig::default());
 
@@ -319,8 +323,8 @@ fn test_crossfader() {
     // T-bar at 0.0 vs 1.0 must differ (dissolve mode)
     let mut cfg_a = HashMap::new();
     cfg_a.insert(src_a, NodeConfig::default());
-    cfg_a.insert(src_b, NodeConfig { frag_shader: Some("void main() { fragColor = vec4(1.0, 0.0, 0.0, 1.0); }".into()), uniforms: HashMap::new(), output_name: None });
-    cfg_a.insert(mix_node, NodeConfig { frag_shader: Some(frag.to_owned()), uniforms: { let mut m = HashMap::new(); m.insert("u_tbar".into(), 0.0f32); m.insert("u_mode".into(), 0.0); m.insert("u_softness".into(), 0.05); m }, output_name: None });
+    cfg_a.insert(src_b, NodeConfig { frag_shader: Some("void main() { fragColor = vec4(1.0, 0.0, 0.0, 1.0); }".into()), uniforms: HashMap::new(), output_name: None, input_textures: [None, None, None, None] });
+    cfg_a.insert(mix_node, NodeConfig { frag_shader: Some(frag.to_owned()), uniforms: { let mut m = HashMap::new(); m.insert("u_tbar".into(), 0.0f32); m.insert("u_mode".into(), 0.0); m.insert("u_softness".into(), 0.05); m }, output_name: None, input_textures: [None, None, None, None] });
     cfg_a.insert(out, NodeConfig::default());
     let mut s1 = PixelReadbackSink::new();
     r.execute_frame(&g, &plan, &cfg_a, &ctx(), &mut s1).unwrap();
@@ -328,8 +332,8 @@ fn test_crossfader() {
 
     let mut cfg_b = HashMap::new();
     cfg_b.insert(src_a, NodeConfig::default());
-    cfg_b.insert(src_b, NodeConfig { frag_shader: Some("void main() { fragColor = vec4(1.0, 0.0, 0.0, 1.0); }".into()), uniforms: HashMap::new(), output_name: None });
-    cfg_b.insert(mix_node, NodeConfig { frag_shader: Some(frag.to_owned()), uniforms: { let mut m = HashMap::new(); m.insert("u_tbar".into(), 1.0f32); m.insert("u_mode".into(), 0.0); m.insert("u_softness".into(), 0.05); m }, output_name: None });
+    cfg_b.insert(src_b, NodeConfig { frag_shader: Some("void main() { fragColor = vec4(1.0, 0.0, 0.0, 1.0); }".into()), uniforms: HashMap::new(), output_name: None, input_textures: [None, None, None, None] });
+    cfg_b.insert(mix_node, NodeConfig { frag_shader: Some(frag.to_owned()), uniforms: { let mut m = HashMap::new(); m.insert("u_tbar".into(), 1.0f32); m.insert("u_mode".into(), 0.0); m.insert("u_softness".into(), 0.05); m }, output_name: None, input_textures: [None, None, None, None] });
     cfg_b.insert(out, NodeConfig::default());
     let mut s2 = PixelReadbackSink::new();
     r.execute_frame(&g, &plan, &cfg_b, &ctx(), &mut s2).unwrap();
@@ -363,6 +367,7 @@ fn test_matrix_mixer() {
             m
         },
         output_name: None,
+            input_textures: [None, None, None, None],
     });
     cfg.insert(out, NodeConfig::default());
 
@@ -373,7 +378,7 @@ fn test_matrix_mixer() {
 
     // u_offset=0.5 on black input must produce visible output
     let mut cfg2 = HashMap::new();
-    cfg2.insert(src_a, NodeConfig { frag_shader: Some("void main() { fragColor = vec4(0.0); }".into()), uniforms: HashMap::new(), output_name: None });
+    cfg2.insert(src_a, NodeConfig { frag_shader: Some("void main() { fragColor = vec4(0.0); }".into()), uniforms: HashMap::new(), output_name: None, input_textures: [None, None, None, None] });
     cfg2.insert(src_b, NodeConfig::default());
     cfg2.insert(mix_node, NodeConfig {
         frag_shader: Some(frag.to_owned()),
@@ -388,6 +393,7 @@ fn test_matrix_mixer() {
             m
         },
         output_name: None,
+            input_textures: [None, None, None, None],
     });
     cfg2.insert(out, NodeConfig::default());
     let mut sink2 = PixelReadbackSink::new();
@@ -483,6 +489,7 @@ fn test_feedback_shader() {
             m
         },
         output_name: None,
+            input_textures: [None, None, None, None],
     });
     cfg.insert(out, NodeConfig::default());
 

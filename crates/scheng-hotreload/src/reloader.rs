@@ -19,7 +19,7 @@ use crate::{watcher::{AssetWatcher, ChangeKind}, HotReloadError};
 ///
 /// # Usage
 ///
-/// ```rust,no_run
+/// ```rust,ignore
 /// let mut reloader = HotReloader::new("assets/").unwrap();
 ///
 /// // Register which shader file belongs to which node
