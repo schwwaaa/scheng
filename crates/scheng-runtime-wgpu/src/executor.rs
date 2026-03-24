@@ -280,7 +280,7 @@ impl WgpuRuntime {
             let target = self.render_targets
                 .entry(node_id)
                 .or_insert_with(|| RenderTarget::new(&self.ctx.device, ctx.width, ctx.height, &label));
-            target.ensure_size(&self.ctx.device, ctx.width, ctx.height, &label);
+            target.ensure_size_msaa(&self.ctx.device, ctx.width, ctx.height, ctx.sample_count, &label);
         }
         // render_targets mutable borrow ends here.
 
@@ -319,7 +319,7 @@ impl WgpuRuntime {
 
             // Mutable borrow of self.pipelines starts here.
             let node_pipeline = self.pipelines.get_or_create(
-                &self.ctx.device, frag_src, &label
+                &self.ctx.device, frag_src, &label, ctx.sample_count
             )?;
 
             // Get or create the per-node custom uniform buffer and upload values.
@@ -348,17 +348,36 @@ impl WgpuRuntime {
 
             // Borrow the render view. render_targets is a distinct field from
             // pipelines so this immutable borrow is compatible.
-            let render_view = &self.render_targets
-                .get(&node_id)
-                .expect("render target missing after Phase A")
-                .render_view;
+            // Borrow attachment and resolve views from the render target.
+            // When MSAA is active: render to msaa_view, resolve to render_view.
+            // When MSAA is off:   render directly to render_view.
+            let (attachment, resolve) = {
+                let rt = self.render_targets
+                    .get(&node_id)
+                    .expect("render target missing after Phase A");
+                let att = if rt.msaa_view.is_some() {
+                    rt.msaa_view.as_ref().unwrap() as *const wgpu::TextureView
+                } else {
+                    &rt.render_view as *const wgpu::TextureView
+                };
+                let res = if rt.msaa_view.is_some() {
+                    Some(&rt.render_view as *const wgpu::TextureView)
+                } else {
+                    None
+                };
+                (att, res)
+            };
 
             {
+                // SAFETY: render_targets field is not borrowed mutably below.
+                let attachment = unsafe { &*attachment };
+                let resolve_target = resolve.map(|p| unsafe { &*p });
+
                 let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: Some(&label),
                     color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                        view:           render_view,
-                        resolve_target: None,
+                        view:           attachment,
+                        resolve_target,
                         ops: wgpu::Operations {
                             load:  wgpu::LoadOp::Clear(wgpu::Color::BLACK),
                             store: wgpu::StoreOp::Store,

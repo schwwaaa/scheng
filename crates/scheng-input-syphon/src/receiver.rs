@@ -1,7 +1,6 @@
 //! `receiver.rs` — SyphonReceiver: connects to a Syphon server and uploads
 //! frames to a wgpu RGBA texture each render cycle.
 
-use std::ffi::CString;
 
 use crate::SyphonInputError;
 

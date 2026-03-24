@@ -42,7 +42,7 @@ pub struct NodePipeline {
 /// Cache of compiled render pipelines, keyed by fragment shader source hash.
 pub struct PipelineCache {
     /// Compiled pipelines, keyed by fragment shader source hash.
-    pipelines: HashMap<u64, NodePipeline>,
+    pipelines: HashMap<(u64, u32), NodePipeline>,
     /// Shader module cache (vertex + fragment modules).
     shaders: ShaderCache,
 }
@@ -64,6 +64,7 @@ impl PipelineCache {
         device: &wgpu::Device,
         frag_src: &str,
         node_label: &str,
+        sample_count: u32,
     ) -> Result<&'a NodePipeline, WgpuError> {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
@@ -71,18 +72,20 @@ impl PipelineCache {
         let mut h = DefaultHasher::new();
         frag_src.hash(&mut h);
         let hash = h.finish();
+        let key = (hash, sample_count);
 
-        if !self.pipelines.contains_key(&hash) {
+        if !self.pipelines.contains_key(&key) {
             let pipeline = build_pipeline(
                 device,
                 &mut self.shaders,
                 frag_src,
                 node_label,
+                sample_count,
             )?;
-            self.pipelines.insert(hash, pipeline);
+            self.pipelines.insert(key, pipeline);
         }
 
-        Ok(self.pipelines.get(&hash).unwrap())
+        Ok(self.pipelines.get(&key).unwrap())
     }
 
     /// Clear the pipeline cache (e.g. on hot-reload).
@@ -100,6 +103,7 @@ fn build_pipeline(
     shaders: &mut ShaderCache,
     frag_src: &str,
     node_label: &str,
+    sample_count: u32,
 ) -> Result<NodePipeline, WgpuError> {
     // Compile/get shader modules.
     let vert_module = {
@@ -167,7 +171,7 @@ fn build_pipeline(
         },
         depth_stencil: None, // video pipeline never uses depth
         multisample: wgpu::MultisampleState {
-            count: crate::render_target::DEFAULT_SAMPLE_COUNT,
+            count: sample_count,
             mask: !0,
             alpha_to_coverage_enabled: false,
         },

@@ -59,17 +59,30 @@ impl RenderTarget {
     }
 
     pub fn ensure_size(&mut self, device: &wgpu::Device, width: u32, height: u32, label: &str) {
-        if self.width == width && self.height == height { return; }
-        log::debug!("RenderTarget '{label}': resizing {}×{} → {}×{}", self.width, self.height, width, height);
+        self.ensure_size_msaa(device, width, height, self.sample_count, label);
+    }
+
+    pub fn ensure_size_msaa(
+        &mut self, device: &wgpu::Device,
+        width: u32, height: u32, sample_count: u32, label: &str,
+    ) {
+        if self.width == width && self.height == height && self.sample_count == sample_count { return; }
+        if width != self.width || height != self.height {
+            log::debug!("RenderTarget '{label}': resizing {}×{} → {}×{}", self.width, self.height, width, height);
+        }
+        if sample_count != self.sample_count {
+            log::debug!("RenderTarget '{label}': MSAA {}x → {}x", self.sample_count, sample_count);
+        }
         let (texture, render_view, sample_view, msaa_texture, msaa_view) =
-            create_textures(device, width, height, label, self.sample_count);
+            create_textures(device, width, height, label, sample_count);
         self.texture     = texture;
         self.render_view = render_view;
         self.sample_view = sample_view;
         self.msaa_texture = msaa_texture;
         self.msaa_view    = msaa_view;
-        self.width  = width;
-        self.height = height;
+        self.width        = width;
+        self.height       = height;
+        self.sample_count = sample_count;
     }
 
     /// The view to use as the render pass color attachment.

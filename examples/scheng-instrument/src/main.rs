@@ -330,6 +330,7 @@ impl Instrument {
         let ctx = FrameCtx {
             width: self.args.width, height: self.args.height,
             time: self.start.elapsed().as_secs_f32(), frame: self.frame,
+            sample_count: self.args.msaa,
         };
 
         // Poll webcam frame into texture before rendering

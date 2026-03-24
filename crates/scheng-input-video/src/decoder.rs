@@ -6,7 +6,7 @@
 //! Frame selection: `FrameCtx::time` (seconds) → frame index via clip fps.
 //! Looping: when time exceeds clip duration, wraps around.
 
-use crate::{texture::VideoTexture, VideoError};
+use crate::VideoError;
 
 // ── Stub (feature = "decode" disabled) ───────────────────────────────────
 

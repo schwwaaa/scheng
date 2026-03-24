@@ -3,7 +3,6 @@
 //! `VideoTexture` owns a `wgpu::Texture` sized to the video's resolution.
 //! It is created once and reused across frames — only the pixel data changes.
 
-use crate::VideoError;
 
 /// A wgpu RGBA8 texture that holds one video frame.
 pub struct VideoTexture {

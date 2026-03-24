@@ -59,11 +59,18 @@ fn build_macos() {
     println!("cargo:rustc-link-lib=framework=Foundation");
     println!("cargo:rustc-link-lib=framework=Metal");
 
-    // RPATH entries so the built binary can find Syphon.framework at runtime.
-    // These cover both the standard app bundle layout and development builds.
+    // RPATH entries so the built binary can find Syphon.framework at runtime
+    // without needing DYLD_FRAMEWORK_PATH.
+    //
+    // Order matters — dyld tries each in order:
+    // 1. Absolute path to workspace vendor/ (works for `cargo run` from workspace)
+    // 2. Relative to executable (works for installed/distributed binaries)
+    // 3. Standard macOS app bundle layout
+    println!("cargo:rustc-link-arg=-Wl,-rpath,{}", vendor_dir.display());
+    println!("cargo:rustc-link-arg=-Wl,-rpath,@executable_path/../../vendor");
+    println!("cargo:rustc-link-arg=-Wl,-rpath,@executable_path/../../../vendor");
     println!("cargo:rustc-link-arg=-Wl,-rpath,@executable_path/../Frameworks");
     println!("cargo:rustc-link-arg=-Wl,-rpath,@loader_path/../Frameworks");
-    println!("cargo:rustc-link-arg=-Wl,-rpath,{}", vendor_dir.display());
 
     // Re-run build.rs if the bridge source changes
     println!("cargo:rerun-if-changed=native/syphon_metal_bridge.m");

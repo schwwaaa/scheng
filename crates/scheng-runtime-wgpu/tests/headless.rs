@@ -185,7 +185,7 @@ fn test_feedback_node_pingpong() {
     // Frame 1
     let mut s1 = PixelReadbackSink::new();
     r.execute_frame(&g, &plan, &cfg,
-        &FrameCtx { width:32, height:32, time:0.1, frame:1 }, &mut s1).unwrap();
+        &FrameCtx { width:32, height:32, time:0.1, frame:1, sample_count: 1 }, &mut s1).unwrap();
     let p1 = s1.take_pixels(out).unwrap();
 
     // Frames 2–5 (let feedback accumulate)
@@ -198,7 +198,7 @@ fn test_feedback_node_pingpong() {
     // Frame 6
     let mut s6 = PixelReadbackSink::new();
     r.execute_frame(&g, &plan, &cfg,
-        &FrameCtx { width:32, height:32, time:0.6, frame:6 }, &mut s6).unwrap();
+        &FrameCtx { width:32, height:32, time:0.6, frame:6, sample_count: 1 }, &mut s6).unwrap();
     let p6 = s6.take_pixels(out).unwrap();
 
     // After 5 frames of feedback the output should differ from frame 1
@@ -225,7 +225,7 @@ fn test_previous_frame_node() {
     // Frame 0: PreviousFrame initialised to black → output should be black
     let mut s0 = PixelReadbackSink::new();
     r.execute_frame(&g, &plan, &cfg,
-        &FrameCtx { width:32, height:32, time:0.0, frame:0 }, &mut s0).unwrap();
+        &FrameCtx { width:32, height:32, time:0.0, frame:0, sample_count: 1 }, &mut s0).unwrap();
     let p0 = s0.take_pixels(out).unwrap();
     // Frame 0: PreviousFrame has no previous frame — renders builtin gradient.
     assert_eq!(p0.len(), 32 * 32 * 4, "Frame 0: wrong pixel count");
@@ -246,10 +246,10 @@ fn test_time_varies_between_frames() {
     cfg.insert(src, NodeConfig::default());
     cfg.insert(out, NodeConfig::default());
     let mut s0 = PixelReadbackSink::new();
-    r.execute_frame(&g, &plan, &cfg, &FrameCtx { width:32, height:32, time:0.0, frame:0 }, &mut s0).unwrap();
+    r.execute_frame(&g, &plan, &cfg, &FrameCtx { width:32, height:32, time:0.0, frame:0, sample_count: 1 }, &mut s0).unwrap();
     let p0 = s0.take_pixels(out).unwrap();
     let mut s1 = PixelReadbackSink::new();
-    r.execute_frame(&g, &plan, &cfg, &FrameCtx { width:32, height:32, time:1.5, frame:1 }, &mut s1).unwrap();
+    r.execute_frame(&g, &plan, &cfg, &FrameCtx { width:32, height:32, time:1.5, frame:1, sample_count: 1 }, &mut s1).unwrap();
     let p1 = s1.take_pixels(out).unwrap();
     assert_ne!(p0, p1, "uTime not affecting output");
     eprintln!("[PASS] test_time_varies_between_frames");

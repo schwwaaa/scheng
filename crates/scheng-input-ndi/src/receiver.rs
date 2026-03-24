@@ -1,6 +1,5 @@
 //! `receiver.rs` — NDI source receiver → wgpu RGBA texture.
 
-use std::time::Duration;
 use crate::NdiError;
 
 #[cfg(feature = "ndi")]
@@ -29,7 +28,7 @@ pub struct NdiReceiver {
 impl NdiReceiver {
     /// Discover NDI sources on the local network.
     /// Blocks for `timeout_ms` milliseconds while listening for announcements.
-    pub fn find_sources(timeout_ms: u32) -> Result<Vec<NdiSource>, NdiError> {
+    pub fn find_sources(_timeout_ms: u32) -> Result<Vec<NdiSource>, NdiError> {
         #[cfg(feature = "ndi")]
         {
             let ndi = NDI::new().map_err(|_| NdiError::SdkNotFound)?;
@@ -118,7 +117,7 @@ impl NdiReceiver {
 
     /// Poll for a new NDI frame and upload to the wgpu texture.
     /// Non-blocking — returns false if no frame is available.
-    pub fn poll(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) -> bool {
+    pub fn poll(&mut self, _device: &wgpu::Device, _queue: &wgpu::Queue) -> bool {
         #[cfg(feature = "ndi")]
         {
             match self.receiver.capture_video(Duration::ZERO) {
@@ -139,6 +138,7 @@ impl NdiReceiver {
         false
     }
 
+    #[allow(dead_code)]
     fn upload(
         &mut self,
         device: &wgpu::Device,
