@@ -7,8 +7,16 @@
 //! MSAA sample count is configurable: 1 (off), 2, 4 (default), 8.
 //! Not all backends support all counts — Metal supports 1, 2, 4, 8.
 
-/// Fixed texture format used throughout scheng's wgpu pipeline.
-pub const RENDER_TARGET_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
+/// Internal render target format.
+///
+/// `Rgba16Float` = 16-bit half-float per channel = 65536 values vs 256 for Rgba8Unorm.
+/// This eliminates banding in gradients and preserves quality through the processing chain.
+/// Universally supported on Metal (M1+), DX12, Vulkan.
+///
+/// Note: readback for FFmpeg/NDI converts to 8-bit RGBA at the output boundary.
+/// The quality gain is in the processing chain — multiple shader passes no longer
+/// accumulate 8-bit quantization error.
+pub const RENDER_TARGET_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba16Float;
 
 /// Default MSAA sample count.
 /// 1 = off (default, maximum compatibility).
@@ -78,7 +86,12 @@ impl RenderTarget {
     }
 
     pub fn readback(&self, device: &wgpu::Device, queue: &wgpu::Queue) -> Vec<u8> {
-        let unaligned = 4 * self.width;
+        // Rgba16Float: 8 bytes per pixel (4 channels × 2 bytes each)
+        let bytes_per_pixel = match RENDER_TARGET_FORMAT {
+            wgpu::TextureFormat::Rgba16Float => 8,
+            _ => 4,
+        };
+        let unaligned = bytes_per_pixel * self.width;
         let aligned = align_to(unaligned, wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
         let total_bytes = (aligned * self.height) as u64;
 
@@ -114,11 +127,31 @@ impl RenderTarget {
 
         let mapped = staging.slice(..).get_mapped_range();
         let mut pixels = Vec::with_capacity((4 * self.width * self.height) as usize);
-        for row in 0..self.height {
-            let start = (row * aligned) as usize;
-            let end   = start + (4 * self.width) as usize;
-            pixels.extend_from_slice(&mapped[start..end]);
+
+        match RENDER_TARGET_FORMAT {
+            wgpu::TextureFormat::Rgba16Float => {
+                // Convert f16 → u8 (clamp to [0,1] then scale to [0,255])
+                for row in 0..self.height {
+                    let start = (row * aligned) as usize;
+                    let row_bytes = &mapped[start..start + (8 * self.width) as usize];
+                    for chunk in row_bytes.chunks(8) {
+                        for i in 0..4 {
+                            let half = u16::from_le_bytes([chunk[i*2], chunk[i*2+1]]);
+                            let f = half_to_f32(half);
+                            pixels.push((f.clamp(0.0, 1.0) * 255.0 + 0.5) as u8);
+                        }
+                    }
+                }
+            }
+            _ => {
+                for row in 0..self.height {
+                    let start = (row * aligned) as usize;
+                    let end   = start + (4 * self.width) as usize;
+                    pixels.extend_from_slice(&mapped[start..end]);
+                }
+            }
         }
+
         drop(mapped);
         staging.unmap();
         pixels
@@ -136,13 +169,22 @@ pub fn create_blank_texture(device: &wgpu::Device, queue: &wgpu::Queue) -> wgpu:
         usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
         view_formats: &[],
     });
+    // Rgba16Float: 8 bytes/pixel (4 × f16). Black = 0.0 in all channels, alpha = 1.0 (0x3C00).
+    let black: &[u8] = match RENDER_TARGET_FORMAT {
+        wgpu::TextureFormat::Rgba16Float => &[0, 0, 0, 0, 0, 0, 0x00, 0x3C], // RGBA f16: 0,0,0,1.0
+        _ => &[0u8, 0, 0, 255],
+    };
+    let bytes_per_row = match RENDER_TARGET_FORMAT {
+        wgpu::TextureFormat::Rgba16Float => 8,
+        _ => 4,
+    };
     queue.write_texture(
         wgpu::ImageCopyTexture {
             texture: &texture, mip_level: 0,
             origin: wgpu::Origin3d::ZERO, aspect: wgpu::TextureAspect::All,
         },
-        &[0u8, 0, 0, 255],
-        wgpu::ImageDataLayout { offset: 0, bytes_per_row: Some(4), rows_per_image: Some(1) },
+        black,
+        wgpu::ImageDataLayout { offset: 0, bytes_per_row: Some(bytes_per_row), rows_per_image: Some(1) },
         wgpu::Extent3d { width: 1, height: 1, depth_or_array_layers: 1 },
     );
     texture
@@ -192,6 +234,23 @@ fn create_textures(
     };
 
     (texture, render_view, sample_view, msaa_texture, msaa_view)
+}
+
+/// Convert IEEE 754 half-precision float (f16) to f32.
+fn half_to_f32(half: u16) -> f32 {
+    let sign     = ((half >> 15) as u32) << 31;
+    let exponent = ((half >> 10) & 0x1f) as u32;
+    let mantissa = (half & 0x3ff) as u32;
+    let bits = if exponent == 0 {
+        // Subnormal
+        sign | (mantissa << 13)
+    } else if exponent == 31 {
+        // Inf / NaN
+        sign | 0x7f800000 | (mantissa << 13)
+    } else {
+        sign | ((exponent + 127 - 15) << 23) | (mantissa << 13)
+    };
+    f32::from_bits(bits)
 }
 
 fn align_to(value: u32, alignment: u32) -> u32 {

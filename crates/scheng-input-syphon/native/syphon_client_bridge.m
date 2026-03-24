@@ -155,10 +155,25 @@ int scheng_syphon_client_pull_rgba(
         uint32_t h = (uint32_t)[tex height];
         *out_width  = w;
         *out_height = h;
+
+        // Read pixels from Metal texture into buffer
         [tex getBytes: out_rgba
           bytesPerRow: w * 4
            fromRegion: MTLRegionMake2D(0, 0, w, h)
           mipmapLevel: 0];
+
+        // Syphon Metal textures are typically BGRAx — swap B and R channels
+        // so the output is RGBA8 as expected by wgpu Rgba8Unorm.
+        // (MTLPixelFormatBGRA8Unorm is the most common Syphon format on macOS)
+        MTLPixelFormat fmt = [tex pixelFormat];
+        if (fmt == MTLPixelFormatBGRA8Unorm || fmt == MTLPixelFormatBGRA8Unorm_sRGB) {
+            uint8_t* p = (uint8_t*)out_rgba;
+            uint32_t n = w * h;
+            for (uint32_t i = 0; i < n; i++, p += 4) {
+                uint8_t tmp = p[0]; p[0] = p[2]; p[2] = tmp;  // swap R and B
+            }
+        }
+
         return 1;
     }
 }

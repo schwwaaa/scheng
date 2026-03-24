@@ -118,6 +118,17 @@ impl FfmpegConfig {
 
         args.extend(["-pix_fmt".into(), self.encoding.pixel_format.clone()]);
 
+        // Colorspace metadata — critical for correct colors in players/broadcast.
+        // bt709 = HD standard (Rec.709), full range for maximum fidelity.
+        // Without these flags ffmpeg defaults to bt601 (SD) which causes
+        // washed-out / shifted colors on HD content.
+        args.extend([
+            "-colorspace".into(), "bt709".into(),
+            "-color_primaries".into(), "bt709".into(),
+            "-color_trc".into(), "bt709".into(),
+            "-color_range".into(), "tv".into(),  // 16-235 broadcast range
+        ]);
+
         if self.encoding.tune_zerolatency {
             args.extend(["-tune".into(), "zerolatency".into()]);
         }

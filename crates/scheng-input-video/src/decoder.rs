@@ -22,7 +22,6 @@ impl VideoDecoder {
     }
     pub fn upload_frame(&mut self, _time_secs: f32, _queue: &wgpu::Queue) {}
     pub fn texture_view(&self) -> Option<wgpu::TextureView> { None }
-    pub fn texture_arc(&self) -> Option<std::sync::Arc<wgpu::Texture>> { None }
     pub fn width(&self)    -> u32 { 0 }
     pub fn height(&self)   -> u32 { 0 }
     pub fn duration(&self) -> f32 { 0.0 }
@@ -56,8 +55,8 @@ pub struct VideoDecoder {
     scaler:      ffmpeg::software::scaling::Context,
     /// The video decoder codec context.
     decoder:     ffmpeg::codec::decoder::Video,
-    /// Cached GPU texture — wrapped in Arc for NodeConfig injection.
-    video_tex:   std::sync::Arc<wgpu::Texture>,
+    /// Cached GPU texture — created once, reused each frame.
+    video_tex:   VideoTexture,
     /// Last decoded frame index (avoids redundant seeks).
     last_frame:  i64,
 }
@@ -108,35 +107,22 @@ impl VideoDecoder {
         let frame_count = (duration * fps) as u64;
 
         // Software scaler: decoded pixel format → RGBA8
+        // SWS_BICUBIC gives better quality than BILINEAR with minimal perf cost.
+        // The scaler respects the source colorspace (bt.601/bt.709/etc) from
+        // the stream metadata, so colors match the source correctly.
         let scaler = ffmpeg::software::scaling::Context::get(
             decoder.format(),
             width, height,
             ffmpeg::format::Pixel::RGBA,
             width, height,
-            ffmpeg::software::scaling::flag::Flags::BILINEAR,
+            ffmpeg::software::scaling::flag::Flags::BICUBIC,
         ).map_err(|e| VideoError::Open { path: path.into(), message: e.to_string() })?;
 
-        let video_tex = std::sync::Arc::new(device.create_texture(&wgpu::TextureDescriptor {
-            label:           Some("video_frame"),
-            size:            wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
-            mip_level_count: 1,
-            sample_count:    1,
-            dimension:       wgpu::TextureDimension::D2,
-            format:          wgpu::TextureFormat::Rgba8Unorm,
-            usage:           wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            view_formats:    &[],
-        }));
+        let video_tex = VideoTexture::new(device, width, height, "video_frame");
 
         // Upload a black frame so the texture is valid before the first decode
         let black = vec![0u8; (width * height * 4) as usize];
-        // upload black frame
-        queue.write_texture(
-            wgpu::ImageCopyTexture { texture: &video_tex, mip_level: 0,
-                origin: wgpu::Origin3d::ZERO, aspect: wgpu::TextureAspect::All },
-            &black,
-            wgpu::ImageDataLayout { offset: 0, bytes_per_row: Some(width * 4), rows_per_image: Some(height) },
-            wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
-        );
+        video_tex.upload(queue, &black);
 
         log::info!("Video '{}': {}×{} {:.2}fps {:.1}s ({} frames)",
             path, width, height, fps, duration, frame_count);
@@ -188,15 +174,7 @@ impl VideoDecoder {
                     if self.scaler.run(&decoded, &mut rgba).is_ok() {
                         let pixels = rgba.data(0);
                         if pixels.len() == (self.width * self.height * 4) as usize {
-                            queue.write_texture(
-                                wgpu::ImageCopyTexture { texture: &self.video_tex, mip_level: 0,
-                                    origin: wgpu::Origin3d::ZERO, aspect: wgpu::TextureAspect::All },
-                                pixels,
-                                wgpu::ImageDataLayout { offset: 0,
-                                    bytes_per_row: Some(self.width * 4),
-                                    rows_per_image: Some(self.height) },
-                                wgpu::Extent3d { width: self.width, height: self.height, depth_or_array_layers: 1 },
-                            );
+                            self.video_tex.upload(queue, pixels);
                             self.last_frame = frame_idx;
                         }
                     }
@@ -208,12 +186,7 @@ impl VideoDecoder {
 
     /// A wgpu texture view ready to bind as iChannel0.
     pub fn texture_view(&self) -> Option<wgpu::TextureView> {
-        Some(self.video_tex.create_view(&wgpu::TextureViewDescriptor::default()))
-    }
-
-    /// Arc<Texture> for injection into NodeConfig::input_textures.
-    pub fn texture_arc(&self) -> Option<std::sync::Arc<wgpu::Texture>> {
-        Some(std::sync::Arc::clone(&self.video_tex))
+        Some(self.video_tex.view())
     }
 
     pub fn width(&self)    -> u32 { self.width }
