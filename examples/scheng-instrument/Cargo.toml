@@ -1,0 +1,48 @@
+[package]
+name        = "scheng-example-instrument"
+version     = "0.1.0"
+edition     = "2021"
+description = "Minimal scheng instrument example — copy this as a starting point"
+default-run = "scheng-example-instrument"
+
+[[bin]]
+name = "scheng-example-instrument"
+path = "src/main.rs"
+
+[dependencies]
+scheng-graph            = { path = "../../crates/scheng-graph" }
+scheng-runtime-wgpu     = { path = "../../crates/scheng-runtime-wgpu" }
+scheng-param-store      = { path = "../../crates/scheng-param-store" }
+scheng-control-osc-wgpu = { path = "../../crates/scheng-control-osc-wgpu" }
+scheng-hotreload        = { path = "../../crates/scheng-hotreload" }
+scheng-output-ffmpeg    = { path = "../../crates/scheng-output-ffmpeg" }
+scheng-input-midi       = { path = "../../crates/scheng-input-midi", optional = true }
+scheng-output-ndi       = { path = "../../crates/scheng-output-ndi", optional = true }
+scheng-input-webcam     = { path = "../../crates/scheng-input-webcam",  optional = true }
+scheng-input-video      = { path = "../../crates/scheng-input-video",    optional = true }
+scheng-input-rtmp       = { path = "../../crates/scheng-input-rtmp",     optional = true }
+wgpu       = "23"
+winit      = "0.30"
+pollster   = "0.3"
+env_logger = "0.11"
+foreign-types-shared = { version = "0.3", optional = true }
+log        = "0.4"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+scheng-output-syphon = { path = "../../crates/scheng-output-syphon", optional = true }
+scheng-input-syphon  = { path = "../../crates/scheng-input-syphon",  optional = true }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+scheng-output-spout = { path = "../../crates/scheng-output-spout", optional = true }
+scheng-input-spout  = { path = "../../crates/scheng-input-spout",  optional = true }
+
+[features]
+default = ["midi", "syphon"]
+midi    = ["dep:scheng-input-midi"]
+syphon          = ["dep:scheng-output-syphon"]
+syphon-receive  = ["dep:scheng-input-syphon", "scheng-input-syphon/syphon-framework", "dep:foreign-types-shared"]
+ndi     = ["dep:scheng-output-ndi", "scheng-output-ndi/ndi"]
+webcam  = ["dep:scheng-input-webcam", "scheng-input-webcam/native"]
+video   = ["dep:scheng-input-video",   "scheng-input-video/decode"]
+rtmp    = ["dep:scheng-input-rtmp"]
+spout   = ["dep:scheng-output-spout"]

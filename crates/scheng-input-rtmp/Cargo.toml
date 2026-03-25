@@ -1,0 +1,12 @@
+[package]
+name        = "scheng-input-rtmp"
+version     = "0.1.0"
+edition     = "2021"
+description = "RTMP/RTSP stream receive → wgpu texture for scheng instruments"
+license     = "MIT"
+
+[dependencies]
+wgpu      = "23"
+log       = "0.4"
+thiserror = "1"
+crossbeam-channel = "0.5"

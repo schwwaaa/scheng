@@ -1,0 +1,19 @@
+[package]
+name        = "scheng-hotreload"
+version     = "0.1.0"
+edition     = "2021"
+description = "File watcher for scheng — reloads shaders and params.json without restart"
+license     = "MIT"
+
+[dependencies]
+scheng-param-store  = { path = "../scheng-param-store" }
+scheng-runtime-wgpu = { path = "../scheng-runtime-wgpu" }
+scheng-graph        = { path = "../scheng-graph" }
+
+# notify: cross-platform file system events (macOS FSEvents, Linux inotify, Windows ReadDirectoryChangesW)
+notify    = { version = "6", features = ["macos_fsevent"] }
+log       = "0.4"
+thiserror = "1"
+
+[features]
+default = []

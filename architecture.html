@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architecture — scheng SDK</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0a0a0f;
+  --paper: #f2f0eb;
+  --electric: #3b82f6;
+  --violet: #8b5cf6;
+  --cyan: #06b6d4;
+  --amber: #f59e0b;
+  --green: #10b981;
+  --red: #ef4444;
+  --grid: rgba(59,130,246,0.06);
+  --mono: 'Space Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 32px; position: relative; z-index: 1; }
+
+nav {
+  padding: 24px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative; z-index: 10;
+}
+.logo { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--electric); text-decoration: none; }
+.logo span { color: var(--paper); }
+nav ul { list-style: none; display: flex; gap: 32px; }
+nav a { color: rgba(242,240,235,0.5); text-decoration: none; font-size: 14px; font-family: var(--mono); transition: color 0.2s; }
+nav a:hover { color: var(--electric); }
+
+.page-header {
+  padding: 80px 32px 64px;
+  position: relative; z-index: 1;
+}
+.eyebrow {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em;
+  color: var(--electric); text-transform: uppercase; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 12px;
+}
+.eyebrow::before { content: ''; width: 24px; height: 1px; background: var(--electric); }
+h1 {
+  font-family: var(--mono); font-size: clamp(40px, 5vw, 64px);
+  font-weight: 700; letter-spacing: -0.03em; margin-bottom: 16px;
+}
+.page-sub { font-size: 18px; color: rgba(242,240,235,0.55); max-width: 560px; }
+
+/* ── Diagram containers ── */
+.diagram-section {
+  padding: 64px 0;
+  position: relative; z-index: 1;
+}
+.diagram-section + .diagram-section {
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.diagram-title {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em;
+  color: var(--electric); text-transform: uppercase; margin-bottom: 8px;
+}
+.diagram-section h2 {
+  font-family: var(--mono); font-size: 28px; font-weight: 700;
+  letter-spacing: -0.02em; margin-bottom: 8px;
+}
+.diagram-section .desc {
+  font-size: 15px; color: rgba(242,240,235,0.5); margin-bottom: 40px; max-width: 560px;
+}
+
+/* ── SVG diagrams ── */
+.diagram-box {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 48px;
+  overflow-x: auto;
+}
+
+svg { font-family: var(--mono); overflow: visible; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="logo">sch<span>eng</span></a>
+  <ul>
+    <li><a href="index.html">Home</a></li>
+    <li><a href="architecture.html" style="color:var(--electric)">Architecture</a></li>
+    <li><a href="sdk-reference.html">SDK Docs</a></li>
+  </ul>
+</nav>
+
+<div class="page-header wrap">
+  <div class="eyebrow">Architecture</div>
+  <h1>How scheng works.</h1>
+  <p class="page-sub">System diagrams for the render pipeline, graph topology, signal flow, and I/O architecture.</p>
+</div>
+
+<!-- Diagram 1: Full system architecture -->
+<div class="diagram-section wrap">
+  <div class="diagram-title">// Diagram 01</div>
+  <h2>Full System Architecture</h2>
+  <p class="desc">Every component in a running scheng instrument and how they relate to each other.</p>
+  <div class="diagram-box">
+    <svg width="100%" viewBox="0 0 1120 580" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="rgba(59,130,246,0.6)"/>
+        </marker>
+        <marker id="arr-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="rgba(6,182,212,0.8)"/>
+        </marker>
+        <marker id="arr-violet" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="rgba(139,92,246,0.8)"/>
+        </marker>
+        <marker id="arr-amber" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="rgba(245,158,11,0.8)"/>
+        </marker>
+      </defs>
+
+      <!-- ── INPUTS column (x=20, boxes 120w × 38h, spaced 54px apart) ── -->
+      <text x="80" y="28" fill="rgba(6,182,212,0.55)" font-size="10" letter-spacing="3" text-anchor="middle">INPUTS</text>
+      <rect x="20" y="38"  width="120" height="38" rx="4" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.4)" stroke-width="1"/>
+      <text x="80" y="62" fill="#06b6d4" font-size="12" font-weight="700" text-anchor="middle">Syphon In</text>
+      <rect x="20" y="92"  width="120" height="38" rx="4" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.4)" stroke-width="1"/>
+      <text x="80" y="116" fill="#06b6d4" font-size="12" font-weight="700" text-anchor="middle">NDI Receive</text>
+      <rect x="20" y="146" width="120" height="38" rx="4" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.4)" stroke-width="1"/>
+      <text x="80" y="170" fill="#06b6d4" font-size="12" font-weight="700" text-anchor="middle">Webcam</text>
+      <rect x="20" y="200" width="120" height="38" rx="4" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.4)" stroke-width="1"/>
+      <text x="80" y="224" fill="#06b6d4" font-size="12" font-weight="700" text-anchor="middle">Video File</text>
+      <rect x="20" y="254" width="120" height="38" rx="4" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.4)" stroke-width="1"/>
+      <text x="80" y="278" fill="#06b6d4" font-size="12" font-weight="700" text-anchor="middle">RTMP / RTSP</text>
+
+      <!-- input arrows → GPU Core (enters at x=300) -->
+      <line x1="140" y1="57"  x2="298" y2="155" stroke="rgba(6,182,212,0.3)" stroke-width="1.5" marker-end="url(#arr-cyan)"/>
+      <line x1="140" y1="111" x2="298" y2="168" stroke="rgba(6,182,212,0.3)" stroke-width="1.5" marker-end="url(#arr-cyan)"/>
+      <line x1="140" y1="165" x2="298" y2="181" stroke="rgba(6,182,212,0.3)" stroke-width="1.5" marker-end="url(#arr-cyan)"/>
+      <line x1="140" y1="219" x2="298" y2="194" stroke="rgba(6,182,212,0.3)" stroke-width="1.5" marker-end="url(#arr-cyan)"/>
+      <line x1="140" y1="273" x2="298" y2="207" stroke="rgba(6,182,212,0.3)" stroke-width="1.5" marker-end="url(#arr-cyan)"/>
+
+      <!-- ── CONTROL column ── -->
+      <text x="80" y="348" fill="rgba(245,158,11,0.55)" font-size="10" letter-spacing="3" text-anchor="middle">CONTROL</text>
+      <rect x="20" y="358" width="120" height="38" rx="4" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.4)" stroke-width="1"/>
+      <text x="80" y="382" fill="#f59e0b" font-size="12" font-weight="700" text-anchor="middle">MIDI CC</text>
+      <rect x="20" y="408" width="120" height="38" rx="4" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.4)" stroke-width="1"/>
+      <text x="80" y="432" fill="#f59e0b" font-size="12" font-weight="700" text-anchor="middle">OSC</text>
+
+      <!-- ParamStore box -->
+      <rect x="165" y="350" width="130" height="96" rx="4" fill="rgba(245,158,11,0.05)" stroke="rgba(245,158,11,0.3)" stroke-width="1"/>
+      <text x="230" y="374" fill="#f59e0b" font-size="11" font-weight="700" text-anchor="middle">ParamStore</text>
+      <text x="230" y="392" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">smooth() targets</text>
+      <text x="230" y="408" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">→ values</text>
+      <text x="230" y="424" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">step_frame()</text>
+      <text x="230" y="438" fill="rgba(6,182,212,0.6)" font-size="10" text-anchor="middle">each tick</text>
+
+      <!-- arrows: MIDI+OSC → ParamStore -->
+      <line x1="140" y1="377" x2="163" y2="390" stroke="rgba(245,158,11,0.5)" stroke-width="1.5" marker-end="url(#arr-amber)"/>
+      <line x1="140" y1="427" x2="163" y2="410" stroke="rgba(245,158,11,0.5)" stroke-width="1.5" marker-end="url(#arr-amber)"/>
+      <!-- ParamStore → GPU Core (dashed, uniforms) -->
+      <line x1="295" y1="398" x2="360" y2="340" stroke="rgba(245,158,11,0.35)" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr-amber)"/>
+
+      <!-- ── GPU CORE box ── -->
+      <rect x="300" y="80" width="600" height="370" rx="8" fill="rgba(59,130,246,0.03)" stroke="rgba(59,130,246,0.22)" stroke-width="1.5"/>
+      <text x="600" y="104" fill="rgba(59,130,246,0.45)" font-size="10" letter-spacing="3" text-anchor="middle">GPU CORE — WgpuRuntime</text>
+
+      <!-- Hot-Reload inner box -->
+      <rect x="326" y="118" width="160" height="76" rx="4" fill="rgba(16,185,129,0.07)" stroke="rgba(16,185,129,0.28)" stroke-width="1"/>
+      <text x="406" y="140" fill="#10b981" font-size="11" font-weight="700" text-anchor="middle">Hot-Reload</text>
+      <text x="406" y="158" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">AssetWatcher</text>
+      <text x="406" y="174" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">naga GLSL compile</text>
+      <text x="406" y="188" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">pipeline cache</text>
+
+      <!-- Shader Graph inner box -->
+      <rect x="326" y="212" width="160" height="96" rx="4" fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.28)" stroke-width="1"/>
+      <text x="406" y="234" fill="#3b82f6" font-size="11" font-weight="700" text-anchor="middle">Shader Graph</text>
+      <text x="406" y="252" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">NodeConfig</text>
+      <text x="406" y="268" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">uniforms u_*</text>
+      <text x="406" y="284" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">input_textures[4]</text>
+      <text x="406" y="300" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">iChannel0–3</text>
+
+      <!-- Render Pipeline inner box -->
+      <rect x="514" y="118" width="180" height="190" rx="4" fill="rgba(59,130,246,0.06)" stroke="rgba(59,130,246,0.25)" stroke-width="1"/>
+      <text x="604" y="140" fill="#3b82f6" font-size="11" font-weight="700" text-anchor="middle">Render Pipeline</text>
+      <text x="604" y="160" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">Rgba16Float targets</text>
+      <text x="604" y="178" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">MSAA 1x / 4x / 8x</text>
+      <text x="604" y="196" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">bind groups</text>
+      <text x="604" y="214" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">FrameBlock UBO</text>
+      <text x="604" y="232" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">CustomBlock UBO</text>
+      <text x="604" y="250" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">iChannel0–3</text>
+      <text x="604" y="268" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">RenderPass/node</text>
+      <text x="604" y="286" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">queue.submit()</text>
+      <text x="604" y="302" fill="rgba(6,182,212,0.6)" font-size="10" text-anchor="middle">one batch/frame</text>
+
+      <!-- OutputSinks inner box -->
+      <rect x="722" y="118" width="160" height="190" rx="4" fill="rgba(139,92,246,0.06)" stroke="rgba(139,92,246,0.25)" stroke-width="1"/>
+      <text x="802" y="140" fill="#8b5cf6" font-size="11" font-weight="700" text-anchor="middle">OutputSinks</text>
+      <text x="802" y="160" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">PreviewSink</text>
+      <text x="802" y="178" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">SyphonSink</text>
+      <text x="802" y="196" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">NdiSink</text>
+      <text x="802" y="214" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">FfmpegSink</text>
+      <text x="802" y="232" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">SpoutSink</text>
+      <text x="802" y="252" fill="rgba(242,240,235,0.35)" font-size="9" text-anchor="middle">present() called</text>
+      <text x="802" y="268" fill="rgba(242,240,235,0.35)" font-size="9" text-anchor="middle">after submit()</text>
+      <text x="802" y="284" fill="rgba(6,182,212,0.55)" font-size="9" text-anchor="middle">non-blocking</text>
+      <text x="802" y="300" fill="rgba(6,182,212,0.55)" font-size="9" text-anchor="middle">drop-safe</text>
+
+      <!-- Inner arrows -->
+      <line x1="486" y1="200" x2="512" y2="200" stroke="rgba(59,130,246,0.4)" stroke-width="1.5" marker-end="url(#arr)"/>
+      <line x1="694" y1="200" x2="720" y2="200" stroke="rgba(59,130,246,0.4)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- Frame loop label -->
+      <rect x="326" y="330" width="556" height="28" rx="3" fill="rgba(59,130,246,0.05)" stroke="rgba(59,130,246,0.12)" stroke-width="1"/>
+      <text x="604" y="349" fill="rgba(59,130,246,0.45)" font-size="10" letter-spacing="2" text-anchor="middle">about_to_wait() → tick() → execute_frame() → present()</text>
+
+      <!-- ── OUTPUTS column (x=960) ── -->
+      <text x="1040" y="28" fill="rgba(139,92,246,0.55)" font-size="10" letter-spacing="3" text-anchor="middle">OUTPUTS</text>
+      <rect x="980" y="38"  width="120" height="38" rx="4" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.4)" stroke-width="1"/>
+      <text x="1040" y="62" fill="#8b5cf6" font-size="12" font-weight="700" text-anchor="middle">Syphon Out</text>
+      <rect x="980" y="92"  width="120" height="38" rx="4" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.4)" stroke-width="1"/>
+      <text x="1040" y="116" fill="#8b5cf6" font-size="12" font-weight="700" text-anchor="middle">NDI Out</text>
+      <rect x="980" y="146" width="120" height="38" rx="4" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.4)" stroke-width="1"/>
+      <text x="1040" y="170" fill="#8b5cf6" font-size="12" font-weight="700" text-anchor="middle">RTMP Stream</text>
+      <rect x="980" y="200" width="120" height="38" rx="4" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.4)" stroke-width="1"/>
+      <text x="1040" y="224" fill="#8b5cf6" font-size="12" font-weight="700" text-anchor="middle">RTSP Stream</text>
+      <rect x="980" y="254" width="120" height="38" rx="4" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.4)" stroke-width="1"/>
+      <text x="1040" y="278" fill="#8b5cf6" font-size="12" font-weight="700" text-anchor="middle">Record MP4</text>
+      <rect x="980" y="308" width="120" height="38" rx="4" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.4)" stroke-width="1"/>
+      <text x="1040" y="332" fill="#8b5cf6" font-size="12" font-weight="700" text-anchor="middle">Preview Window</text>
+
+      <!-- GPU Core → outputs arrows -->
+      <line x1="882" y1="185" x2="978" y2="57"  stroke="rgba(139,92,246,0.35)" stroke-width="1.5" marker-end="url(#arr-violet)"/>
+      <line x1="882" y1="195" x2="978" y2="111" stroke="rgba(139,92,246,0.35)" stroke-width="1.5" marker-end="url(#arr-violet)"/>
+      <line x1="882" y1="205" x2="978" y2="165" stroke="rgba(139,92,246,0.35)" stroke-width="1.5" marker-end="url(#arr-violet)"/>
+      <line x1="882" y1="215" x2="978" y2="219" stroke="rgba(139,92,246,0.35)" stroke-width="1.5" marker-end="url(#arr-violet)"/>
+      <line x1="882" y1="225" x2="978" y2="273" stroke="rgba(139,92,246,0.35)" stroke-width="1.5" marker-end="url(#arr-violet)"/>
+      <line x1="882" y1="235" x2="978" y2="327" stroke="rgba(139,92,246,0.35)" stroke-width="1.5" marker-end="url(#arr-violet)"/>
+
+      <!-- Legend -->
+      <rect x="20"  y="510" width="12" height="12" rx="2" fill="rgba(6,182,212,0.3)"   stroke="rgba(6,182,212,0.5)"   stroke-width="1"/>
+      <text x="38"  y="521" fill="rgba(242,240,235,0.4)" font-size="11">Video / texture inputs</text>
+      <rect x="220" y="510" width="12" height="12" rx="2" fill="rgba(245,158,11,0.3)"  stroke="rgba(245,158,11,0.5)"  stroke-width="1"/>
+      <text x="238" y="521" fill="rgba(242,240,235,0.4)" font-size="11">Control signals</text>
+      <rect x="380" y="510" width="12" height="12" rx="2" fill="rgba(59,130,246,0.3)"  stroke="rgba(59,130,246,0.5)"  stroke-width="1"/>
+      <text x="398" y="521" fill="rgba(242,240,235,0.4)" font-size="11">GPU processing</text>
+      <rect x="540" y="510" width="12" height="12" rx="2" fill="rgba(139,92,246,0.3)"  stroke="rgba(139,92,246,0.5)"  stroke-width="1"/>
+      <text x="558" y="521" fill="rgba(242,240,235,0.4)" font-size="11">Output / sink</text>
+    </svg>
+  </div>
+</div>
+
+<!-- Diagram 2<!-- Diagram 2: Render pipeline steps -->
+<div class="diagram-section wrap">
+  <div class="diagram-title">// Diagram 02</div>
+  <h2>Frame Render Loop</h2>
+  <p class="desc">What happens every single frame, in order. The render loop never blocks — inputs that fall behind drop frames gracefully.</p>
+  <div class="diagram-box">
+    <svg width="100%" viewBox="0 0 1100 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#3b82f6"/>
+        </marker>
+      </defs>
+
+      <!-- Steps -->
+      <!-- Step 1 -->
+      <rect x="10" y="40" width="140" height="100" rx="6" fill="rgba(6,182,212,0.07)" stroke="rgba(6,182,212,0.3)" stroke-width="1.5"/>
+      <text x="80" y="70" fill="#06b6d4" font-size="11" font-weight="700" text-anchor="middle">01 POLL INPUTS</text>
+      <text x="80" y="90" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">Webcam.poll()</text>
+      <text x="80" y="106" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">VideoDecoder</text>
+      <text x="80" y="122" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">.upload_frame()</text>
+      <text x="80" y="138" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">Syphon.poll()</text>
+
+      <!-- Arrow -->
+      <line x1="150" y1="90" x2="175" y2="90" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+      <!-- Step 2 -->
+      <rect x="180" y="40" width="140" height="100" rx="6" fill="rgba(245,158,11,0.07)" stroke="rgba(245,158,11,0.3)" stroke-width="1.5"/>
+      <text x="250" y="70" fill="#f59e0b" font-size="11" font-weight="700" text-anchor="middle">02 PARAMS</text>
+      <text x="250" y="90" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">store.step_frame()</text>
+      <text x="250" y="106" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">MIDI targets →</text>
+      <text x="250" y="122" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">smoothed values</text>
+
+      <line x1="320" y1="90" x2="345" y2="90" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+      <!-- Step 3 -->
+      <rect x="350" y="40" width="140" height="100" rx="6" fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.3)" stroke-width="1.5"/>
+      <text x="420" y="70" fill="#3b82f6" font-size="11" font-weight="700" text-anchor="middle">03 BUILD CFG</text>
+      <text x="420" y="90" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">NodeConfig per node</text>
+      <text x="420" y="106" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">frag_shader source</text>
+      <text x="420" y="122" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">uniforms HashMap</text>
+      <text x="420" y="138" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">input_textures[4]</text>
+
+      <line x1="490" y1="90" x2="515" y2="90" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+      <!-- Step 4 -->
+      <rect x="520" y="40" width="140" height="100" rx="6" fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.3)" stroke-width="1.5"/>
+      <text x="590" y="70" fill="#3b82f6" font-size="11" font-weight="700" text-anchor="middle">04 GPU RENDER</text>
+      <text x="590" y="90" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">graph.compile()</text>
+      <text x="590" y="106" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">RenderPass per node</text>
+      <text x="590" y="122" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">Rgba16Float targets</text>
+      <text x="590" y="138" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">MSAA if active</text>
+
+      <line x1="660" y1="90" x2="685" y2="90" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+      <!-- Step 5 -->
+      <rect x="690" y="40" width="140" height="100" rx="6" fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.3)" stroke-width="1.5"/>
+      <text x="760" y="70" fill="#3b82f6" font-size="11" font-weight="700" text-anchor="middle">05 SUBMIT</text>
+      <text x="760" y="90" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">queue.submit()</text>
+      <text x="760" y="106" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">All GPU commands</text>
+      <text x="760" y="122" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">batched as one</text>
+      <text x="760" y="138" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">CommandEncoder</text>
+
+      <line x1="830" y1="90" x2="855" y2="90" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+      <!-- Step 6 -->
+      <rect x="860" y="40" width="140" height="100" rx="6" fill="rgba(139,92,246,0.07)" stroke="rgba(139,92,246,0.3)" stroke-width="1.5"/>
+      <text x="930" y="70" fill="#8b5cf6" font-size="11" font-weight="700" text-anchor="middle">06 PRESENT</text>
+      <text x="930" y="90" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">sink.present()</text>
+      <text x="930" y="106" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">Preview blit</text>
+      <text x="930" y="122" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">Syphon / NDI</text>
+      <text x="930" y="138" fill="rgba(242,240,235,0.45)" font-size="10" text-anchor="middle">FFmpeg pipe</text>
+
+      <!-- Non-blocking note -->
+      <text x="550" y="180" fill="rgba(59,130,246,0.35)" font-size="10" letter-spacing="2" text-anchor="middle">— non-blocking — inputs and outputs run on dedicated threads — frame drops preferred over stalling —</text>
+    </svg>
+  </div>
+</div>
+
+<!-- Diagram 3: Graph topology -->
+<div class="diagram-section wrap">
+  <div class="diagram-title">// Diagram 03</div>
+  <h2>Graph Node Topology</h2>
+  <p class="desc">How nodes connect. Any output can feed any input. The graph compiles to a topologically sorted execution plan each frame.</p>
+  <div class="diagram-box">
+    <svg width="100%" viewBox="0 0 1100 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="rgba(59,130,246,0.7)"/>
+        </marker>
+        <marker id="arr3g" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="rgba(16,185,129,0.7)"/>
+        </marker>
+      </defs>
+
+      <!-- ════ ROW 1: Single node (left) + Effect chain (right) ════ -->
+
+      <!-- SINGLE NODE label -->
+      <text x="160" y="26" fill="rgba(242,240,235,0.28)" font-size="10" letter-spacing="2" text-anchor="middle">SINGLE NODE</text>
+      <!-- nodes -->
+      <rect x="20"  y="36" width="126" height="50" rx="4" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.32)" stroke-width="1.5"/>
+      <text x="83"  y="57" fill="#06b6d4" font-size="11" font-weight="700" text-anchor="middle">ShaderSource</text>
+      <text x="83"  y="73" fill="rgba(242,240,235,0.38)" font-size="9" text-anchor="middle">generates content</text>
+      <line x1="146" y1="61" x2="168" y2="61" stroke="rgba(59,130,246,0.55)" stroke-width="1.5" marker-end="url(#arr3)"/>
+      <rect x="172" y="36" width="100" height="50" rx="4" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.32)" stroke-width="1.5"/>
+      <text x="222" y="57" fill="#8b5cf6" font-size="11" font-weight="700" text-anchor="middle">PixelsOut</text>
+      <text x="222" y="73" fill="rgba(242,240,235,0.38)" font-size="9" text-anchor="middle">triggers sinks</text>
+
+      <!-- EFFECT CHAIN label -->
+      <text x="720" y="26" fill="rgba(242,240,235,0.28)" font-size="10" letter-spacing="2" text-anchor="middle">EFFECT CHAIN</text>
+      <!-- nodes spaced 16px apart, each 130w -->
+      <rect x="450" y="36" width="130" height="50" rx="4" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.32)" stroke-width="1.5"/>
+      <text x="515" y="57" fill="#06b6d4" font-size="11" font-weight="700" text-anchor="middle">ShaderSource</text>
+      <text x="515" y="73" fill="rgba(242,240,235,0.38)" font-size="9" text-anchor="middle">webcam texture</text>
+      <line x1="580" y1="61" x2="600" y2="61" stroke="rgba(59,130,246,0.55)" stroke-width="1.5" marker-end="url(#arr3)"/>
+      <rect x="604" y="36" width="120" height="50" rx="4" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.32)" stroke-width="1.5"/>
+      <text x="664" y="57" fill="#3b82f6" font-size="11" font-weight="700" text-anchor="middle">ShaderPass</text>
+      <text x="664" y="73" fill="rgba(242,240,235,0.38)" font-size="9" text-anchor="middle">solarize effect</text>
+      <line x1="724" y1="61" x2="744" y2="61" stroke="rgba(59,130,246,0.55)" stroke-width="1.5" marker-end="url(#arr3)"/>
+      <rect x="748" y="36" width="120" height="50" rx="4" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.32)" stroke-width="1.5"/>
+      <text x="808" y="57" fill="#3b82f6" font-size="11" font-weight="700" text-anchor="middle">ShaderPass</text>
+      <text x="808" y="73" fill="rgba(242,240,235,0.38)" font-size="9" text-anchor="middle">color grade</text>
+      <line x1="868" y1="61" x2="888" y2="61" stroke="rgba(59,130,246,0.55)" stroke-width="1.5" marker-end="url(#arr3)"/>
+      <rect x="892" y="36" width="100" height="50" rx="4" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.32)" stroke-width="1.5"/>
+      <text x="942" y="57" fill="#8b5cf6" font-size="11" font-weight="700" text-anchor="middle">PixelsOut</text>
+      <text x="942" y="73" fill="rgba(242,240,235,0.38)" font-size="9" text-anchor="middle">→ preview</text>
+
+      <!-- ════ Horizontal divider ════ -->
+      <line x1="20" y1="116" x2="1080" y2="116" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+
+      <!-- ════ ROW 2: Feedback (left) + A/B Mixer (right) ════ -->
+
+      <!-- FEEDBACK label -->
+      <text x="280" y="144" fill="rgba(242,240,235,0.28)" font-size="10" letter-spacing="2" text-anchor="middle">FEEDBACK / TEMPORAL</text>
+
+      <!-- Feedback nodes: y=158 -->
+      <rect x="20"  y="158" width="130" height="50" rx="4" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.32)" stroke-width="1.5"/>
+      <text x="85"  y="179" fill="#06b6d4" font-size="11" font-weight="700" text-anchor="middle">ShaderSource</text>
+      <text x="85"  y="195" fill="rgba(242,240,235,0.38)" font-size="9" text-anchor="middle">current frame</text>
+      <line x1="150" y1="183" x2="172" y2="183" stroke="rgba(59,130,246,0.55)" stroke-width="1.5" marker-end="url(#arr3)"/>
+      <rect x="176" y="158" width="140" height="50" rx="4" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.32)" stroke-width="1.5"/>
+      <text x="246" y="179" fill="#3b82f6" font-size="11" font-weight="700" text-anchor="middle">ShaderPass</text>
+      <text x="246" y="195" fill="rgba(242,240,235,0.38)" font-size="9" text-anchor="middle">mixes prev frame</text>
+      <line x1="316" y1="183" x2="338" y2="183" stroke="rgba(59,130,246,0.55)" stroke-width="1.5" marker-end="url(#arr3)"/>
+      <rect x="342" y="158" width="110" height="50" rx="4" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.32)" stroke-width="1.5"/>
+      <text x="397" y="179" fill="#8b5cf6" font-size="11" font-weight="700" text-anchor="middle">PixelsOut</text>
+      <text x="397" y="195" fill="rgba(242,240,235,0.38)" font-size="9" text-anchor="middle">→ output</text>
+
+      <!-- PreviousFrame node below ShaderPass -->
+      <rect x="176" y="238" width="140" height="46" rx="4" fill="rgba(16,185,129,0.07)" stroke="rgba(16,185,129,0.28)" stroke-width="1"/>
+      <text x="246" y="258" fill="#10b981" font-size="11" font-weight="700" text-anchor="middle">PreviousFrame</text>
+      <text x="246" y="274" fill="rgba(242,240,235,0.38)" font-size="9" text-anchor="middle">last frame texture</text>
+      <!-- PreviousFrame → ShaderPass (dashed feedback loop) -->
+      <path d="M176,261 L160,261 L160,183 L174,183" stroke="rgba(16,185,129,0.45)" stroke-width="1.5" stroke-dasharray="5,3" fill="none" marker-end="url(#arr3g)"/>
+      <!-- ShaderPass ↓ to PreviousFrame (read last frame) -->
+      <line x1="246" y1="208" x2="246" y2="236" stroke="rgba(16,185,129,0.35)" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr3g)"/>
+
+      <!-- A/B MIXER label -->
+      <text x="790" y="144" fill="rgba(242,240,235,0.28)" font-size="10" letter-spacing="2" text-anchor="middle">A/B MIXER</text>
+
+      <!-- Source A: y=158 -->
+      <rect x="530" y="158" width="120" height="46" rx="4" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.32)" stroke-width="1.5"/>
+      <text x="590" y="177" fill="#06b6d4" font-size="11" font-weight="700" text-anchor="middle">ShaderSource</text>
+      <text x="590" y="193" fill="rgba(242,240,235,0.38)" font-size="9" text-anchor="middle">Source A</text>
+
+      <!-- Source B: y=228 -->
+      <rect x="530" y="228" width="120" height="46" rx="4" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.32)" stroke-width="1.5"/>
+      <text x="590" y="247" fill="#06b6d4" font-size="11" font-weight="700" text-anchor="middle">ShaderSource</text>
+      <text x="590" y="263" fill="rgba(242,240,235,0.38)" font-size="9" text-anchor="middle">Source B</text>
+
+      <!-- Crossfade: centered vertically between A and B -->
+      <rect x="700" y="175" width="150" height="66" rx="4" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.32)" stroke-width="1.5"/>
+      <text x="775" y="197" fill="#3b82f6" font-size="11" font-weight="700" text-anchor="middle">Crossfade</text>
+      <text x="775" y="214" fill="rgba(242,240,235,0.4)" font-size="9" text-anchor="middle">u_tbar = MIDI CC1</text>
+      <text x="775" y="230" fill="rgba(242,240,235,0.4)" font-size="9" text-anchor="middle">mix(A, B, tbar)</text>
+
+      <!-- arrows A → Crossfade, B → Crossfade -->
+      <line x1="650" y1="181" x2="698" y2="200" stroke="rgba(59,130,246,0.5)" stroke-width="1.5" marker-end="url(#arr3)"/>
+      <line x1="650" y1="251" x2="698" y2="220" stroke="rgba(59,130,246,0.5)" stroke-width="1.5" marker-end="url(#arr3)"/>
+
+      <!-- Crossfade → PixelsOut -->
+      <line x1="850" y1="208" x2="874" y2="208" stroke="rgba(59,130,246,0.5)" stroke-width="1.5" marker-end="url(#arr3)"/>
+      <rect x="878" y="185" width="110" height="46" rx="4" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.32)" stroke-width="1.5"/>
+      <text x="933" y="206" fill="#8b5cf6" font-size="11" font-weight="700" text-anchor="middle">PixelsOut</text>
+      <text x="933" y="222" fill="rgba(242,240,235,0.38)" font-size="9" text-anchor="middle">→ Syphon / NDI</text>
+
+      <!-- MIDI T-bar label -->
+      <text x="775" y="266" fill="rgba(245,158,11,0.5)" font-size="9" text-anchor="middle">↑ MIDI CC1 controls mix</text>
+
+      <!-- Bottom note -->
+      <text x="550" y="390" fill="rgba(242,240,235,0.18)" font-size="10" letter-spacing="1" text-anchor="middle">graph.compile() topologically sorts nodes — execution order is always dependency-correct</text>
+    </svg>
+  </div>
+</div>
+
+<!-- Diagram 4<!-- Diagram 4: MIDI routing -->
+<div class="diagram-section wrap">
+  <div class="diagram-title">// Diagram 04</div>
+  <h2>MIDI → Shader Routing</h2>
+  <p class="desc">How a MIDI CC message becomes a shader uniform value — with optional smoothing to remove steppy artifacts.</p>
+  <div class="diagram-box">
+    <svg width="100%" viewBox="0 0 1100 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="rgba(245,158,11,0.8)"/>
+        </marker>
+      </defs>
+
+      <!-- MIDI controller -->
+      <rect x="20" y="70" width="120" height="70" rx="6" fill="rgba(245,158,11,0.07)" stroke="rgba(245,158,11,0.35)" stroke-width="1.5"/>
+      <text x="80" y="98" fill="#f59e0b" font-size="12" font-weight="700" text-anchor="middle">MIDI Controller</text>
+      <text x="80" y="116" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">CC1 = 64</text>
+      <text x="80" y="132" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">(any device)</text>
+      <line x1="140" y1="105" x2="165" y2="105" stroke="rgba(245,158,11,0.6)" stroke-width="1.5" marker-end="url(#arr4)"/>
+
+      <!-- midir thread -->
+      <rect x="170" y="70" width="130" height="70" rx="6" fill="rgba(245,158,11,0.06)" stroke="rgba(245,158,11,0.25)" stroke-width="1"/>
+      <text x="235" y="98" fill="#f59e0b" font-size="11" font-weight="700" text-anchor="middle">midir callback</text>
+      <text x="235" y="114" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">msg[0]=0xB0 ch=1</text>
+      <text x="235" y="130" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">cc=1 val=64</text>
+      <line x1="300" y1="105" x2="325" y2="105" stroke="rgba(245,158,11,0.6)" stroke-width="1.5" marker-end="url(#arr4)"/>
+
+      <!-- ParamStore -->
+      <rect x="330" y="55" width="160" height="100" rx="6" fill="rgba(245,158,11,0.06)" stroke="rgba(245,158,11,0.3)" stroke-width="1.5"/>
+      <text x="410" y="82" fill="#f59e0b" font-size="11" font-weight="700" text-anchor="middle">ParamStore</text>
+      <text x="410" y="100" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">set_by_midi_cc(1, 64)</text>
+      <text x="410" y="116" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">targets["u_tbar"]=0.5</text>
+      <text x="410" y="134" fill="rgba(6,182,212,0.7)" font-size="10" text-anchor="middle">step_frame() each tick</text>
+      <text x="410" y="148" fill="rgba(16,185,129,0.7)" font-size="10" text-anchor="middle">smooth → values[0.5]</text>
+      <line x1="490" y1="105" x2="515" y2="105" stroke="rgba(245,158,11,0.6)" stroke-width="1.5" marker-end="url(#arr4)"/>
+
+      <!-- NodeConfig -->
+      <rect x="520" y="70" width="150" height="70" rx="6" fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.3)" stroke-width="1.5"/>
+      <text x="595" y="96" fill="#3b82f6" font-size="11" font-weight="700" text-anchor="middle">NodeConfig</text>
+      <text x="595" y="114" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">uniforms["u_tbar"]</text>
+      <text x="595" y="130" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">= store.get("u_tbar")</text>
+      <line x1="670" y1="105" x2="695" y2="105" stroke="rgba(59,130,246,0.5)" stroke-width="1.5" marker-end="url(#arr4)"/>
+
+      <!-- CustomBlock -->
+      <rect x="700" y="70" width="150" height="70" rx="6" fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.3)" stroke-width="1.5"/>
+      <text x="775" y="96" fill="#3b82f6" font-size="11" font-weight="700" text-anchor="middle">CustomBlock GPU</text>
+      <text x="775" y="114" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">binding 6 UBO</text>
+      <text x="775" y="130" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">float u_tbar = 0.5</text>
+      <line x1="850" y1="105" x2="875" y2="105" stroke="rgba(59,130,246,0.5)" stroke-width="1.5" marker-end="url(#arr4)"/>
+
+      <!-- Shader -->
+      <rect x="880" y="55" width="150" height="100" rx="6" fill="rgba(16,185,129,0.07)" stroke="rgba(16,185,129,0.3)" stroke-width="1.5"/>
+      <text x="955" y="82" fill="#10b981" font-size="11" font-weight="700" text-anchor="middle">GLSL Shader</text>
+      <text x="955" y="100" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">uniform float</text>
+      <text x="955" y="116" fill="rgba(242,240,235,0.4)" font-size="10" text-anchor="middle">u_tbar;</text>
+      <text x="955" y="134" fill="rgba(16,185,129,0.6)" font-size="10" text-anchor="middle">mix(a, b, u_tbar)</text>
+
+      <!-- Thread label -->
+      <text x="235" y="30" fill="rgba(245,158,11,0.3)" font-size="9" letter-spacing="2" text-anchor="middle">MIDI THREAD</text>
+      <text x="595" y="30" fill="rgba(59,130,246,0.3)" font-size="9" letter-spacing="2" text-anchor="middle">RENDER THREAD (each tick)</text>
+      <line x1="420" y1="38" x2="420" y2="55" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="3,3"/>
+
+      <!-- Smoothing label -->
+      <text x="410" y="185" fill="rgba(16,185,129,0.4)" font-size="10" letter-spacing="1" text-anchor="middle">smooth=0.05 → reaches target in ~20 frames — eliminates steppy CC artifacts</text>
+    </svg>
+  </div>
+</div>
+
+<!-- Diagram 5: Use case flows -->
+<div class="diagram-section wrap">
+  <div class="diagram-title">// Diagram 05</div>
+  <h2>Use Case Signal Flows</h2>
+  <p class="desc">Three complete real-world signal chains from input to output.</p>
+  <div class="diagram-box">
+    <svg width="100%" viewBox="0 0 1100 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr5" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L7,3 z" fill="rgba(59,130,246,0.7)"/>
+        </marker>
+      </defs>
+
+      <!-- Use Case 1: Live Mixer -->
+      <text x="20" y="24" fill="rgba(242,240,235,0.5)" font-size="11" font-weight="700" letter-spacing="1">LIVE VIDEO MIXER</text>
+      <rect x="20" y="36" width="90" height="40" rx="4" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.3)" stroke-width="1"/>
+      <text x="65" y="54" fill="#06b6d4" font-size="10" font-weight="700" text-anchor="middle">Resolume</text>
+      <text x="65" y="68" fill="rgba(242,240,235,0.4)" font-size="9" text-anchor="middle">Syphon Out</text>
+      <line x1="110" y1="56" x2="128" y2="56" stroke="rgba(59,130,246,0.5)" stroke-width="1" marker-end="url(#arr5)"/>
+      <rect x="133" y="36" width="90" height="40" rx="4" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.3)" stroke-width="1"/>
+      <text x="178" y="54" fill="#3b82f6" font-size="10" font-weight="700" text-anchor="middle">scheng</text>
+      <text x="178" y="68" fill="rgba(242,240,235,0.4)" font-size="9" text-anchor="middle">crossfade</text>
+      <line x1="223" y1="56" x2="241" y2="56" stroke="rgba(59,130,246,0.5)" stroke-width="1" marker-end="url(#arr5)"/>
+      <rect x="246" y="36" width="90" height="40" rx="4" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.3)" stroke-width="1"/>
+      <text x="291" y="54" fill="#8b5cf6" font-size="10" font-weight="700" text-anchor="middle">Resolume</text>
+      <text x="291" y="68" fill="rgba(242,240,235,0.4)" font-size="9" text-anchor="middle">Syphon In</text>
+      <text x="605" y="280" fill="rgba(245,158,11,0.5)" font-size="9" text-anchor="middle">↑ MIDI T-bar controls mix</text>
+
+      <!-- Use Case 2: Broadcast -->
+      <text x="420" y="24" fill="rgba(242,240,235,0.5)" font-size="11" font-weight="700" letter-spacing="1">BROADCAST STREAM</text>
+      <rect x="420" y="36" width="90" height="40" rx="4" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.3)" stroke-width="1"/>
+      <text x="465" y="54" fill="#06b6d4" font-size="10" font-weight="700" text-anchor="middle">Webcam</text>
+      <text x="465" y="68" fill="rgba(242,240,235,0.4)" font-size="9" text-anchor="middle">FaceTime HD</text>
+      <line x1="510" y1="56" x2="528" y2="56" stroke="rgba(59,130,246,0.5)" stroke-width="1" marker-end="url(#arr5)"/>
+      <rect x="533" y="36" width="90" height="40" rx="4" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.3)" stroke-width="1"/>
+      <text x="578" y="54" fill="#3b82f6" font-size="10" font-weight="700" text-anchor="middle">scheng</text>
+      <text x="578" y="68" fill="rgba(242,240,235,0.4)" font-size="9" text-anchor="middle">color grade</text>
+      <line x1="623" y1="56" x2="641" y2="56" stroke="rgba(59,130,246,0.5)" stroke-width="1" marker-end="url(#arr5)"/>
+      <rect x="646" y="36" width="90" height="40" rx="4" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.3)" stroke-width="1"/>
+      <text x="691" y="54" fill="#8b5cf6" font-size="10" font-weight="700" text-anchor="middle">YouTube</text>
+      <text x="691" y="68" fill="rgba(242,240,235,0.4)" font-size="9" text-anchor="middle">RTMP ingest</text>
+      <text x="578" y="96" fill="rgba(245,158,11,0.5)" font-size="9" text-anchor="middle">↑ MIDI CC: brightness / contrast / hue</text>
+
+      <!-- Use Case 3: Installation -->
+      <text x="820" y="24" fill="rgba(242,240,235,0.5)" font-size="11" font-weight="700" letter-spacing="1">VIDEO INSTALLATION</text>
+      <rect x="820" y="36" width="90" height="40" rx="4" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.3)" stroke-width="1"/>
+      <text x="865" y="54" fill="#06b6d4" font-size="10" font-weight="700" text-anchor="middle">Video File</text>
+      <text x="865" y="68" fill="rgba(242,240,235,0.4)" font-size="9" text-anchor="middle">loops forever</text>
+      <line x1="910" y1="56" x2="928" y2="56" stroke="rgba(59,130,246,0.5)" stroke-width="1" marker-end="url(#arr5)"/>
+      <rect x="933" y="36" width="90" height="40" rx="4" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.3)" stroke-width="1"/>
+      <text x="978" y="54" fill="#3b82f6" font-size="10" font-weight="700" text-anchor="middle">scheng</text>
+      <text x="978" y="68" fill="rgba(242,240,235,0.4)" font-size="9" text-anchor="middle">generative</text>
+      <line x1="978" y1="76" x2="978" y2="94" stroke="rgba(139,92,246,0.5)" stroke-width="1" marker-end="url(#arr5)"/>
+      <rect x="933" y="98" width="90" height="40" rx="4" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.3)" stroke-width="1"/>
+      <text x="978" y="116" fill="#8b5cf6" font-size="10" font-weight="700" text-anchor="middle">NDI Out</text>
+      <text x="978" y="130" fill="rgba(242,240,235,0.4)" font-size="9" text-anchor="middle">→ projectors</text>
+
+      <!-- Divider -->
+      <line x1="20" y1="160" x2="1080" y2="160" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+
+      <!-- Colorspace flow -->
+      <text x="20" y="188" fill="rgba(242,240,235,0.5)" font-size="11" font-weight="700" letter-spacing="1">COLORSPACE CHAIN</text>
+
+      <rect x="20" y="200" width="100" height="50" rx="4" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+      <text x="70" y="221" fill="rgba(242,240,235,0.7)" font-size="10" font-weight="700" text-anchor="middle">Input</text>
+      <text x="70" y="237" fill="rgba(242,240,235,0.35)" font-size="9" text-anchor="middle">Rgba8Unorm</text>
+      <text x="70" y="249" fill="rgba(242,240,235,0.35)" font-size="9" text-anchor="middle">8-bit</text>
+
+      <line x1="120" y1="225" x2="145" y2="225" stroke="rgba(59,130,246,0.4)" stroke-width="1.5" marker-end="url(#arr5)"/>
+
+      <rect x="150" y="200" width="130" height="50" rx="4" fill="rgba(59,130,246,0.06)" stroke="rgba(59,130,246,0.25)" stroke-width="1"/>
+      <text x="215" y="221" fill="#3b82f6" font-size="10" font-weight="700" text-anchor="middle">GPU Render</text>
+      <text x="215" y="237" fill="rgba(242,240,235,0.35)" font-size="9" text-anchor="middle">Rgba16Float</text>
+      <text x="215" y="249" fill="rgba(242,240,235,0.35)" font-size="9" text-anchor="middle">16-bit half-float</text>
+
+      <line x1="280" y1="225" x2="305" y2="225" stroke="rgba(59,130,246,0.4)" stroke-width="1.5" marker-end="url(#arr5)"/>
+
+      <rect x="310" y="200" width="160" height="50" rx="4" fill="rgba(16,185,129,0.06)" stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+      <text x="390" y="221" fill="#10b981" font-size="10" font-weight="700" text-anchor="middle">FFmpeg Encode</text>
+      <text x="390" y="237" fill="rgba(242,240,235,0.35)" font-size="9" text-anchor="middle">YUV420P bt.709</text>
+      <text x="390" y="249" fill="rgba(242,240,235,0.35)" font-size="9" text-anchor="middle">broadcast color range</text>
+
+      <line x1="470" y1="225" x2="495" y2="225" stroke="rgba(59,130,246,0.4)" stroke-width="1.5" marker-end="url(#arr5)"/>
+
+      <rect x="500" y="200" width="130" height="50" rx="4" fill="rgba(139,92,246,0.06)" stroke="rgba(139,92,246,0.25)" stroke-width="1"/>
+      <text x="565" y="221" fill="#8b5cf6" font-size="10" font-weight="700" text-anchor="middle">VLC / OBS</text>
+      <text x="565" y="237" fill="rgba(242,240,235,0.35)" font-size="9" text-anchor="middle">Rec.709 tagged</text>
+      <text x="565" y="249" fill="rgba(242,240,235,0.35)" font-size="9" text-anchor="middle">correct colors</text>
+
+      <!-- vs without -->
+      <rect x="700" y="200" width="160" height="50" rx="4" fill="rgba(239,68,68,0.06)" stroke="rgba(239,68,68,0.2)" stroke-width="1" stroke-dasharray="3,3"/>
+      <text x="780" y="221" fill="rgba(239,68,68,0.7)" font-size="10" font-weight="700" text-anchor="middle">Without bt.709</text>
+      <text x="780" y="237" fill="rgba(239,68,68,0.4)" font-size="9" text-anchor="middle">defaults to bt.601 (SD)</text>
+      <text x="780" y="249" fill="rgba(239,68,68,0.4)" font-size="9" text-anchor="middle">washed / shifted colors</text>
+
+      <text x="700" y="280" fill="rgba(16,185,129,0.4)" font-size="10" text-anchor="middle">scheng sets: -colorspace bt709 -color_primaries bt709 -color_trc bt709 automatically</text>
+
+      <!-- MSAA comparison -->
+      <text x="20" y="320" fill="rgba(242,240,235,0.5)" font-size="11" font-weight="700" letter-spacing="1">MSAA ANTI-ALIASING</text>
+
+      <rect x="20" y="332" width="200" height="50" rx="4" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+      <text x="120" y="352" fill="rgba(242,240,235,0.6)" font-size="10" font-weight="700" text-anchor="middle">sample_count = 1</text>
+      <text x="120" y="368" fill="rgba(242,240,235,0.3)" font-size="9" text-anchor="middle">No MSAA — aliased edges</text>
+
+      <rect x="240" y="332" width="200" height="50" rx="4" fill="rgba(59,130,246,0.06)" stroke="rgba(59,130,246,0.25)" stroke-width="1"/>
+      <text x="340" y="352" fill="#3b82f6" font-size="10" font-weight="700" text-anchor="middle">sample_count = 4</text>
+      <text x="340" y="368" fill="rgba(242,240,235,0.3)" font-size="9" text-anchor="middle">4x MSAA — smooth edges</text>
+
+      <rect x="460" y="332" width="200" height="50" rx="4" fill="rgba(139,92,246,0.06)" stroke="rgba(139,92,246,0.2)" stroke-width="1"/>
+      <text x="560" y="352" fill="#8b5cf6" font-size="10" font-weight="700" text-anchor="middle">sample_count = 8</text>
+      <text x="560" y="368" fill="rgba(242,240,235,0.3)" font-size="9" text-anchor="middle">8x MSAA — highest quality</text>
+
+      <text x="750" y="358" fill="rgba(59,130,246,0.4)" font-size="10">Pipeline keyed on (shader_hash, sample_count) — change anytime</text>
+    </svg>
+  </div>
+</div>
+
+<div style="padding:80px 0; text-align:center; position:relative; z-index:1;">
+  <a href="index.html" style="font-family:var(--mono);font-size:14px;color:rgba(242,240,235,0.4);text-decoration:none;letter-spacing:0.05em;">← Back to scheng home</a>
+</div>
+
+</body>
+</html>

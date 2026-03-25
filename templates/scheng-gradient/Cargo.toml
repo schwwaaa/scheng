@@ -1,0 +1,37 @@
+[package]
+name    = "scheng-gradient"
+version = "0.1.0"
+edition = "2021"
+description = "Minimal scheng instrument — hot-reload shader, no I/O dependencies"
+
+# ── scheng SDK ────────────────────────────────────────────────────────────────
+# Point these paths at your local scheng workspace.
+# Once scheng is published to crates.io, replace with:
+#   scheng-runtime-wgpu = "0.1"
+[dependencies]
+scheng-runtime-wgpu = { path = "../scheng/crates/scheng-runtime-wgpu" }
+scheng-graph         = { path = "../scheng/crates/scheng-graph" }
+scheng-hotreload     = { path = "../scheng/crates/scheng-hotreload" }
+
+log        = "0.4"
+env_logger = "0.11"
+winit      = "0.30"
+wgpu       = "23"
+
+# ── Optional I/O — uncomment to enable ───────────────────────────────────────
+# scheng-input-midi        = { path = "../scheng/crates/scheng-input-midi",        optional = true }
+# scheng-control-osc-wgpu  = { path = "../scheng/crates/scheng-control-osc-wgpu",  optional = true }
+# scheng-output-ffmpeg     = { path = "../scheng/crates/scheng-output-ffmpeg",     optional = true }
+# scheng-output-ndi        = { path = "../scheng/crates/scheng-output-ndi",        optional = true }
+
+# ── macOS only ────────────────────────────────────────────────────────────────
+# [target.'cfg(target_os = "macos")'.dependencies]
+# scheng-output-syphon = { path = "../scheng/crates/scheng-output-syphon", optional = true }
+# scheng-input-syphon  = { path = "../scheng/crates/scheng-input-syphon",  optional = true, features = ["syphon-framework"] }
+
+[features]
+default = []
+# midi    = ["dep:scheng-input-midi"]
+# osc     = ["dep:scheng-control-osc-wgpu"]
+# stream  = ["dep:scheng-output-ffmpeg"]
+# syphon  = ["dep:scheng-output-syphon"]

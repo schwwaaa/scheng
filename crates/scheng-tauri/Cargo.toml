@@ -1,0 +1,56 @@
+[package]
+name    = "scheng-tauri"
+version = "0.1.0"
+edition = "2021"
+description = "Tauri shell for scheng instruments — embeds wgpu runtime, exposes IPC, ships native apps"
+license = "MIT"
+
+# Tauri requires lib.rs for the run() entry point.
+# The binary (main.rs) just calls it.
+[lib]
+name = "scheng_tauri"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "scheng-tauri"
+path = "src/main.rs"
+
+[dependencies]
+# ── scheng SDK ───────────────────────────────────────────────────────────
+scheng-graph            = { path = "../scheng-graph" }
+scheng-runtime-wgpu     = { path = "../scheng-runtime-wgpu" }
+scheng-param-store      = { path = "../scheng-param-store" }
+scheng-input-midi       = { path = "../scheng-input-midi" }
+scheng-control-osc-wgpu = { path = "../scheng-control-osc-wgpu" }
+scheng-hotreload        = { path = "../scheng-hotreload" }
+scheng-output-ffmpeg    = { path = "../scheng-output-ffmpeg" }
+
+# ── Tauri 2 ───────────────────────────────────────────────────────────────
+tauri = { version = "2", features = ["rustls-tls"] }
+
+# ── Shared state + threading ──────────────────────────────────────────────
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+log        = "0.4"
+env_logger = "0.11"
+
+# base64 for preview frame encoding (JPEG→base64 for IPC)
+base64 = "0.22"
+
+# JPEG encoding for preview frames
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
+
+# wgpu needed directly in render_loop.rs (NoopSink impl)
+wgpu = "22"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[features]
+default        = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+# Enable Syphon output on macOS
+syphon = ["scheng-output-syphon"]
+
+[target.'cfg(target_os = "macos")'.dependencies]
+scheng-output-syphon = { path = "../scheng-output-syphon", optional = true }

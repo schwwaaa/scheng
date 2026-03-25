@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Developer Reference — scheng SDK</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0a0a0f;
+  --paper: #f2f0eb;
+  --electric: #3b82f6;
+  --violet: #8b5cf6;
+  --cyan: #06b6d4;
+  --amber: #f59e0b;
+  --green: #10b981;
+  --red: #ef4444;
+  --grid: rgba(59,130,246,0.055);
+  --mono: 'Space Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+  --sidebar-w: 272px;
+  --content-max: 820px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.75;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Layout ── */
+.layout { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  border-right: 1px solid rgba(255,255,255,0.07);
+  background: rgba(8,8,14,0.95);
+  backdrop-filter: blur(12px);
+  padding: 0 0 40px;
+}
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+.sidebar-head {
+  padding: 28px 24px 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 8px;
+}
+.sidebar-head a { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--electric); text-decoration: none; }
+.sidebar-head a span { color: var(--paper); }
+.sidebar-head .ver { font-family: var(--mono); font-size: 10px; color: rgba(242,240,235,0.25); letter-spacing: 0.15em; margin-top: 4px; }
+
+.nav-section { padding: 16px 24px 0; }
+.nav-section-label {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em;
+  color: rgba(242,240,235,0.22); text-transform: uppercase; margin-bottom: 6px;
+}
+.nav-section a {
+  display: block; font-size: 13px; color: rgba(242,240,235,0.48);
+  text-decoration: none; padding: 4px 0; line-height: 1.4;
+  transition: color 0.15s; font-family: var(--sans);
+}
+.nav-section a:hover { color: var(--electric); }
+.nav-section a.active { color: var(--electric); font-weight: 500; }
+.nav-section a.sub { padding-left: 14px; font-size: 12px; color: rgba(242,240,235,0.33); }
+.nav-section a.sub:hover, .nav-section a.sub.active { color: var(--cyan); }
+
+/* ── Main ── */
+.main { flex: 1; min-width: 0; }
+
+/* ── Top bar ── */
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(8,8,14,0.95); backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 0 48px;
+  height: 56px;
+  display: flex; align-items: center; gap: 32px;
+}
+.topbar a { font-family: var(--mono); font-size: 12px; color: rgba(242,240,235,0.4); text-decoration: none; letter-spacing: 0.05em; transition: color 0.15s; }
+.topbar a:hover { color: var(--electric); }
+.topbar-title { font-family: var(--mono); font-size: 13px; color: rgba(242,240,235,0.6); margin-right: auto; }
+
+/* ── Content ── */
+.content { padding: 60px 64px 120px; max-width: calc(var(--content-max) + 128px); }
+
+/* ── Section page header ── */
+.page-hero { margin-bottom: 48px; padding-bottom: 36px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.page-hero .eyebrow {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em;
+  color: var(--electric); text-transform: uppercase; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 10px;
+}
+.page-hero .eyebrow::before { content: ''; width: 20px; height: 1px; background: var(--electric); }
+.page-hero h1 { font-family: var(--mono); font-size: 40px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; margin-bottom: 16px; }
+.page-hero .lead { font-size: 18px; color: rgba(242,240,235,0.58); max-width: 600px; line-height: 1.6; }
+
+/* ── Headings ── */
+h2 {
+  font-family: var(--mono); font-size: 24px; font-weight: 700;
+  letter-spacing: -0.02em; margin-top: 72px; margin-bottom: 16px;
+  color: var(--paper); padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+h2:first-of-type { margin-top: 0; }
+h3 { font-family: var(--mono); font-size: 17px; font-weight: 700; margin-top: 40px; margin-bottom: 12px; color: var(--electric); }
+h4 { font-family: var(--mono); font-size: 14px; font-weight: 700; margin-top: 28px; margin-bottom: 8px; color: var(--cyan); letter-spacing: 0.02em; }
+
+/* ── Prose ── */
+p { margin-bottom: 16px; color: rgba(242,240,235,0.72); }
+p + p { margin-top: -4px; }
+strong { color: var(--paper); }
+a { color: var(--electric); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Code ── */
+code {
+  font-family: var(--mono); font-size: 13px;
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.08);
+  padding: 1px 6px; border-radius: 3px; color: var(--cyan);
+}
+pre {
+  background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.08);
+  border-left: 3px solid var(--electric);
+  border-radius: 6px; padding: 20px 24px; overflow-x: auto; margin: 20px 0;
+  position: relative;
+}
+pre code { background: none; border: none; padding: 0; font-size: 13px; color: rgba(242,240,235,0.88); line-height: 1.8; }
+.c  { color: rgba(242,240,235,0.28); }
+.kw { color: var(--violet); }
+.ty { color: var(--cyan); }
+.st { color: var(--amber); }
+.fn { color: var(--electric); }
+.nm { color: var(--green); }
+.cm { color: rgba(242,240,235,0.28); font-style: italic; }
+
+/* ── Callouts ── */
+.callout {
+  border-radius: 6px; padding: 16px 20px; margin: 24px 0;
+  font-size: 14px; line-height: 1.6; color: rgba(242,240,235,0.72);
+  border-left: 3px solid;
+}
+.callout strong { display: block; margin-bottom: 4px; font-size: 13px; font-family: var(--mono); letter-spacing: 0.04em; }
+.callout.info  { background: rgba(59,130,246,0.06);  border-color: var(--electric); }
+.callout.info strong  { color: var(--electric); }
+.callout.warn  { background: rgba(245,158,11,0.06);  border-color: var(--amber); }
+.callout.warn strong  { color: var(--amber); }
+.callout.tip   { background: rgba(16,185,129,0.06);  border-color: var(--green); }
+.callout.tip strong   { color: var(--green); }
+.callout.danger{ background: rgba(239,68,68,0.06);   border-color: var(--red); }
+.callout.danger strong{ color: var(--red); }
+
+/* ── Tables ── */
+.table-wrap { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--electric); text-align: left;
+  padding: 10px 16px; border-bottom: 1px solid rgba(59,130,246,0.25);
+  background: rgba(59,130,246,0.04); white-space: nowrap;
+}
+td { padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); color: rgba(242,240,235,0.68); vertical-align: top; }
+tr:hover td { background: rgba(255,255,255,0.018); }
+td code { font-size: 12px; }
+
+/* ── Divider ── */
+hr { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 64px 0; }
+
+/* ── Badges ── */
+.badge { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 2px; letter-spacing: 0.04em; vertical-align: middle; margin-left: 6px; }
+.badge.mac  { background: rgba(6,182,212,0.1);   color: var(--cyan);     border: 1px solid rgba(6,182,212,0.2); }
+.badge.win  { background: rgba(139,92,246,0.1);  color: var(--violet);   border: 1px solid rgba(139,92,246,0.2); }
+.badge.new  { background: rgba(16,185,129,0.1);  color: var(--green);    border: 1px solid rgba(16,185,129,0.2); }
+.badge.exp  { background: rgba(245,158,11,0.1);  color: var(--amber);    border: 1px solid rgba(245,158,11,0.2); }
+
+/* ── Section anchor ── */
+.anchor { display: block; height: 72px; margin-top: -72px; visibility: hidden; }
+
+/* ── Step list ── */
+.steps { counter-reset: step; list-style: none; margin: 24px 0; }
+.steps li { counter-increment: step; display: flex; gap: 16px; margin-bottom: 28px; }
+.steps li::before {
+  content: counter(step);
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  color: var(--electric); border: 1px solid rgba(59,130,246,0.35);
+  background: rgba(59,130,246,0.06); border-radius: 50%;
+  width: 32px; height: 32px; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; margin-top: 2px;
+}
+.steps li > div { flex: 1; }
+.steps li > div strong { display: block; color: var(--paper); font-size: 15px; margin-bottom: 4px; }
+
+/* ── Two-col layout ── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+.col-card {
+  border: 1px solid rgba(255,255,255,0.07); border-radius: 6px;
+  padding: 20px 24px; background: rgba(255,255,255,0.02);
+}
+.col-card h4 { margin-top: 0; }
+
+/* ── Inline diagram boxes ── */
+.diagram { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 32px; margin: 24px 0; overflow-x: auto; }
+.diagram svg { display: block; }
+
+/* ── Layer strip ── */
+.layer-strip { display: flex; flex-direction: column; gap: 3px; margin: 24px 0; }
+.layer {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 20px; border-radius: 5px; border: 1px solid;
+}
+.layer .layer-num { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; width: 24px; flex-shrink: 0; }
+.layer .layer-name { font-family: var(--mono); font-size: 13px; font-weight: 700; min-width: 160px; }
+.layer .layer-desc { font-size: 13px; color: rgba(242,240,235,0.5); }
+.layer.l1 { background: rgba(6,182,212,0.05);  border-color: rgba(6,182,212,0.2);  }
+.layer.l1 .layer-num, .layer.l1 .layer-name { color: var(--cyan); }
+.layer.l2 { background: rgba(59,130,246,0.05); border-color: rgba(59,130,246,0.2); }
+.layer.l2 .layer-num, .layer.l2 .layer-name { color: var(--electric); }
+.layer.l3 { background: rgba(59,130,246,0.05); border-color: rgba(59,130,246,0.2); }
+.layer.l3 .layer-num, .layer.l3 .layer-name { color: var(--electric); }
+.layer.l4 { background: rgba(245,158,11,0.05); border-color: rgba(245,158,11,0.2); }
+.layer.l4 .layer-num, .layer.l4 .layer-name { color: var(--amber); }
+.layer.l5 { background: rgba(139,92,246,0.05); border-color: rgba(139,92,246,0.2); }
+.layer.l5 .layer-num, .layer.l5 .layer-name { color: var(--violet); }
+
+/* ── On-this-page ── */
+.on-this-page {
+  float: right; width: 220px; margin: 0 0 32px 40px;
+  border: 1px solid rgba(255,255,255,0.07); border-radius: 6px;
+  padding: 20px; background: rgba(255,255,255,0.02);
+  position: sticky; top: 72px;
+}
+.on-this-page h5 { font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: rgba(242,240,235,0.25); text-transform: uppercase; margin-bottom: 12px; }
+.on-this-page a { display: block; font-size: 12px; color: rgba(242,240,235,0.4); text-decoration: none; padding: 3px 0; transition: color 0.15s; }
+.on-this-page a:hover { color: var(--electric); }
+
+/* ── Quickstart card ── */
+.quickstart-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 24px 0; }
+.qs-card {
+  border: 1px solid rgba(255,255,255,0.07); border-radius: 6px;
+  padding: 20px; background: rgba(255,255,255,0.02); cursor: default;
+  transition: border-color 0.15s, background 0.15s;
+}
+.qs-card:hover { border-color: rgba(59,130,246,0.35); background: rgba(59,130,246,0.04); }
+.qs-card .qs-icon { font-size: 24px; margin-bottom: 10px; }
+.qs-card h4 { margin: 0 0 6px; font-size: 13px; }
+.qs-card p { font-size: 12px; color: rgba(242,240,235,0.4); margin: 0; line-height: 1.5; }
+
+/* ── Glossary ── */
+.gloss-term {
+  border-bottom: 1px solid rgba(255,255,255,0.05); padding: 20px 0;
+}
+.gloss-term dt { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--electric); margin-bottom: 6px; }
+.gloss-term dd { color: rgba(242,240,235,0.65); font-size: 14px; max-width: 680px; }
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .sidebar { width: 220px; }
+  .content { padding: 48px 40px 80px; }
+  .on-this-page { display: none; }
+  .quickstart-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .content { padding: 32px 24px 80px; }
+  .two-col { grid-template-columns: 1fr; }
+  .quickstart-grid { grid-template-columns: 1fr; }
+  .topbar { padding: 0 24px; }
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+<!-- ── Sidebar ── -->
+<nav class="sidebar">
+  <div class="sidebar-head">
+    <a href="index.html">sch<span>eng</span></a>
+    <div class="ver">DEVELOPER REFERENCE · v0.1.0</div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Overview</div>
+    <a href="#introduction">Introduction</a>
+    <a href="#quickstart">5-Minute Quickstart</a>
+    <a href="#core-concepts">Core Concepts</a>
+    <a href="#architecture">Architecture</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">The Graph</div>
+    <a href="#graph-intro">Graph System</a>
+    <a href="#node-kinds">Node Kinds</a>
+    <a href="#connections">Connections & Ports</a>
+    <a href="#compilation">Compilation</a>
+    <a href="#nodeconfig">NodeConfig</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Shaders</div>
+    <a href="#shader-contract">Shader Contract</a>
+    <a href="#builtin-uniforms">Built-in Uniforms</a>
+    <a href="#custom-uniforms">Custom Uniforms</a>
+    <a href="#hotreload">Hot-Reload</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Parameters</div>
+    <a href="#paramstore">ParamStore</a>
+    <a href="#midi-input">MIDI</a>
+    <a href="#osc-input">OSC</a>
+    <a href="#smoothing">Smoothing</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Inputs</div>
+    <a href="#webcam">Webcam</a>
+    <a href="#video-file">Video File</a>
+    <a href="#syphon-in">Syphon Receive</a>
+    <a href="#ndi-in">NDI Receive</a>
+    <a href="#rtmp-in">RTMP / RTSP</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Outputs</div>
+    <a href="#output-sink">OutputSink Trait</a>
+    <a href="#preview-sink">Preview Window</a>
+    <a href="#syphon-out">Syphon Output</a>
+    <a href="#ndi-out">NDI Output</a>
+    <a href="#ffmpeg-out">FFmpeg (RTMP / File)</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Execution</div>
+    <a href="#framectx">FrameCtx</a>
+    <a href="#frame-lifecycle">Per-Frame Lifecycle</a>
+    <a href="#determinism">Determinism</a>
+    <a href="#threading">Threading Model</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Quality</div>
+    <a href="#rgba16float">Rgba16Float Pipeline</a>
+    <a href="#colorspace">bt.709 Colorspace</a>
+    <a href="#msaa">MSAA</a>
+    <a href="#resolution">4K / Resolution</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Reference</div>
+    <a href="#crate-map">Crate Map</a>
+    <a href="#cli-flags">CLI Flags</a>
+    <a href="#constraints">Known Constraints</a>
+    <a href="#testing">Testing</a>
+    <a href="#troubleshooting">Troubleshooting</a>
+    <a href="#glossary">Glossary</a>
+  </div>
+</nav>
+
+<!-- ── Main ── -->
+<div class="main">
+  <div class="topbar">
+    <span class="topbar-title">Developer Reference</span>
+    <a href="index.html">Home</a>
+    <a href="architecture.html">Diagrams</a>
+    <a href="sdk-reference.html">Quick Ref</a>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══════════════════════════════════════════════ INTRODUCTION -->
+    <span class="anchor" id="introduction"></span>
+    <div class="page-hero">
+      <div class="eyebrow">Developer Reference</div>
+      <h1>scheng SDK</h1>
+      <p class="lead">A Rust SDK for building GPU-accelerated video instruments. Write shader-based processors, mixers, and generators with professional I/O — MIDI, Syphon, NDI, RTMP, webcam, video, and more.</p>
+    </div>
+
+    <div class="quickstart-grid">
+      <div class="qs-card">
+        <div class="qs-icon">⚡</div>
+        <h4>5-Minute Quickstart</h4>
+        <p>Clone a template and get rendering on the GPU immediately.</p>
+      </div>
+      <div class="qs-card">
+        <div class="qs-icon">🔷</div>
+        <h4>Graph System</h4>
+        <p>How nodes connect and how execution topology is declared.</p>
+      </div>
+      <div class="qs-card">
+        <div class="qs-icon">📡</div>
+        <h4>I/O Reference</h4>
+        <p>Every input and output protocol with copy-paste code.</p>
+      </div>
+    </div>
+
+    <h2>What is scheng?</h2>
+    <p>scheng is a <strong>Rust engine and SDK</strong> for building programmable video instruments — not a fixed VJ application. It gives you the building blocks: a graph execution model, explicit shader contracts, and a modular I/O surface. You wire them into your own executable.</p>
+
+    <p>The engine is deliberately minimal: it evaluates frames, it does not own time, schedule execution, or manage devices. These responsibilities belong to the <strong>instrument</strong> — your application.</p>
+
+    <div class="two-col">
+      <div class="col-card">
+        <h4>Engine responsibilities</h4>
+        <p style="font-size:13px;margin:0;color:rgba(242,240,235,0.55);">Deterministic graph execution · Shader compilation and caching · GPU resource management · Render target allocation · Per-frame parameter binding</p>
+      </div>
+      <div class="col-card">
+        <h4>Instrument responsibilities</h4>
+        <p style="font-size:13px;margin:0;color:rgba(242,240,235,0.55);">Graph construction · Time and transport · Control input (MIDI, OSC) · Device management · Output routing</p>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════════════════ QUICKSTART -->
+    <span class="anchor" id="quickstart"></span>
+    <h2>5-Minute Quickstart</h2>
+    <p>Use the <code>scheng-gradient</code> template — the simplest possible instrument. One shader, hot-reload, no I/O dependencies.</p>
+
+    <ol class="steps">
+      <li>
+        <div>
+          <strong>Clone the template</strong>
+          <pre><code>git clone https://github.com/yourorg/scheng-gradient
+cd scheng-gradient</code></pre>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Place scheng/ next to it</strong>
+          <pre><code>projects/
+  scheng/            <span class="c">← SDK workspace</span>
+  scheng-gradient/   <span class="c">← your project (here)</span></code></pre>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Run it</strong>
+          <pre><code>cargo run --release</code></pre>
+          <p style="margin-top:8px;font-size:14px;color:rgba(242,240,235,0.5);">A window opens rendering a GPU shader. You should see an animated gradient.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Edit the shader live</strong>
+          <p style="font-size:14px;color:rgba(242,240,235,0.55);">Open <code>assets/shaders/main.frag</code> in your editor. Save any change — the window updates instantly, no restart needed. This is hot-reload.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Try 4K MSAA</strong>
+          <pre><code>cargo run --release -- --width 3840 --height 2160 --msaa 4</code></pre>
+        </div>
+      </li>
+    </ol>
+
+    <div class="callout tip">
+      <strong>TIP — Start from a template</strong>
+      All four templates are ready-to-run instruments demonstrating complete signal chains. <code>scheng-gradient</code> → <code>scheng-processor</code> → <code>scheng-mixer</code> → <code>scheng-video-mixer</code> in increasing complexity.
+    </div>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════════════════ CORE CONCEPTS -->
+    <span class="anchor" id="core-concepts"></span>
+    <h2>Core Concepts</h2>
+
+    <p>Six terms define the entire system. Learn these and everything else follows.</p>
+
+    <dl>
+      <div class="gloss-term">
+        <dt>Instrument</dt>
+        <dd>Your application. It constructs the graph, supplies NodeConfigs and FrameCtx, and handles I/O. The engine does not define instruments — instruments define themselves around the engine.</dd>
+      </div>
+      <div class="gloss-term">
+        <dt>Graph</dt>
+        <dd>A static, directed acyclic topology describing how nodes connect. The graph defines structure only — no GPU work happens here. It compiles into an immutable execution plan via <code>graph.compile()</code>.</dd>
+      </div>
+      <div class="gloss-term">
+        <dt>Node</dt>
+        <dd>A single unit of computation. Nodes consume and produce textures. Behavior is determined by the GLSL shader source supplied in NodeConfig, not by the node kind itself.</dd>
+      </div>
+      <div class="gloss-term">
+        <dt>NodeConfig</dt>
+        <dd>The per-node configuration surface for each frame. Contains shader source, uniform values, and optional external textures. Owned by the instrument, read by the runtime. Never mutated by the engine.</dd>
+      </div>
+      <div class="gloss-term">
+        <dt>FrameCtx</dt>
+        <dd>The immutable per-frame context: width, height, time, frame index. The engine derives shader uniforms <code>uResolution</code>, <code>uTime</code>, and <code>uFrame</code> from this. The engine never owns or accumulates time.</dd>
+      </div>
+      <div class="gloss-term">
+        <dt>ParamStore</dt>
+        <dd>The live parameter hub. MIDI and OSC write targets; the smoother advances values toward targets each tick; shaders read smoothed values via NodeConfig.uniforms. Owned by the instrument, threadsafe.</dd>
+      </div>
+    </dl>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════════════════ ARCHITECTURE -->
+    <span class="anchor" id="architecture"></span>
+    <h2>Architecture</h2>
+
+    <p>scheng is organized as five isolated layers. Each layer has a single responsibility. No layer reaches backward across a boundary. This isolation guarantees deterministic execution, clear debugging, and long-term SDK stability.</p>
+
+    <div class="layer-strip">
+      <div class="layer l1">
+        <span class="layer-num">01</span>
+        <span class="layer-name">Graph Layer</span>
+        <span class="layer-desc">Declarative signal topology. Defines what connects to what. No GPU work.</span>
+      </div>
+      <div class="layer l2">
+        <span class="layer-num">02</span>
+        <span class="layer-name">Runtime Layer</span>
+        <span class="layer-desc">Frame planning and deterministic execution. Evaluates compiled plans.</span>
+      </div>
+      <div class="layer l3">
+        <span class="layer-num">03</span>
+        <span class="layer-name">Shader Contracts</span>
+        <span class="layer-desc">Explicit GPU interface. What a node promises — inputs, outputs, uniforms.</span>
+      </div>
+      <div class="layer l4">
+        <span class="layer-num">04</span>
+        <span class="layer-name">Control Inputs</span>
+        <span class="layer-desc">MIDI, OSC, keyboard. Updates parameters without touching graph structure.</span>
+      </div>
+      <div class="layer l5">
+        <span class="layer-num">05</span>
+        <span class="layer-name">Output Targets</span>
+        <span class="layer-desc">Sinks — Syphon, NDI, RTMP, preview. Consume final results, produce nothing upstream.</span>
+      </div>
+    </div>
+
+    <h3>Key architectural principle</h3>
+    <p><strong>Topology is static. Configuration is dynamic.</strong> The graph structure (which nodes connect to which) is fixed after <code>compile()</code>. NodeConfig — shader source, uniforms, input textures — changes every frame. This separation is what makes execution deterministic and debuggable.</p>
+
+    <p>For identical: Graph + NodeConfig + FrameCtx → execution order and resource bindings are always identical. Shader determinism depends on the shader code itself.</p>
+
+    <div class="diagram">
+      <svg width="100%" viewBox="0 0 760 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="a" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L7,3 z" fill="rgba(59,130,246,0.7)"/>
+          </marker>
+        </defs>
+        <rect x="0"   y="36" width="110" height="48" rx="4" fill="rgba(6,182,212,0.07)"  stroke="rgba(6,182,212,0.3)"  stroke-width="1"/>
+        <text x="55"  y="56" fill="#06b6d4" font-family="Space Mono" font-size="11" font-weight="700" text-anchor="middle">Instrument</text>
+        <text x="55"  y="74" fill="rgba(242,240,235,0.35)" font-family="Space Mono" font-size="9" text-anchor="middle">graph + config</text>
+        <line x1="110" y1="60" x2="132" y2="60" stroke="rgba(59,130,246,0.5)" stroke-width="1.5" marker-end="url(#a)"/>
+        <rect x="136" y="36" width="120" height="48" rx="4" fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.3)" stroke-width="1"/>
+        <text x="196" y="56" fill="#3b82f6" font-family="Space Mono" font-size="11" font-weight="700" text-anchor="middle">Graph Layer</text>
+        <text x="196" y="74" fill="rgba(242,240,235,0.35)" font-family="Space Mono" font-size="9" text-anchor="middle">compile() → plan</text>
+        <line x1="256" y1="60" x2="278" y2="60" stroke="rgba(59,130,246,0.5)" stroke-width="1.5" marker-end="url(#a)"/>
+        <rect x="282" y="36" width="120" height="48" rx="4" fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.3)" stroke-width="1"/>
+        <text x="342" y="56" fill="#3b82f6" font-family="Space Mono" font-size="11" font-weight="700" text-anchor="middle">Runtime</text>
+        <text x="342" y="74" fill="rgba(242,240,235,0.35)" font-family="Space Mono" font-size="9" text-anchor="middle">execute_frame()</text>
+        <line x1="402" y1="60" x2="424" y2="60" stroke="rgba(59,130,246,0.5)" stroke-width="1.5" marker-end="url(#a)"/>
+        <rect x="428" y="36" width="120" height="48" rx="4" fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.3)" stroke-width="1"/>
+        <text x="488" y="56" fill="#3b82f6" font-family="Space Mono" font-size="11" font-weight="700" text-anchor="middle">GPU Backend</text>
+        <text x="488" y="74" fill="rgba(242,240,235,0.35)" font-family="Space Mono" font-size="9" text-anchor="middle">wgpu Metal/DX12</text>
+        <line x1="548" y1="60" x2="570" y2="60" stroke="rgba(139,92,246,0.5)" stroke-width="1.5" marker-end="url(#a)"/>
+        <rect x="574" y="36" width="120" height="48" rx="4" fill="rgba(139,92,246,0.07)" stroke="rgba(139,92,246,0.3)" stroke-width="1"/>
+        <text x="634" y="56" fill="#8b5cf6" font-family="Space Mono" font-size="11" font-weight="700" text-anchor="middle">Output Sinks</text>
+        <text x="634" y="74" fill="rgba(242,240,235,0.35)" font-family="Space Mono" font-size="9" text-anchor="middle">Syphon · NDI · RTMP</text>
+        <text x="380" y="108" fill="rgba(245,158,11,0.4)" font-family="Space Mono" font-size="9" text-anchor="middle">MIDI · OSC ↑ ParamStore ↑ NodeConfig.uniforms — injected each frame</text>
+      </svg>
+    </div>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════════════════ GRAPH SYSTEM -->
+    <span class="anchor" id="graph-intro"></span>
+    <h2>Graph System</h2>
+
+    <p>The graph is a directed acyclic topology of nodes. It has no GPU concept. It defines <em>what connects to what</em>. The runtime layer handles <em>how and when</em>.</p>
+
+    <p>Build a graph once at startup. Compile it once. Reuse the plan every frame. The only thing that changes per frame is <code>NodeConfig</code>.</p>
+
+    <pre><code><span class="kw">use</span> <span class="ty">scheng_graph</span>::{Graph, NodeKind};
+
+<span class="c">// 1. Declare topology</span>
+<span class="kw">let mut</span> g = Graph::new();
+<span class="kw">let</span> src  = g.add_node(NodeKind::ShaderSource);
+<span class="kw">let</span> fx   = g.add_node(NodeKind::ShaderPass);
+<span class="kw">let</span> out  = g.add_node(NodeKind::PixelsOut);
+
+<span class="c">// 2. Connect edges</span>
+g.connect_named(src, <span class="st">"out"</span>, fx,  <span class="st">"in"</span>).unwrap();
+g.connect_named(fx,  <span class="st">"out"</span>, out, <span class="st">"in"</span>).unwrap();
+
+<span class="c">// 3. Compile — validates topology, produces execution plan</span>
+<span class="kw">let</span> plan = g.compile().unwrap();
+
+<span class="c">// 4. Execute — plan is reused every frame</span>
+runtime.execute_frame(&g, &plan, &configs, &ctx, &<span class="kw">mut</span> sink)?;</code></pre>
+
+    <span class="anchor" id="node-kinds"></span>
+    <h3>Node Kinds</h3>
+
+    <p>Node kinds describe <strong>structural roles</strong>, not behavior. Behavior is provided by the GLSL shader source in <code>NodeConfig.frag_shader</code>.</p>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>NodeKind</th><th>Role</th><th>In ports</th><th>Out</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><code>ShaderSource</code></td><td>Generator / source</td><td>iChannel0–3 (optional)</td><td>out</td><td>Entry point. No required upstream.</td></tr>
+        <tr><td><code>ShaderPass</code></td><td>Transformer / effect</td><td>in</td><td>out</td><td>Processes one upstream texture.</td></tr>
+        <tr><td><code>Crossfade</code></td><td>A/B mixer</td><td>a, b</td><td>out</td><td>Blends two sources via <code>u_tbar</code>.</td></tr>
+        <tr><td><code>PreviousFrame</code></td><td>Temporal feedback</td><td>in</td><td>out</td><td>Reads last frame's output. Feedback loops.</td></tr>
+        <tr><td><code>PixelsOut</code></td><td>Terminal / sink trigger</td><td>in</td><td>—</td><td>Triggers all registered output sinks.</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="callout info">
+      <strong>DESIGN RULE</strong>
+      Avoid introducing new node kinds. Prefer extending behavior through new shader sources or additional NodeConfig parameters. Node kinds should remain minimal — they define structural roles only.
+    </div>
+
+    <span class="anchor" id="connections"></span>
+    <h3>Connections & Ports</h3>
+
+    <p>Ports are named. <code>connect_named(from_node, "out", to_node, "in")</code> connects them. Port names map to <code>iChannel</code> bindings in the shader:</p>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Port name(s)</th><th>Maps to</th></tr></thead>
+      <tbody>
+        <tr><td><code>in</code> · <code>in0</code> · <code>a</code> · <code>src</code></td><td><code>iChannel0</code></td></tr>
+        <tr><td><code>in1</code> · <code>b</code> · <code>src1</code></td><td><code>iChannel1</code></td></tr>
+        <tr><td><code>in2</code></td><td><code>iChannel2</code></td></tr>
+        <tr><td><code>out</code></td><td>Node's render target</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <span class="anchor" id="compilation"></span>
+    <h3>Compilation</h3>
+
+    <p><code>graph.compile()</code> performs cycle detection, port validation, and deterministic topological sorting. It returns an immutable <code>ExecutionPlan</code> that can be safely reused across frames. Structural changes to the graph require recompilation.</p>
+
+    <span class="anchor" id="nodeconfig"></span>
+    <h3>NodeConfig</h3>
+
+    <p>The complete per-node configuration surface for one frame. Owned by the instrument, read by the runtime, never mutated by the engine.</p>
+
+    <pre><code><span class="kw">pub struct</span> <span class="ty">NodeConfig</span> {
+    <span class="kw">pub</span> frag_shader:    Option&lt;String&gt;,              <span class="c">// GLSL source, None = builtin gradient</span>
+    <span class="kw">pub</span> uniforms:       HashMap&lt;String, f32&gt;,         <span class="c">// u_* values → CustomBlock</span>
+    <span class="kw">pub</span> output_name:    Option&lt;String&gt;,              <span class="c">// named output for external routing</span>
+    <span class="kw">pub</span> input_textures: [Option&lt;Arc&lt;wgpu::Texture&gt;&gt;; <span class="nm">4</span>], <span class="c">// external textures (webcam etc.)</span>
+}</code></pre>
+
+    <p>Changes to NodeConfig take effect on the next frame. Changing <code>frag_shader</code> triggers recompilation on that frame (lazy, cached per hash).</p>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════════════════ SHADERS -->
+    <span class="anchor" id="shader-contract"></span>
+    <h2>Shader Contract</h2>
+
+    <p>Shaders are written in GLSL 330. The compat layer processes them before GPU compilation: injects the standard uniform block, rewrites <code>iChannel</code> sampler references, and packs custom <code>u_*</code> uniforms into a GPU buffer.</p>
+
+    <p>You never write layout qualifiers, binding numbers, or sampler declarations. The contract handles it.</p>
+
+    <span class="anchor" id="builtin-uniforms"></span>
+    <h3>Built-in Uniforms</h3>
+
+    <p>Always available in every shader, no declaration needed:</p>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Uniform</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>uTime</code></td><td>float</td><td>Seconds since instrument start (from FrameCtx.time)</td></tr>
+        <tr><td><code>uFrame</code></td><td>uint</td><td>Monotonic frame counter (from FrameCtx.frame)</td></tr>
+        <tr><td><code>uResolution</code></td><td>vec2</td><td>Output width and height in pixels</td></tr>
+        <tr><td><code>iChannel0</code></td><td>sampler2D</td><td>First upstream texture (or external texture)</td></tr>
+        <tr><td><code>iChannel1</code></td><td>sampler2D</td><td>Second upstream texture</td></tr>
+        <tr><td><code>iChannel2</code></td><td>sampler2D</td><td>Third upstream texture</td></tr>
+        <tr><td><code>iChannel3</code></td><td>sampler2D</td><td>Fourth upstream texture</td></tr>
+        <tr><td><code>v_uv</code></td><td>vec2 (in)</td><td>Interpolated UV coordinates [0,1]</td></tr>
+        <tr><td><code>fragColor</code></td><td>vec4 (out)</td><td>Output pixel color — write this</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>Minimal shader</h3>
+    <pre><code><span class="c">// assets/shaders/main.frag</span>
+<span class="kw">void</span> <span class="fn">main</span>() {
+    <span class="ty">vec2</span>  uv  = v_uv;
+    <span class="kw">float</span> t   = uTime;
+    <span class="ty">vec3</span>  col = <span class="nm">0.5</span> + <span class="nm">0.5</span> * cos(t + uv.xyx + <span class="ty">vec3</span>(<span class="nm">0</span>,<span class="nm">2</span>,<span class="nm">4</span>));
+    fragColor = <span class="ty">vec4</span>(col, <span class="nm">1.0</span>);
+}</code></pre>
+
+    <span class="anchor" id="custom-uniforms"></span>
+    <h3>Custom Uniforms</h3>
+
+    <p>Declare any <code>uniform float u_name;</code> in your shader. The compat layer detects it, strips the declaration, and injects a <code>CustomBlock</code> GLSL uniform block at GPU binding 6. The values come from <code>NodeConfig.uniforms</code>.</p>
+
+    <pre><code><span class="c">// In shader — declare custom uniforms freely:</span>
+<span class="kw">uniform float</span> u_threshold;  <span class="c">// solarize threshold</span>
+<span class="kw">uniform float</span> u_mix;        <span class="c">// wet/dry blend</span>
+
+<span class="kw">void</span> <span class="fn">main</span>() {
+    <span class="ty">vec4</span> src   = texture(iChannel0, v_uv);
+    <span class="ty">vec3</span> inv   = <span class="nm">1.0</span> - src.rgb;
+    <span class="ty">vec3</span> solar = mix(src.rgb, inv, step(u_threshold, src.rgb));
+    fragColor  = <span class="ty">vec4</span>(mix(src.rgb, solar, u_mix), <span class="nm">1.0</span>);
+}</code></pre>
+
+    <pre><code><span class="c">// In Rust — supply values via NodeConfig.uniforms:</span>
+<span class="kw">let mut</span> cfg = NodeConfig::default();
+cfg.frag_shader = shader_source.clone();
+cfg.uniforms.insert(<span class="st">"u_threshold"</span>.into(), <span class="nm">0.5</span>);
+cfg.uniforms.insert(<span class="st">"u_mix"</span>.into(), <span class="nm">1.0</span>);</code></pre>
+
+    <div class="callout warn">
+      <strong>GOTCHA — Values packed in declaration order</strong>
+      Custom uniform values are packed into the GPU buffer in the order the compat layer discovers them in the shader source. Always insert values via the name key — don't rely on HashMap ordering.
+    </div>
+
+    <span class="anchor" id="hotreload"></span>
+    <h3>Hot-Reload</h3>
+
+    <p>Use <code>AssetWatcher</code> to watch your shader directory. When any file changes, drain the watcher, reload the source, and assign it to <code>NodeConfig.frag_shader</code>. The pipeline recompiles lazily on the next <code>execute_frame()</code>.</p>
+
+    <pre><code><span class="kw">use</span> <span class="ty">scheng_hotreload</span>::watcher::AssetWatcher;
+
+<span class="kw">let mut</span> watcher = AssetWatcher::new(<span class="st">"assets"</span>).unwrap();
+
+<span class="c">// In tick():</span>
+<span class="kw">if</span> !watcher.drain().is_empty() {
+    self.shader_src = std::fs::read_to_string(<span class="st">"assets/shaders/main.frag"</span>).ok();
+    <span class="c">// No pipeline.clear() needed — hash mismatch triggers recompile automatically</span>
+    log::info!(<span class="st">"Shader reloaded"</span>);
+}</code></pre>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════════════════ PARAMS -->
+    <span class="anchor" id="paramstore"></span>
+    <h2>ParamStore</h2>
+
+    <p>ParamStore is the central parameter state machine. MIDI and OSC threads write <em>targets</em>. Each tick, <code>step_frame()</code> advances smoothed <em>values</em> toward targets. Shaders read smoothed values through <code>NodeConfig.uniforms</code>.</p>
+
+    <div class="diagram">
+      <svg width="100%" viewBox="0 0 720 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs><marker id="b" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="rgba(245,158,11,0.8)"/></marker></defs>
+        <rect x="0"   y="16" width="120" height="48" rx="4" fill="rgba(245,158,11,0.07)" stroke="rgba(245,158,11,0.3)" stroke-width="1"/>
+        <text x="60"  y="36" fill="#f59e0b" font-family="Space Mono" font-size="11" font-weight="700" text-anchor="middle">MIDI Thread</text>
+        <text x="60"  y="54" fill="rgba(242,240,235,0.35)" font-family="Space Mono" font-size="9" text-anchor="middle">CC1 = 64</text>
+        <line x1="120" y1="40" x2="142" y2="40" stroke="rgba(245,158,11,0.6)" stroke-width="1.5" marker-end="url(#b)"/>
+        <rect x="146" y="10" width="165" height="60" rx="4" fill="rgba(245,158,11,0.05)" stroke="rgba(245,158,11,0.25)" stroke-width="1"/>
+        <text x="228" y="30" fill="#f59e0b" font-family="Space Mono" font-size="11" font-weight="700" text-anchor="middle">ParamStore</text>
+        <text x="228" y="47" fill="rgba(242,240,235,0.4)" font-family="Space Mono" font-size="9" text-anchor="middle">targets["u_tbar"] = 0.5</text>
+        <text x="228" y="62" fill="rgba(6,182,212,0.7)" font-family="Space Mono" font-size="9" text-anchor="middle">step_frame() → values</text>
+        <line x1="311" y1="40" x2="333" y2="40" stroke="rgba(245,158,11,0.6)" stroke-width="1.5" marker-end="url(#b)"/>
+        <rect x="337" y="16" width="155" height="48" rx="4" fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.25)" stroke-width="1"/>
+        <text x="414" y="36" fill="#3b82f6" font-family="Space Mono" font-size="11" font-weight="700" text-anchor="middle">NodeConfig</text>
+        <text x="414" y="54" fill="rgba(242,240,235,0.35)" font-family="Space Mono" font-size="9" text-anchor="middle">uniforms["u_tbar"]</text>
+        <line x1="492" y1="40" x2="514" y2="40" stroke="rgba(59,130,246,0.6)" stroke-width="1.5" marker-end="url(#b)"/>
+        <rect x="518" y="16" width="140" height="48" rx="4" fill="rgba(16,185,129,0.07)" stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+        <text x="588" y="36" fill="#10b981" font-family="Space Mono" font-size="11" font-weight="700" text-anchor="middle">GLSL Shader</text>
+        <text x="588" y="54" fill="rgba(242,240,235,0.35)" font-family="Space Mono" font-size="9" text-anchor="middle">uniform float u_tbar</text>
+      </svg>
+    </div>
+
+    <h3>Defining a schema</h3>
+    <pre><code><span class="kw">use</span> <span class="ty">scheng_param_store</span>::{ParamStore, ParamSchema, schema::ParamDef};
+
+<span class="kw">let</span> store = ParamStore::new(ParamSchema {
+    version: <span class="nm">1</span>,
+    params: vec![
+        ParamDef {
+            name:         <span class="st">"u_tbar"</span>.into(),
+            ty:           <span class="st">"float"</span>.into(),
+            min:          <span class="nm">0.0</span>,  max: <span class="nm">1.0</span>,  default: <span class="nm">0.0</span>,
+            smooth:       <span class="nm">0.05</span>,         <span class="c">// 0=instant, higher=slower</span>
+            midi_cc:      Some(<span class="nm">1</span>),       <span class="c">// CC1 → u_tbar</span>
+            midi_channel: None,           <span class="c">// None = any channel</span>
+            osc_addr:     Some(<span class="st">"/scheng/tbar"</span>.into()),
+            node_label:   None,
+            description:  None,
+        },
+    ],
+});</code></pre>
+
+    <h3>Reading values each tick</h3>
+    <pre><code><span class="c">// ALWAYS call step_frame() first — this is the smoother</span>
+<span class="kw">let</span> uniforms = {
+    <span class="kw">let mut</span> store = param_store.lock().unwrap();
+    store.step_frame();               <span class="c">// ← REQUIRED. Without this, MIDI does nothing visible.</span>
+    store.all_values().clone()        <span class="c">// HashMap&lt;String, f32&gt; — all params</span>
+};
+
+<span class="c">// Assign to NodeConfig — params reach shader automatically</span>
+cfg.uniforms = uniforms;</code></pre>
+
+    <span class="anchor" id="midi-input"></span>
+    <h3>MIDI Input</h3>
+
+    <p>Use <code>midir</code> directly — it gives the most control and matches the shadecore pattern. Open in <code>resumed()</code>, store the live connection in your instrument struct.</p>
+
+    <pre><code><span class="kw">use</span> <span class="ty">midir</span>::{MidiInput, Ignore};
+
+<span class="c">// In resumed():</span>
+<span class="kw">let mut</span> midi = MidiInput::new(<span class="st">"my-instrument"</span>).ok()?;
+midi.ignore(Ignore::None);
+<span class="kw">let</span> ports = midi.ports();
+<span class="kw">for</span> p <span class="kw">in</span> &ports {
+    log::info!(<span class="st">"MIDI port: '{}'"</span>, midi.port_name(p).unwrap_or_default());
+}
+<span class="kw">let</span> port = ports.into_iter().next()?;
+<span class="kw">let</span> name = midi.port_name(&port).unwrap_or_default();
+<span class="kw">let</span> conn = midi.connect(&port, <span class="st">"midi-in"</span>, <span class="kw">move</span> |_ts, msg, _| {
+    <span class="kw">if</span> msg.len() == <span class="nm">3</span> && (msg[<span class="nm">0</span>] & <span class="nm">0xF0</span>) == <span class="nm">0xB0</span> {
+        <span class="c">// CC message: channel = msg[0] & 0x0F, cc = msg[1], val = msg[2]</span>
+        log::info!(<span class="st">"[MIDI] CC{} = {}"</span>, msg[<span class="nm">1</span>], msg[<span class="nm">2</span>]);
+        store_clone.lock().unwrap().set_by_midi_cc(msg[<span class="nm">1</span>], msg[<span class="nm">2</span>]).ok();
+    }
+}, ()).ok()?;
+log::info!(<span class="st">"MIDI connected: '{}'"</span>, name);</code></pre>
+
+    <div class="callout info">
+      <strong>macOS — Enable IAC Driver</strong>
+      Audio MIDI Setup → Window → Show MIDI Studio → IAC Driver → tick "Device is online". This enables software MIDI routing between MaxMSP, Ableton, and scheng.
+    </div>
+
+    <span class="anchor" id="osc-input"></span>
+    <h3>OSC Input</h3>
+    <pre><code><span class="kw">use</span> <span class="ty">scheng_control_osc_wgpu</span>::OscReceiver;
+
+<span class="kw">let</span> osc = OscReceiver::bind(<span class="st">"127.0.0.1:9000"</span>).unwrap();
+
+<span class="c">// In tick() — drains any pending OSC messages into the store:</span>
+osc.poll(&<span class="kw">mut</span> *store.lock().unwrap());</code></pre>
+
+    <p>OSC address format: <code>/scheng/u_param_name</code>, or whatever you set in <code>ParamDef.osc_addr</code>.</p>
+
+    <span class="anchor" id="smoothing"></span>
+    <h3>Smoothing Reference</h3>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>smooth</th><th>Behavior</th><th>Frames to target</th><th>Best for</th></tr></thead>
+      <tbody>
+        <tr><td><code>0.0</code></td><td>Instant — target = value immediately</td><td>1</td><td>Buttons, gates, triggers</td></tr>
+        <tr><td><code>0.05</code></td><td>Fast</td><td>~20</td><td>Faders, most CC controls</td></tr>
+        <tr><td><code>0.10</code></td><td>Medium</td><td>~40</td><td>Gradual parameter shifts</td></tr>
+        <tr><td><code>0.15</code></td><td>Slow</td><td>~60</td><td>Ambient color, atmosphere</td></tr>
+        <tr><td><code>0.50</code></td><td>Very slow drift</td><td>~200+</td><td>Auto-evolving values</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <p>The formula is: <code>value = value + (target - value) * (1.0 - smooth)</code> per frame at the target framerate.</p>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════════════════ INPUTS -->
+    <span class="anchor" id="webcam"></span>
+    <h2>Webcam Input</h2>
+
+    <pre><code><span class="kw">use</span> <span class="ty">scheng_input_webcam</span>::Webcam;
+
+<span class="c">// List available cameras</span>
+<span class="kw">let</span> cams = Webcam::list_cameras();
+<span class="kw">for</span> (i, name) <span class="kw">in</span> cams.iter().enumerate() {
+    log::info!(<span class="st">"Camera [{}]: {}"</span>, i, name);
+}
+
+<span class="c">// Open — nokhwa scales to render resolution internally</span>
+<span class="kw">let</span> cam = Webcam::open(<span class="nm">1</span>, width, height, &device, &queue)
+    .map(|c| { log::info!(<span class="st">"Webcam {}×{}"</span>, c.width(), c.height()); c })?;
+
+<span class="c">// Each tick — poll new frame, inject as iChannel0</span>
+cam.poll(&queue);
+cfg.input_textures[<span class="nm">0</span>] = cam.texture_arc();
+cfg.frag_shader = Some(<span class="st">"void main() {
+    fragColor = texture(iChannel0, vec2(v_uv.x, 1.0 - v_uv.y));
+}"</span>.into());</code></pre>
+
+    <div class="callout warn">
+      <strong>Y-FLIP REQUIRED</strong>
+      Webcam frames are vertically inverted relative to GPU UV space. Always use <code>vec2(v_uv.x, 1.0 - v_uv.y)</code> when sampling webcam textures, or the image will appear upside down.
+    </div>
+
+    <p>Run with <code>--list-cameras</code> to discover indexes. On macOS, camera index 0 is often OBS Virtual Camera; FaceTime HD is typically index 1.</p>
+
+    <span class="anchor" id="video-file"></span>
+    <h2>Video File Input</h2>
+
+    <pre><code><span class="kw">use</span> <span class="ty">scheng_input_video</span>::VideoDecoder;
+
+<span class="kw">let mut</span> vid = VideoDecoder::open(<span class="st">"clip.mp4"</span>, &device, &queue)?;
+log::info!(<span class="st">"{}×{} @ {:.1}fps"</span>, vid.width(), vid.height(), vid.fps());
+
+<span class="c">// Each tick — upload frame at current time (loops automatically)</span>
+vid.upload_frame(time_secs, &queue);
+cfg.input_textures[<span class="nm">0</span>] = vid.texture_arc();
+cfg.frag_shader = Some(passthrough_yflip.into());</code></pre>
+
+    <p>Supported: any container ffmpeg can decode — mp4, mov, avi, mkv, ProRes, H.264, H.265. BICUBIC scaling. Loops at end of file.</p>
+
+    <span class="anchor" id="syphon-in"></span>
+    <h2>Syphon Receive <span class="badge mac">macOS</span></h2>
+
+    <pre><code><span class="kw">use</span> <span class="ty">scheng_input_syphon</span>::SyphonReceiver;
+
+<span class="c">// Deferred init — call from frame 5+ (run loop must be active)</span>
+<span class="kw">if</span> self.frame >= <span class="nm">5</span> && !self.syphon_initialized {
+    self.syphon_initialized = <span class="kw">true</span>;
+    <span class="kw">let</span> servers = SyphonReceiver::list_servers(mtl_ptr);
+    <span class="kw">for</span> s <span class="kw">in</span> &servers { log::info!(<span class="st">"{} from {}"</span>, s.name, s.app); }
+    self.recv = SyphonReceiver::connect(<span class="st">"OBS"</span>, mtl_ptr, &device, &queue).ok();
+}
+
+<span class="c">// Each tick:</span>
+<span class="kw">if let</span> Some(<span class="kw">ref mut</span> recv) = self.recv {
+    recv.poll_with_device(&device, &queue);
+    cfg.input_textures[<span class="nm">0</span>] = recv.texture_arc();
+}</code></pre>
+
+    <div class="callout warn">
+      <strong>DEFERRED INIT REQUIRED</strong>
+      The SyphonServerDirectory needs the macOS run loop active to discover sources. Querying it during <code>resumed()</code> — before the first <code>about_to_wait()</code> fires — yields zero results. Always defer to frame 5 or later.
+    </div>
+
+    <span class="anchor" id="ndi-in"></span>
+    <h2>NDI Receive</h2>
+
+    <pre><code><span class="kw">use</span> <span class="ty">scheng_input_ndi</span>::NdiReceiver;
+
+<span class="kw">let</span> sources = NdiReceiver::find_sources(<span class="nm">2000</span>)?;
+<span class="kw">let mut</span> recv = NdiReceiver::connect(&sources[<span class="nm">0</span>].name, &device, &queue)?;
+
+<span class="c">// Each tick:</span>
+<span class="kw">if</span> recv.poll(&device, &queue) {
+    cfg.input_textures[<span class="nm">0</span>] = recv.texture_arc();
+}</code></pre>
+
+    <span class="anchor" id="rtmp-in"></span>
+    <h2>RTMP / RTSP Receive</h2>
+
+    <pre><code><span class="kw">use</span> <span class="ty">scheng_input_rtmp</span>::RtmpReceiver;
+
+<span class="kw">let mut</span> recv = RtmpReceiver::open(
+    <span class="st">"rtmp://localhost:1935/live/key"</span>,
+    width, height, &device, &queue
+)?;
+
+<span class="c">// Each tick:</span>
+recv.poll(&device, &queue);
+cfg.input_textures[<span class="nm">0</span>] = recv.texture_arc();</code></pre>
+
+    <p>Any URL ffmpeg can read: <code>rtmp://</code>, <code>rtsp://</code>, <code>srt://</code>, <code>http://</code> (HLS). The receiver spawns ffmpeg as a subprocess.</p>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════════════════ OUTPUTS -->
+    <span class="anchor" id="output-sink"></span>
+    <h2>Output Sinks</h2>
+
+    <p>All outputs implement the <code>OutputSink</code> trait. Pass any sink to <code>execute_frame()</code>. Multiple sinks can be active simultaneously — call <code>execute_frame()</code> once per sink per frame.</p>
+
+    <pre><code><span class="c">// Multiple simultaneous outputs</span>
+runtime.execute_frame(&g, &plan, &configs, &ctx, &<span class="kw">mut</span> preview)?;
+runtime.execute_frame(&g, &plan, &configs, &ctx, &<span class="kw">mut</span> syphon_sink)?;</code></pre>
+
+    <div class="callout info">
+      <strong>PERFORMANCE NOTE</strong>
+      Each <code>execute_frame()</code> call re-executes the render graph. For Syphon (zero-copy Metal texture sharing), this is effectively free. For FFmpeg (GPU readback), it adds a frame readback cost. Minimize FFmpeg sinks at high framerates.
+    </div>
+
+    <span class="anchor" id="preview-sink"></span>
+    <h3>Preview Window</h3>
+
+    <p>A <code>PreviewSink</code> blits the render target to the winit window via a WGSL passthrough shader. Resize-aware — updates surface config on <code>WindowEvent::Resized</code>. See any template for the complete implementation pattern.</p>
+
+    <span class="anchor" id="syphon-out"></span>
+    <h3>Syphon Output <span class="badge mac">macOS</span></h3>
+
+    <pre><code><span class="kw">use</span> <span class="ty">scheng_output_syphon</span>::SyphonSink;
+
+<span class="kw">let mut</span> sink = SyphonSink::new(<span class="st">"my-instrument"</span>)?;
+<span class="c">// Now visible to Resolume, OBS, VDMX as "my-instrument"</span>
+
+runtime.execute_frame(&g, &plan, &configs, &ctx, &<span class="kw">mut</span> sink)?;</code></pre>
+
+    <p>Zero-copy Metal texture sharing on Apple Silicon. The GPU texture is shared directly with the receiving application — no CPU readback, no copy.</p>
+
+    <span class="anchor" id="ndi-out"></span>
+    <h3>NDI Output</h3>
+
+    <pre><code><span class="kw">use</span> <span class="ty">scheng_output_ndi</span>::{NdiSink, NdiConfig};
+
+<span class="kw">let mut</span> sink = NdiSink::new(NdiConfig {
+    source_name:   <span class="st">"my-instrument"</span>.into(),
+    framerate_num: <span class="nm">30</span>,
+    framerate_den: <span class="nm">1</span>,
+    ..Default::default()
+})?;</code></pre>
+
+    <span class="anchor" id="ffmpeg-out"></span>
+    <h3>FFmpeg Output (RTMP / RTSP / File)</h3>
+
+    <pre><code><span class="kw">use</span> <span class="ty">scheng_output_ffmpeg</span>::{FfmpegSink, FfmpegConfig, config::OutputTarget};
+
+<span class="c">// RTMP stream → YouTube / Twitch / OBS ingest</span>
+<span class="kw">let mut</span> sink = FfmpegSink::new(FfmpegConfig {
+    width: <span class="nm">1280</span>, height: <span class="nm">720</span>, framerate: <span class="nm">30</span>,
+    target: OutputTarget::Rtmp { url: <span class="st">"rtmp://a.rtmp.youtube.com/live2/STREAM_KEY"</span>.into() },
+    ..Default::default()
+})?;
+
+<span class="c">// RTSP (requires mediamtx or similar)</span>
+<span class="kw">let mut</span> sink = FfmpegSink::new(FfmpegConfig {
+    target: OutputTarget::Rtsp { url: <span class="st">"rtsp://localhost:8554/live"</span>.into() },
+    ..Default::default()
+})?;
+
+<span class="c">// File recording — finalizes cleanly on instrument exit</span>
+<span class="kw">let mut</span> sink = FfmpegSink::new(FfmpegConfig {
+    target: OutputTarget::File { path: <span class="st">"output.mp4"</span>.into(), overwrite: <span class="kw">true</span> },
+    ..Default::default()
+})?;</code></pre>
+
+    <p>All FFmpeg output is automatically tagged with <strong>bt.709 colorspace metadata</strong>. See <a href="#colorspace">Colorspace</a>.</p>
+
+    <h4>Local RTMP/RTSP testing with mediamtx</h4>
+    <pre><code>brew install mediamtx
+
+<span class="c"># Config: accept any stream key</span>
+printf "paths:\n  all_others:\n" > /tmp/mtx.yml
+mediamtx /tmp/mtx.yml
+
+<span class="c"># Receive in VLC</span>
+vlc rtmp://localhost:1935/live/key</code></pre>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════════════════ EXECUTION -->
+    <span class="anchor" id="framectx"></span>
+    <h2>FrameCtx</h2>
+
+    <p>The immutable per-frame execution context. The engine derives all temporal shader uniforms from this structure. The engine never owns or accumulates time — all temporal semantics originate here.</p>
+
+    <pre><code><span class="kw">pub struct</span> <span class="ty">FrameCtx</span> {
+    <span class="kw">pub</span> width:        u32,   <span class="c">// render width → uResolution.x</span>
+    <span class="kw">pub</span> height:       u32,   <span class="c">// render height → uResolution.y</span>
+    <span class="kw">pub</span> time:         f32,   <span class="c">// seconds → uTime (you control this)</span>
+    <span class="kw">pub</span> frame:        u64,   <span class="c">// counter → uFrame (you increment this)</span>
+    <span class="kw">pub</span> sample_count: u32,   <span class="c">// 1=off, 4=4xMSAA, 8=8xMSAA</span>
+}</code></pre>
+
+    <p><strong>Valid time patterns:</strong> monotonic wall-clock, manual scrub, looping domains, discontinuous jumps. The runtime does not interpret or constrain time — it forwards it to shaders verbatim.</p>
+
+    <p>Changing <code>width</code> or <code>height</code> between frames triggers render target reallocation (GPU memory only, fast). Excessive resolution changes can cause frame drops.</p>
+
+    <span class="anchor" id="frame-lifecycle"></span>
+    <h2>Per-Frame Lifecycle</h2>
+
+    <p>Every frame proceeds in exactly this order. The hot path avoids allocation, shader recompilation, and blocking I/O.</p>
+
+    <ol class="steps">
+      <li><div><strong>Poll inputs</strong><br><span style="font-size:13px;color:rgba(242,240,235,0.45);">Webcam.poll(), VideoDecoder.upload_frame(), Syphon.poll_with_device() — upload latest frame pixels to GPU textures on dedicated threads.</span></div></li>
+      <li><div><strong>Step params</strong><br><span style="font-size:13px;color:rgba(242,240,235,0.45);">store.step_frame() — advance smoother: targets → values. MIDI/OSC threads write targets; this step moves values.</span></div></li>
+      <li><div><strong>Build NodeConfigs</strong><br><span style="font-size:13px;color:rgba(242,240,235,0.45);">Assemble HashMap&lt;NodeId, NodeConfig&gt; — shader source, uniforms from ParamStore, input textures from devices.</span></div></li>
+      <li><div><strong>graph.compile() (if needed)</strong><br><span style="font-size:13px;color:rgba(242,240,235,0.45);">Only required on topology change. For most instruments this is called once at startup and the plan is reused.</span></div></li>
+      <li><div><strong>execute_frame()</strong><br><span style="font-size:13px;color:rgba(242,240,235,0.45);">One wgpu RenderPass per non-output node, in topological order. All passes encoded into a single CommandEncoder.</span></div></li>
+      <li><div><strong>queue.submit()</strong><br><span style="font-size:13px;color:rgba(242,240,235,0.45);">All GPU work submitted as one batch. Output sinks are presented after submit — never before.</span></div></li>
+      <li><div><strong>Present output sinks</strong><br><span style="font-size:13px;color:rgba(242,240,235,0.45);">sink.present() called for each registered sink: preview window blit, Syphon texture share, NDI frame push, FFmpeg pipe write.</span></div></li>
+    </ol>
+
+    <span class="anchor" id="determinism"></span>
+    <h3>Determinism</h3>
+
+    <p>For identical Graph + NodeConfig + FrameCtx: execution order, resource bindings, and shader inputs are always identical. This makes scheng instruments replayable and debuggable offline.</p>
+
+    <p>The graph guarantees structural determinism at compile time. The runtime enforces execution determinism. Shader determinism depends on the shader itself — avoid sampling <code>gl_FragCoord</code> without normalizing, and avoid platform-specific GLSL extensions.</p>
+
+    <span class="anchor" id="threading"></span>
+    <h3>Threading Model</h3>
+
+    <div class="two-col">
+      <div class="col-card">
+        <h4>GPU render thread</h4>
+        <p style="font-size:13px;color:rgba(242,240,235,0.5);">Single threaded. Owns the wgpu Device and Queue. Runs the winit event loop. Calls execute_frame() and present().</p>
+      </div>
+      <div class="col-card">
+        <h4>Input/Output threads</h4>
+        <p style="font-size:13px;color:rgba(242,240,235,0.5);">MIDI callback, OSC UDP receiver, video decode, RTMP receive, NDI receive all run on dedicated threads. Communicate via Arc&lt;Mutex&lt;ParamStore&gt;&gt; or bounded channels.</p>
+      </div>
+    </div>
+
+    <p>The bounded channel pattern (try_send semantics) ensures the GPU render thread never blocks waiting for an input. When a source falls behind, frames are dropped gracefully.</p>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════════════════ QUALITY -->
+    <span class="anchor" id="rgba16float"></span>
+    <h2>Rgba16Float Pipeline</h2>
+
+    <p>All internal render targets use <code>Rgba16Float</code> — 16-bit half-float precision per channel. This gives 65,536 distinct values per channel instead of 256 (8-bit), eliminating quantization banding that would otherwise accumulate across multiple shader passes.</p>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Stage</th><th>Format</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Internal render targets</td><td>Rgba16Float</td><td>16-bit — zero banding across passes</td></tr>
+        <tr><td>Webcam input</td><td>Rgba8Unorm</td><td>Camera hardware delivers 8-bit</td></tr>
+        <tr><td>Video input</td><td>Rgba8Unorm</td><td>ffmpeg decodes to 8-bit RGBA</td></tr>
+        <tr><td>NDI input</td><td>Rgba8Unorm</td><td>NDI SDK delivers 8-bit</td></tr>
+        <tr><td>Syphon input</td><td>Rgba8Unorm</td><td>BGRA→RGBA swap in ObjC bridge</td></tr>
+        <tr><td>FFmpeg output</td><td>YUV420P</td><td>Broadcast standard; f16→u8 in readback</td></tr>
+        <tr><td>Preview display</td><td>sRGB surface</td><td>Auto-selected by wgpu for display</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <span class="anchor" id="colorspace"></span>
+    <h2>bt.709 Colorspace</h2>
+
+    <p>All FFmpeg output is automatically tagged with Rec.709 metadata. Without these flags, players and broadcast systems default to bt.601 (SD standard), causing visibly shifted colors on HD content.</p>
+
+    <pre><code><span class="c">// Automatically applied to all FfmpegSink output:</span>
+-colorspace bt709 -color_primaries bt709 -color_trc bt709 -color_range tv</code></pre>
+
+    <span class="anchor" id="msaa"></span>
+    <h2>MSAA Anti-Aliasing</h2>
+
+    <p>Set <code>sample_count</code> in <code>FrameCtx</code>. The pipeline is keyed on <code>(shader_hash, sample_count)</code> — switching between values recompiles the pipeline once, then caches.</p>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>sample_count</th><th>Quality</th><th>Memory cost</th><th>Best for</th></tr></thead>
+      <tbody>
+        <tr><td><code>1</code></td><td>Off</td><td>Baseline</td><td>Organic / fluid shaders</td></tr>
+        <tr><td><code>4</code></td><td>4× MSAA</td><td>~2×</td><td>Geometric content, hard edges</td></tr>
+        <tr><td><code>8</code></td><td>8× MSAA</td><td>~4×</td><td>Highest quality, sufficient GPU budget</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <span class="anchor" id="resolution"></span>
+    <h2>4K / Resolution</h2>
+
+    <p>Resolution is a <code>FrameCtx</code> parameter — change it between frames for dynamic reallocation. Render targets are allocated on demand at the first <code>execute_frame()</code> for a given size.</p>
+
+    <pre><code>cargo run --release -- --width 3840 --height 2160 --msaa 4</code></pre>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════════════════ CRATE MAP -->
+    <span class="anchor" id="crate-map"></span>
+    <h2>Crate Map</h2>
+
+    <p>This is a <strong>system ownership map</strong>, not an API reference. Core crates change slowly. Edge crates (I/O) evolve independently without breaking core guarantees.</p>
+
+    <h3>Core</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Crate</th><th>Owns</th><th>Does NOT own</th></tr></thead>
+      <tbody>
+        <tr><td><code>scheng-graph</code></td><td>Node instantiation, port definitions, topology validation, compile()</td><td>Shader compilation, GPU resources, execution</td></tr>
+        <tr><td><code>scheng-runtime-wgpu</code></td><td>WgpuRuntime, execute_frame, render targets, pipeline cache, CustomBlock</td><td>Topology mutation, control protocols, time</td></tr>
+        <tr><td><code>scheng-param-store</code></td><td>ParamStore, ParamSchema, smoothing, MIDI/OSC routing tables</td><td>Protocol parsing, device management</td></tr>
+        <tr><td><code>scheng-hotreload</code></td><td>AssetWatcher, file change events</td><td>Shader compilation (that's the runtime)</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>Inputs</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Crate</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>scheng-input-midi</code></td><td>MidiInput wrapper around midir (prefer using midir directly)</td></tr>
+        <tr><td><code>scheng-control-osc-wgpu</code></td><td>OscReceiver, UDP socket, address → ParamStore routing</td></tr>
+        <tr><td><code>scheng-input-webcam</code></td><td>Webcam open/poll, nokhwa, MJPEG/YUYV decode, GPU texture upload</td></tr>
+        <tr><td><code>scheng-input-video</code></td><td>VideoDecoder, ffmpeg-next, BICUBIC scaling, looping, texture_arc()</td></tr>
+        <tr><td><code>scheng-input-ndi</code></td><td>NdiReceiver, grafton-ndi, NewTek SDK</td></tr>
+        <tr><td><code>scheng-input-syphon</code></td><td>SyphonReceiver, ObjC Metal bridge, SyphonServerDirectory (macOS)</td></tr>
+        <tr><td><code>scheng-input-rtmp</code></td><td>RtmpReceiver, ffmpeg subprocess, bounded channel, any ffmpeg-readable URL</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>Outputs</h3>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Crate</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>scheng-output-syphon</code></td><td>SyphonSink, Metal texture sharing, zero-copy (macOS)</td></tr>
+        <tr><td><code>scheng-output-ndi</code></td><td>NdiSink, NewTek SDK, frame push</td></tr>
+        <tr><td><code>scheng-output-spout</code></td><td>SpoutSink stub, DX texture sharing (Windows — C++ bridge needed)</td></tr>
+        <tr><td><code>scheng-output-ffmpeg</code></td><td>FfmpegSink, RTMP/RTSP/file, H.264, bt.709, ffmpeg subprocess</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════════════════ CLI -->
+    <span class="anchor" id="cli-flags"></span>
+    <h2>CLI Flags</h2>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Flag</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>--width N</code></td><td>1280</td><td>Render width in pixels</td></tr>
+        <tr><td><code>--height N</code></td><td>720</td><td>Render height in pixels</td></tr>
+        <tr><td><code>--msaa N</code></td><td>1</td><td>MSAA sample count — 1, 4, or 8</td></tr>
+        <tr><td><code>--webcam N</code></td><td>—</td><td>Open camera at index N (0-based)</td></tr>
+        <tr><td><code>--list-cameras</code></td><td>—</td><td>Print available cameras and exit</td></tr>
+        <tr><td><code>--video path</code></td><td>—</td><td>Open video file for looping playback</td></tr>
+        <tr><td><code>--video-a path</code></td><td>—</td><td>Video file for channel A (video-mixer)</td></tr>
+        <tr><td><code>--video-b path</code></td><td>—</td><td>Video file for channel B (video-mixer)</td></tr>
+        <tr><td><code>--syphon-a name</code></td><td>—</td><td>Syphon receive source name, channel A</td></tr>
+        <tr><td><code>--syphon-b name</code></td><td>—</td><td>Syphon receive source name, channel B</td></tr>
+        <tr><td><code>--stream url</code></td><td>—</td><td>RTMP or RTSP output URL</td></tr>
+        <tr><td><code>--record path</code></td><td>—</td><td>Record to file (H.264 mp4)</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════════════════ CONSTRAINTS -->
+    <span class="anchor" id="constraints"></span>
+    <h2>Known Constraints & Non-Goals</h2>
+
+    <p>Understanding what the engine deliberately does <em>not</em> do is as important as understanding what it does. These are intentional architectural constraints — not bugs.</p>
+
+    <div class="two-col">
+      <div class="col-card">
+        <h4>The engine does not own time</h4>
+        <p style="font-size:13px;color:rgba(242,240,235,0.5);">No play/pause, no internal frame clock, no transport logic. All temporal semantics are supplied via FrameCtx. This enables replayability and offline rendering.</p>
+      </div>
+      <div class="col-card">
+        <h4>The engine is protocol-agnostic</h4>
+        <p style="font-size:13px;color:rgba(242,240,235,0.5);">No OSC parsing, no MIDI handling, no network sockets in core crates. Control values enter only via NodeConfig.uniforms. Parsing belongs in the instrument.</p>
+      </div>
+      <div class="col-card">
+        <h4>Device management is external</h4>
+        <p style="font-size:13px;color:rgba(242,240,235,0.5);">No webcam enumeration, no capture APIs in the engine. The engine consumes textures (Arc&lt;wgpu::Texture&gt;). It does not manage hardware.</p>
+      </div>
+      <div class="col-card">
+        <h4>Node kinds must remain minimal</h4>
+        <p style="font-size:13px;color:rgba(242,240,235,0.5);">Prefer extending behavior through new shaders or NodeConfig parameters. Avoid adding node kinds unless a new structural execution role is genuinely required.</p>
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <strong>THE PATTERN</strong>
+      When ownership is unclear, ask: does this belong in the graph (topology), NodeConfig (per-frame config), runtime (execution), or the instrument layer (everything else)? If it's "everything else," it belongs in the instrument.
+    </div>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════════════════ TESTING -->
+    <span class="anchor" id="testing"></span>
+    <h2>Testing</h2>
+
+    <pre><code><span class="c"># All workspace tests — headless GPU, no window or display required</span>
+cargo test --workspace --exclude scheng-example-instrument
+
+<span class="c"># Single crate</span>
+cargo test -p scheng-runtime-wgpu
+
+<span class="c"># With stdout</span>
+cargo test -p scheng-runtime-wgpu --test headless -- --nocapture
+
+<span class="c"># Shader library tests</span>
+cargo test -p scheng-runtime-wgpu --test shader_library</code></pre>
+
+    <p>Tests use wgpu's headless Metal/Vulkan backend — no display server needed. For CI without a physical GPU, set <code>WGPU_BACKEND=gl</code>.</p>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Crate</th><th>Test type</th><th>What it covers</th></tr></thead>
+      <tbody>
+        <tr><td><code>scheng-runtime-wgpu</code></td><td>GPU integration</td><td>Render, uniforms, feedback, custom u_* params</td></tr>
+        <tr><td><code>scheng-runtime-wgpu</code></td><td>Shader library</td><td>Crossfade, keyer, wipe transitions, solarize</td></tr>
+        <tr><td><code>scheng-graph</code></td><td>Unit</td><td>Graph compile, edge validation, cycle detection</td></tr>
+        <tr><td><code>scheng-param-store</code></td><td>Unit</td><td>Schema, MIDI CC mapping, smoothing arithmetic</td></tr>
+        <tr><td><code>scheng-output-ffmpeg</code></td><td>Integration</td><td>Config validation, ffmpeg args, file recording</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════════════════ TROUBLESHOOTING -->
+    <span class="anchor" id="troubleshooting"></span>
+    <h2>Troubleshooting</h2>
+
+    <h3>Library not loaded: Syphon.framework</h3>
+    <p>rpath is missing. Verify <code>build.rs</code> has the rpath entries and that <code>scheng/vendor/Syphon.framework</code> exists. Never set <code>DYLD_FRAMEWORK_PATH</code> — rpath makes it unnecessary.</p>
+
+    <h3>MIDI arrives but shader doesn't change</h3>
+    <p>Almost always <code>step_frame()</code> is missing. MIDI writes to <em>targets</em>. The smoother only advances <em>values</em> when <code>step_frame()</code> is called. Both are required every tick.</p>
+    <pre><code>store.step_frame();  <span class="c">// ← without this, store.get() always returns the default</span></code></pre>
+
+    <h3>Custom uniforms are always 0.0</h3>
+    <p>Either (a) the value isn't in <code>NodeConfig.uniforms</code>, or (b) <code>step_frame()</code> isn't called. Check both.</p>
+    <pre><code>cfg.uniforms.insert(<span class="st">"u_threshold"</span>.into(), <span class="nm">0.5</span>);  <span class="c">// must exist</span></code></pre>
+
+    <h3>Webcam is upside down</h3>
+    <p>Missing Y-flip. Always sample webcam textures with inverted V: <code>vec2(v_uv.x, 1.0 - v_uv.y)</code>.</p>
+
+    <h3>Webcam: no compatible format</h3>
+    <p>Camera doesn't support MJPEG at requested resolution. Use <code>--list-cameras</code> to find valid indexes. Try FaceTime HD (usually index 1 on macOS) at 1280×720.</p>
+
+    <h3>Syphon shows zero sources</h3>
+    <p>Run loop not active yet. Defer SyphonReceiver init to frame 5+. See <a href="#syphon-in">Syphon Receive</a>.</p>
+
+    <h3>RTMP: Connection refused</h3>
+    <p>No RTMP server running. Start mediamtx with <code>paths: all_others:</code> config. See <a href="#ffmpeg-out">FFmpeg Output</a>.</p>
+
+    <h3>All pixels black</h3>
+    <p>Output sinks must be called <em>after</em> <code>queue.submit()</code>. This is handled automatically by <code>execute_frame()</code> — don't call <code>present()</code> manually before submitting the command encoder.</p>
+
+    <h3>Shader compile error on startup</h3>
+    <p>Check the log for the GLSL error text. Common causes: GLSL 4.x features not supported by naga (use 3.3 features only), missing <code>void main()</code>, or undeclared variable. The error text includes line numbers relative to the user shader body.</p>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════════════════ GLOSSARY -->
+    <span class="anchor" id="glossary"></span>
+    <h2>Glossary</h2>
+
+    <p>Canonical terminology. When these terms appear in SDK docs, they carry these precise meanings.</p>
+
+    <dl>
+      <div class="gloss-term"><dt>Instrument</dt><dd>A user-defined application built on the scheng engine. Owns graph construction, time, control input, device management, and output routing. The engine does not define instruments.</dd></div>
+      <div class="gloss-term"><dt>Engine</dt><dd>The collective core crates: scheng-graph, scheng-runtime-wgpu, scheng-param-store. Deterministic, execution-focused. Does not own time, control protocols, or devices.</dd></div>
+      <div class="gloss-term"><dt>Graph</dt><dd>The static, directed acyclic topology describing how nodes connect. Defines structure only — no GPU work. Compiled once into an ExecutionPlan.</dd></div>
+      <div class="gloss-term"><dt>ExecutionPlan</dt><dd>An immutable, topologically sorted plan produced by graph.compile(). Safe for repeated per-frame evaluation. Cannot be modified once compiled.</dd></div>
+      <div class="gloss-term"><dt>Node</dt><dd>A single unit of computation. Consumes and produces textures. Behavior is determined by GLSL shader source — node kind describes structural role only.</dd></div>
+      <div class="gloss-term"><dt>NodeId</dt><dd>An opaque identifier assigned by the Graph when add_node() is called. Stable for the lifetime of a graph instance. Used as key into NodeConfig maps.</dd></div>
+      <div class="gloss-term"><dt>NodeConfig</dt><dd>The complete per-node configuration surface for one frame: shader source, uniforms HashMap, input textures. Owned by the instrument, read by the runtime. Replaces the prior NodeProps concept.</dd></div>
+      <div class="gloss-term"><dt>FrameCtx</dt><dd>The immutable per-frame context: width, height, time, frame, sample_count. All temporal shader uniforms (uTime, uFrame, uResolution) derive from here. The engine never generates or mutates FrameCtx.</dd></div>
+      <div class="gloss-term"><dt>ParamStore</dt><dd>The live parameter state machine. MIDI/OSC write targets; step_frame() advances smoothed values toward targets; shaders read smoothed values via NodeConfig.uniforms.</dd></div>
+      <div class="gloss-term"><dt>Shader Contract</dt><dd>The explicit interface between runtime and GLSL programs: what the engine guarantees to inject (standard uniforms, iChannel bindings, CustomBlock) and what the shader must provide (void main(), valid fragColor output).</dd></div>
+      <div class="gloss-term"><dt>CustomBlock</dt><dd>A GLSL uniform block at GPU binding 6 containing all custom u_* uniform values, packed in declaration order and sourced from NodeConfig.uniforms.</dd></div>
+      <div class="gloss-term"><dt>OutputSink</dt><dd>A trait implementing present() — called after queue.submit() each frame. Implementations: PreviewSink, SyphonSink, NdiSink, FfmpegSink.</dd></div>
+      <div class="gloss-term"><dt>Hot Path</dt><dd>The per-frame execution path inside execute_frame(). Must avoid per-frame allocation, shader recompilation, and blocking I/O.</dd></div>
+      <div class="gloss-term"><dt>Lazy Compilation</dt><dd>Shader programs are compiled only on first use and cached per (shader_hash, sample_count). Recompilation triggers only when shader source changes.</dd></div>
+      <div class="gloss-term"><dt>Topology vs Configuration</dt><dd>Topology (Graph) is static after compile(). Configuration (NodeConfig) is dynamic and changes every frame. Never conflate them.</dd></div>
+    </dl>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /layout -->
+
+<script>
+// Active sidebar link on scroll
+const anchors = [...document.querySelectorAll('.anchor')];
+const links   = [...document.querySelectorAll('.nav-section a')];
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const m = document.querySelector(`.nav-section a[href="#${e.target.id}"]`);
+      if (m) m.classList.add('active');
+    }
+  });
+}, { rootMargin: '-15% 0px -75% 0px', threshold: 0 });
+anchors.forEach(a => obs.observe(a));
+</script>
+
+</body>
+</html>

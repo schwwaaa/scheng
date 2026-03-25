@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "params": [
+    {
+      "name":        "u_speed",
+      "min":         0.0,
+      "max":         5.0,
+      "default":     1.0,
+      "smooth":      0.05,
+      "midi_cc":     1,
+      "osc_addr":    "/scheng/uniform/u_speed",
+      "node_label":  "main",
+      "description": "Animation speed"
+    },
+    {
+      "name":        "u_brightness",
+      "min":         0.0,
+      "max":         2.0,
+      "default":     1.0,
+      "smooth":      0.03,
+      "midi_cc":     7,
+      "osc_addr":    "/scheng/uniform/u_brightness",
+      "node_label":  "main",
+      "description": "Output brightness"
+    },
+    {
+      "name":        "u_hue_shift",
+      "min":         -180.0,
+      "max":         180.0,
+      "default":     0.0,
+      "smooth":      0.05,
+      "midi_cc":     14,
+      "osc_addr":    "/scheng/uniform/u_hue_shift",
+      "node_label":  "main",
+      "description": "Hue rotation in degrees"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+[package]
+name        = "scheng-input-syphon"
+version     = "0.1.0"
+edition     = "2021"
+description = "Syphon Metal receive → wgpu texture for scheng instruments (macOS only)"
+license     = "MIT"
+
+[dependencies]
+wgpu      = "23"
+log       = "0.4"
+thiserror = "1"
+
+[build-dependencies]
+cc = "1"
+
+[features]
+default = []
+# Enable to compile the ObjC Metal bridge and link Syphon.framework.
+# Requires vendor/Syphon.framework at workspace root.
+syphon-framework = []

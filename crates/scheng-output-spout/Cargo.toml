@@ -1,0 +1,16 @@
+[package]
+name        = "scheng-output-spout"
+version     = "0.1.0"
+edition     = "2021"
+description = "Spout2 output sink for scheng (Windows only)"
+license     = "MIT"
+
+[dependencies]
+scheng-runtime-wgpu = { path = "../scheng-runtime-wgpu" }
+scheng-graph         = { path = "../scheng-graph" }
+log       = "0.4"
+wgpu      = "23"
+thiserror = "1"
+
+[build-dependencies]
+cc = "1"

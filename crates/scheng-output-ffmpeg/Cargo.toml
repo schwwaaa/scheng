@@ -1,0 +1,21 @@
+[package]
+name        = "scheng-output-ffmpeg"
+version     = "0.1.0"
+edition     = "2021"
+description = "FFmpeg output sink for scheng — RTSP/RTMP streaming and local file recording"
+license     = "MIT"
+
+[dependencies]
+scheng-runtime-wgpu = { path = "../scheng-runtime-wgpu" }
+scheng-graph         = { path = "../scheng-graph" }
+
+log       = "0.4"
+wgpu = "23"
+thiserror = "1"
+serde     = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Bounded channel for the frame queue.
+# The worker thread reads from this; the render thread sends to it.
+# When full, the oldest frame is dropped — render loop never blocks.
+crossbeam-channel = "0.5"

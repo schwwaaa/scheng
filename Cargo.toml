@@ -2,20 +2,50 @@
 resolver = "2"
 
 members = [
+  # ── Core SDK ──────────────────────────────────────────────────────────────
   "crates/sdk-compat",
-  "crates/scheng-buffers",
-  "crates/scheng-control-osc",
   "crates/scheng-core",
   "crates/scheng-graph",
-  "crates/scheng-host-winit",
-  "crates/scheng-passes",
   "crates/scheng-runtime",
-  "crates/scheng-runtime-glow",
-  "crates/scheng-contract-tests",
+  "crates/scheng-runtime-wgpu",
+  "crates/scheng-param-store",
+  "crates/scrubbable_controls",
+
+  # ── Outputs ───────────────────────────────────────────────────────────────
+  "crates/scheng-output-ffmpeg",
+  "crates/scheng-output-syphon",
+  "crates/scheng-output-spout",
+  "crates/scheng-output-ndi",
+
+  # ── Inputs ────────────────────────────────────────────────────────────────
+  "crates/scheng-input-midi",
   "crates/scheng-input-webcam",
   "crates/scheng-input-video",
-  "crates/scrubbable_controls",
+  "crates/scheng-input-ndi",
+
+  # ── Control ───────────────────────────────────────────────────────────────
+  "crates/scheng-control-osc",
+  "crates/scheng-hotreload",
+
+  # ── Tests ─────────────────────────────────────────────────────────────────
+  "crates/scheng-contract-tests",
+
+  # ── Example instrument ────────────────────────────────────────────────────
+  "examples/scheng-instrument",
+]
+
+exclude = [
+  # Legacy OpenGL (glow) runtime — not part of wgpu SDK
+  "crates/scheng-runtime-glow",
+  "crates/scheng-buffers",
+  "crates/scheng-host-winit",
+  "crates/scheng-passes",
   "crates/scheng-bridge",
+
+  # Legacy glow-based examples
+  "examples/syphon_builtin_legacy",
+  "examples/syphon_minimal",
+  "examples/syphon_patchbay",
   "examples/minimal",
   "examples/pure_single_pass",
   "examples/render_target_only",
@@ -28,9 +58,6 @@ members = [
   "examples/graph_matrix_mix4",
   "examples/graph_matrix_mix4_webcam",
   "examples/graph_webcam_luma_key",
-  "examples/syphon_builtin_legacy",
-  "examples/syphon_minimal",
-  "examples/syphon_patchbay",
   "examples/readback_minimal",
   "examples/texture_input_minimal",
   "examples/static_source_minimal",
@@ -40,20 +67,19 @@ members = [
   "examples/video_device_capture_macos",
   "examples/osc_minimal",
   "examples/video_scrub_keyboard_transport",
+  "examples/temporal_slitscan",
 ]
-
-exclude = ["examples/syphon_builtin_legacy"]
 
 [workspace.package]
 edition = "2021"
 
 [workspace.dependencies]
-serde = { version = "1", features = ["derive"] }
+serde      = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 [profile.dev]
 opt-level = 1
 
 [profile.release]
-lto = true
+lto           = true
 codegen-units = 1

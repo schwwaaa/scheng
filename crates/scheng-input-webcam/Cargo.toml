@@ -1,11 +1,20 @@
 [package]
-name = "scheng-input-webcam"
-version = "0.1.0"
-edition = "2021"
-
-[features]
-native = ["dep:nokhwa"]
+name        = "scheng-input-webcam"
+version     = "0.1.0"
+edition     = "2021"
+description = "Webcam capture → wgpu RGBA texture for scheng instruments"
+license     = "MIT"
 
 [dependencies]
+wgpu      = "23"
+log       = "0.4"
 thiserror = "1"
-nokhwa = { version = "0.10.10", default-features = false, features = ["input-native"], optional = true }
+
+# nokhwa: cross-platform webcam capture
+# macOS: AVFoundation, Windows: DirectShow/MF, Linux: V4L2
+nokhwa = { version = "0.10", features = ["input-native", "output-threaded"], optional = true }
+
+[features]
+default = []
+# Enable real camera capture. Without this, returns NotEnabled at runtime.
+native = ["dep:nokhwa"]

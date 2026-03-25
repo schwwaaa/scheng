@@ -1,0 +1,17 @@
+[package]
+name        = "scheng-input-ndi"
+version     = "0.1.0"
+edition     = "2021"
+description = "NDI source receiver → wgpu texture for scheng instruments"
+license     = "MIT"
+
+[dependencies]
+log       = "0.4"
+wgpu      = "23"
+thiserror = "1"
+
+grafton-ndi = { version = "0.11", optional = true }
+
+[features]
+default = []
+ndi     = ["dep:grafton-ndi"]
