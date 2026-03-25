@@ -6,7 +6,7 @@
 //! Frame selection: `FrameCtx::time` (seconds) → frame index via clip fps.
 //! Looping: when time exceeds clip duration, wraps around.
 
-use crate::VideoError;
+use crate::{texture::VideoTexture, VideoError};
 
 // ── Stub (feature = "decode" disabled) ───────────────────────────────────
 
@@ -22,6 +22,7 @@ impl VideoDecoder {
     }
     pub fn upload_frame(&mut self, _time_secs: f32, _queue: &wgpu::Queue) {}
     pub fn texture_view(&self) -> Option<wgpu::TextureView> { None }
+    pub fn texture_arc(&self) -> Option<std::sync::Arc<wgpu::Texture>> { None }
     pub fn width(&self)    -> u32 { 0 }
     pub fn height(&self)   -> u32 { 0 }
     pub fn duration(&self) -> f32 { 0.0 }
@@ -187,6 +188,12 @@ impl VideoDecoder {
     /// A wgpu texture view ready to bind as iChannel0.
     pub fn texture_view(&self) -> Option<wgpu::TextureView> {
         Some(self.video_tex.view())
+    }
+
+    /// Arc<Texture> for injection into NodeConfig::input_textures.
+    /// Returns None — use texture_view() and inject via frag_shader passthrough instead.
+    pub fn texture_arc(&self) -> Option<std::sync::Arc<wgpu::Texture>> {
+        Some(std::sync::Arc::clone(&self.video_tex.texture))
     }
 
     pub fn width(&self)    -> u32 { self.width }

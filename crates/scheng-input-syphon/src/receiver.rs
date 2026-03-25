@@ -2,6 +2,7 @@
 //! frames to a wgpu RGBA texture each render cycle.
 
 
+use std::ffi::CString;
 use crate::SyphonInputError;
 
 /// Information about an available Syphon server.

@@ -227,7 +227,7 @@ pub struct WgpuRuntime {
     /// The wgpu device and queue. Exposed for use by OutputSink implementations
     /// (e.g. Syphon/Spout sinks that need the device to create shared textures).
     pub ctx:         WgpuContext,
-    pipelines:       PipelineCache,
+    pub pipelines:   PipelineCache,
     render_targets:  HashMap<NodeId, RenderTarget>,
     uniform_manager:        UniformManager,
     custom_uniform_buffers: HashMap<NodeId, crate::uniforms::CustomUniformBuffer>,
@@ -414,6 +414,12 @@ impl WgpuRuntime {
 
         Ok(())
     }
+
+    /// Clear the pipeline and shader cache — call after hot-reloading a shader.
+    pub fn clear_pipeline_cache(&mut self) {
+        self.pipelines.clear();
+    }
+
 
     /// Read back RGBA pixels from a node's render target. Testing only.
     pub fn readback_pixels(&self, node_id: NodeId) -> Result<Vec<u8>, WgpuError> {

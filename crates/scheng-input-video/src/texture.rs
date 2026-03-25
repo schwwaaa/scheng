@@ -3,10 +3,11 @@
 //! `VideoTexture` owns a `wgpu::Texture` sized to the video's resolution.
 //! It is created once and reused across frames — only the pixel data changes.
 
+use crate::VideoError;
 
 /// A wgpu RGBA8 texture that holds one video frame.
 pub struct VideoTexture {
-    pub texture: wgpu::Texture,
+    pub texture: std::sync::Arc<wgpu::Texture>,
     pub width:   u32,
     pub height:  u32,
 }
@@ -14,7 +15,7 @@ pub struct VideoTexture {
 impl VideoTexture {
     /// Allocate a texture at the given resolution.
     pub fn new(device: &wgpu::Device, width: u32, height: u32, label: &str) -> Self {
-        let texture = device.create_texture(&wgpu::TextureDescriptor {
+        let texture = std::sync::Arc::new(device.create_texture(&wgpu::TextureDescriptor {
             label:           Some(label),
             size:            wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
             mip_level_count: 1,
@@ -23,7 +24,7 @@ impl VideoTexture {
             format:          wgpu::TextureFormat::Rgba8Unorm,
             usage:           wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats:    &[],
-        });
+        }));
         Self { texture, width, height }
     }
 
@@ -38,7 +39,7 @@ impl VideoTexture {
         );
         queue.write_texture(
             wgpu::ImageCopyTexture {
-                texture:   &self.texture,
+                texture:   &*self.texture,
                 mip_level: 0,
                 origin:    wgpu::Origin3d::ZERO,
                 aspect:    wgpu::TextureAspect::All,
@@ -55,7 +56,7 @@ impl VideoTexture {
 
     /// Create a texture view for binding as iChannel0.
     pub fn view(&self) -> wgpu::TextureView {
-        self.texture.create_view(&wgpu::TextureViewDescriptor::default())
+        self.texture.as_ref().create_view(&wgpu::TextureViewDescriptor::default())
     }
 
     /// Resize the texture if resolution changed. Returns true if reallocated.
