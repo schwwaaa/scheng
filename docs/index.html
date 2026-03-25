@@ -715,6 +715,7 @@ section + .divider,
     <li><a href="#io">I/O</a></li>
     <li><a href="#templates">Templates</a></li>
     <li><a href="#quality">Quality</a></li>
+    <li><a href="#distribution">Ship It</a></li>
     <li><a href="developer-reference.html" class="nav-cta">Dev Reference →</a></li>
   </ul>
 </nav>
@@ -1113,6 +1114,54 @@ section + .divider,
       <p>Syphon output shares the Metal texture directly — no CPU readback, no copy. On Apple Silicon, this is effectively zero-latency texture sharing.</p>
       <span class="quality-spec">Metal texture sharing — M1/M2</span>
     </div>
+  </div>
+</section>
+
+
+<hr class="divider">
+
+<!-- Distribution -->
+<section id="distribution" class="wrap">
+  <div class="section-label">Distribution</div>
+  <h2>Ship your instrument.</h2>
+  <p class="section-intro">
+    A compiled scheng instrument is a native binary. Packaging it for each platform is straightforward — but each has its own requirements.
+  </p>
+
+  <div class="use-cases">
+    <div class="use-card">
+      <span class="use-icon"></span>
+      <h3>macOS — .app Bundle</h3>
+      <p>Package as a double-clickable <code>.app</code> bundle. Bundle <code>Syphon.framework</code> inside <code>Contents/Frameworks/</code>, fix rpaths with <code>install_name_tool</code>, then code sign and notarize with your Apple Developer certificate for Gatekeeper-free distribution.</p>
+      <span class="use-tag">codesign · notarytool · DMG</span>
+    </div>
+    <div class="use-card">
+      <span class="use-icon">🪟</span>
+      <h3>Windows — Folder + ZIP</h3>
+      <p>Ship as a folder containing the <code>.exe</code> and required DLLs. NDI instruments need <code>Processing.NDI.Lib.x64.dll</code> alongside the binary. ffmpeg must be available in PATH on the target machine.</p>
+      <span class="use-tag">DLL bundle · Inno Setup · Zip</span>
+    </div>
+    <div class="use-card">
+      <span class="use-icon">🐧</span>
+      <h3>Linux — AppImage</h3>
+      <p>Bundle as an AppImage for maximum compatibility across distributions. No installation required — a single executable file runs on any modern Linux with Vulkan drivers. Requires users to have a Vulkan-capable GPU.</p>
+      <span class="use-tag">AppImage · Tarball · Vulkan</span>
+    </div>
+  </div>
+
+  <div class="signal-chain" style="margin-top:40px;">
+    <div class="chain-title">// recommended: hybrid asset loading</div>
+    <div class="chain-row">
+      <div class="chain-node process">include_str!() embedded fallback</div>
+      <div class="chain-arrow">+</div>
+      <div class="chain-node input">filesystem override at runtime</div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node output">hot-reload in dev, self-contained in prod</div>
+    </div>
+  </div>
+
+  <div style="margin-top:32px;">
+    <a href="developer-reference.html#dist-overview" class="btn-secondary">Full packaging guide →</a>
   </div>
 </section>
 

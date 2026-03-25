@@ -367,6 +367,16 @@ hr { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 64px 0;
   </div>
 
   <div class="nav-section">
+    <div class="nav-section-label">Distribution</div>
+    <a href="#dist-overview">Overview</a>
+    <a href="#dist-macos">macOS App Bundle</a>
+    <a href="#dist-windows">Windows (.exe)</a>
+    <a href="#dist-linux">Linux Binary</a>
+    <a href="#dist-assets">Bundling Assets</a>
+    <a href="#dist-signing">Code Signing</a>
+  </div>
+
+  <div class="nav-section">
     <div class="nav-section-label">Reference</div>
     <a href="#crate-map">Crate Map</a>
     <a href="#cli-flags">CLI Flags</a>
@@ -1171,6 +1181,291 @@ vlc rtmp://localhost:1935/live/key</code></pre>
     <pre><code>cargo run --release -- --width 3840 --height 2160 --msaa 4</code></pre>
 
     <hr>
+
+
+    <!-- ═══════════════════════════════════════════════ DISTRIBUTION -->
+    <span class="anchor" id="dist-overview"></span>
+    <h2>Distribution & Packaging</h2>
+
+    <p>A scheng instrument compiles to a native binary. Shipping it to other machines requires bundling all runtime dependencies — frameworks, dylibs, shaders, and assets — so the binary finds them without requiring the end user to install an SDK.</p>
+
+    <p>The three platforms have very different packaging requirements. Each is covered below.</p>
+
+    <div class="callout info">
+      <strong>RELEASE BUILD FIRST</strong>
+      Always build with <code>--release</code> for distribution. Debug builds are 10–50× slower and include symbols you don't want to ship.
+      <pre style="margin-top:8px"><code>cargo build --release
+# Binary at: target/release/my-instrument</code></pre>
+    </div>
+
+    <hr style="margin:32px 0">
+
+    <!-- macOS -->
+    <span class="anchor" id="dist-macos"></span>
+    <h2>macOS — App Bundle</h2>
+
+    <p>On macOS, instruments should be distributed as <code>.app</code> bundles. This packages the binary, Syphon framework, NDI dylib, and assets into a self-contained double-clickable application.</p>
+
+    <h3>App bundle structure</h3>
+    <pre><code>MyInstrument.app/
+└── Contents/
+    ├── Info.plist
+    ├── MacOS/
+    │   └── my-instrument          ← compiled binary
+    ├── Frameworks/
+    │   ├── Syphon.framework       ← copy from scheng/vendor/
+    │   └── libndi.dylib           ← copy from NDI SDK (if used)
+    └── Resources/
+        └── assets/
+            └── shaders/           ← shader files</code></pre>
+
+    <h3>Step 1 — Build release binary</h3>
+    <pre><code>cargo build --release
+cp target/release/my-instrument MyInstrument.app/Contents/MacOS/</code></pre>
+
+    <h3>Step 2 — Create Info.plist</h3>
+    <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;&lt;dict&gt;
+  &lt;key&gt;CFBundleName&lt;/key&gt;             &lt;string&gt;MyInstrument&lt;/string&gt;
+  &lt;key&gt;CFBundleIdentifier&lt;/key&gt;       &lt;string&gt;com.yourname.myinstrument&lt;/string&gt;
+  &lt;key&gt;CFBundleVersion&lt;/key&gt;          &lt;string&gt;0.1.0&lt;/string&gt;
+  &lt;key&gt;CFBundleExecutable&lt;/key&gt;       &lt;string&gt;my-instrument&lt;/string&gt;
+  &lt;key&gt;CFBundlePackageType&lt;/key&gt;      &lt;string&gt;APPL&lt;/string&gt;
+  &lt;key&gt;NSHighResolutionCapable&lt;/key&gt;  &lt;true/&gt;
+  &lt;key&gt;LSMinimumSystemVersion&lt;/key&gt;   &lt;string&gt;12.0&lt;/string&gt;
+&lt;/dict&gt;&lt;/plist&gt;</code></pre>
+
+    <h3>Step 3 — Bundle Syphon.framework</h3>
+    <pre><code>mkdir -p MyInstrument.app/Contents/Frameworks
+cp -R scheng/vendor/Syphon.framework \
+      MyInstrument.app/Contents/Frameworks/</code></pre>
+
+    <h3>Step 4 — Bundle NDI (if used)</h3>
+    <pre><code>cp "/Library/NDI SDK for Apple/lib/macOS/libndi.dylib" \
+   MyInstrument.app/Contents/Frameworks/
+
+# Fix the install name so the binary finds it inside the bundle
+install_name_tool -change \
+  /usr/local/lib/libndi.dylib \
+  @executable_path/../Frameworks/libndi.dylib \
+  MyInstrument.app/Contents/MacOS/my-instrument</code></pre>
+
+    <h3>Step 5 — Bundle assets</h3>
+    <pre><code>cp -R assets/ MyInstrument.app/Contents/Resources/assets/</code></pre>
+
+    <p>Update your instrument's asset path to use the bundle's Resources directory at runtime:</p>
+    <pre><code><span class="c">// In main.rs — resolve assets relative to bundle on macOS</span>
+<span class="kw">fn</span> <span class="fn">asset_path</span>(rel: &str) -> std::path::PathBuf {
+    <span class="c">// In a .app bundle, Resources/ is next to MacOS/</span>
+    <span class="kw">let</span> exe = std::env::current_exe().unwrap();
+    <span class="kw">let</span> resources = exe.parent().unwrap()  <span class="c">// MacOS/</span>
+        .parent().unwrap()                  <span class="c">// Contents/</span>
+        .join(<span class="st">"Resources"</span>);
+    <span class="kw">if</span> resources.exists() {
+        resources.join(rel)
+    } <span class="kw">else</span> {
+        std::path::PathBuf::from(rel)       <span class="c">// development fallback</span>
+    }
+}
+
+<span class="c">// Usage:</span>
+<span class="kw">let</span> shader = std::fs::read_to_string(asset_path(<span class="st">"assets/shaders/main.frag"</span>)).ok();</code></pre>
+
+    <h3>Step 6 — Fix rpaths in the bundle</h3>
+    <pre><code><span class="c"># Remove the development rpath, add bundle-relative path</span>
+install_name_tool -delete_rpath \
+  /Users/yourname/Documents/SPLASH/scheng/vendor \
+  MyInstrument.app/Contents/MacOS/my-instrument
+
+install_name_tool -add_rpath \
+  @executable_path/../Frameworks \
+  MyInstrument.app/Contents/MacOS/my-instrument
+
+<span class="c"># Verify</span>
+otool -L MyInstrument.app/Contents/MacOS/my-instrument</code></pre>
+
+    <span class="anchor" id="dist-signing"></span>
+    <h3>Code signing & notarization</h3>
+
+    <p>Required for distribution outside the App Store. Unsigned apps show a Gatekeeper warning on other machines.</p>
+
+    <pre><code><span class="c"># Sign the entire bundle (requires Apple Developer account)</span>
+codesign --deep --force --sign "Developer ID Application: Your Name (TEAMID)" \
+  --options runtime \
+  MyInstrument.app
+
+<span class="c"># Notarize (submit to Apple for malware scan)</span>
+xcrun notarytool submit MyInstrument.zip \
+  --apple-id your@email.com \
+  --team-id TEAMID \
+  --password app-specific-password \
+  --wait
+
+<span class="c"># Staple the notarization ticket to the bundle</span>
+xcrun stapler staple MyInstrument.app</code></pre>
+
+    <div class="callout tip">
+      <strong>TIP — Apple Silicon universal binaries</strong>
+      Build for both architectures to support Intel and M-series Macs:
+      <pre style="margin-top:8px"><code>cargo build --release --target aarch64-apple-darwin
+cargo build --release --target x86_64-apple-darwin
+lipo -create \
+  target/aarch64-apple-darwin/release/my-instrument \
+  target/x86_64-apple-darwin/release/my-instrument \
+  -output MyInstrument.app/Contents/MacOS/my-instrument</code></pre>
+    </div>
+
+    <h3>Distribute as DMG</h3>
+    <pre><code><span class="c"># Create a DMG for distribution</span>
+hdiutil create -volname "MyInstrument" \
+  -srcfolder MyInstrument.app \
+  -ov -format UDZO \
+  MyInstrument-0.1.0.dmg</code></pre>
+
+    <hr style="margin:32px 0">
+
+    <!-- Windows -->
+    <span class="anchor" id="dist-windows"></span>
+    <h2>Windows — Executable Package</h2>
+
+    <p>On Windows, instruments are distributed as a folder containing the <code>.exe</code> and required DLLs. No installer is required for basic distribution — zip the folder and ship it.</p>
+
+    <h3>Build</h3>
+    <pre><code>cargo build --release
+<span class="c"># Binary at: target\release\my-instrument.exe</span></code></pre>
+
+    <h3>Distribution folder structure</h3>
+    <pre><code>MyInstrument/
+├── my-instrument.exe
+├── assets/
+│   └── shaders/
+│       └── main.frag
+├── NDI Redistribution/        ← from NDI SDK (if used)
+│   └── Processing.NDI.Lib.x64.dll
+└── README.txt</code></pre>
+
+    <h3>Required DLLs</h3>
+
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Feature used</th><th>DLL required</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td>NDI output/input</td><td><code>Processing.NDI.Lib.x64.dll</code></td><td>NDI SDK redistribution folder</td></tr>
+        <tr><td>Spout output</td><td><code>Spout.dll</code></td><td>Spout2 SDK</td></tr>
+        <tr><td>ffmpeg (video/RTMP)</td><td>ffmpeg must be in PATH on target machine</td><td>User installs ffmpeg</td></tr>
+        <tr><td>wgpu (DX12)</td><td>Included in Windows 10+</td><td>System — no action needed</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>Bundle NDI DLL</h3>
+    <pre><code><span class="c"># Copy NDI redistribution DLL next to the executable</span>
+copy "C:\Program Files\NDI\NDI 5 Runtime\v5\Processing.NDI.Lib.x64.dll" .\MyInstrument\</code></pre>
+
+    <h3>Create installer (optional)</h3>
+    <p>For a polished installer, use <a href="https://jrsoftware.org/isinfo.php" target="_blank">Inno Setup</a> (free) or <a href="https://wixtoolset.org" target="_blank">WiX Toolset</a>. For most instruments, a plain zip works fine.</p>
+
+    <pre><code><span class="c"># Simple zip for distribution</span>
+Compress-Archive -Path .\MyInstrument -DestinationPath MyInstrument-0.1.0-windows.zip</code></pre>
+
+    <div class="callout warn">
+      <strong>Windows Defender</strong>
+      Unsigned executables trigger SmartScreen on first run ("Windows protected your PC"). Users must click "More info → Run anyway". To suppress this, sign with a code signing certificate from a CA like DigiCert or Sectigo.
+    </div>
+
+    <h3>Windows code signing (optional)</h3>
+    <pre><code><span class="c"># Sign with a code signing certificate (.pfx)</span>
+signtool sign /f certificate.pfx /p password /tr http://timestamp.digicert.com /td sha256 /fd sha256 MyInstrument\my-instrument.exe</code></pre>
+
+    <hr style="margin:32px 0">
+
+    <!-- Linux -->
+    <span class="anchor" id="dist-linux"></span>
+    <h2>Linux — Binary Distribution</h2>
+
+    <p>Linux distribution is the most flexible but requires users to have Vulkan drivers installed. Distribute a tarball with the binary and assets.</p>
+
+    <h3>Build</h3>
+    <pre><code>cargo build --release
+<span class="c"># Binary at: target/release/my-instrument</span></code></pre>
+
+    <h3>Distribution structure</h3>
+    <pre><code>my-instrument-0.1.0-linux-x64/
+├── my-instrument              ← binary
+├── assets/
+│   └── shaders/
+│       └── main.frag
+└── README.txt</code></pre>
+
+    <h3>Vulkan requirement</h3>
+    <p>Users need a Vulkan-capable GPU and drivers. Most modern Linux systems with NVIDIA, AMD, or Intel GPUs have this. Verify with:</p>
+    <pre><code>vulkaninfo | head -20
+<span class="c"># If missing: sudo apt install vulkan-tools mesa-vulkan-drivers</span></code></pre>
+
+    <h3>NDI on Linux</h3>
+    <pre><code><span class="c"># Install NDI SDK for Linux, then set LD_LIBRARY_PATH</span>
+export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+./my-instrument</code></pre>
+
+    <h3>AppImage (recommended for wide compatibility)</h3>
+    <p>AppImage bundles everything into a single executable file that runs on any Linux distribution without installation.</p>
+    <pre><code><span class="c"># Using appimagetool</span>
+mkdir -p MyInstrument.AppDir/usr/bin
+cp target/release/my-instrument MyInstrument.AppDir/usr/bin/
+cp -R assets/ MyInstrument.AppDir/usr/bin/assets/
+cat > MyInstrument.AppDir/AppRun &lt;&lt; 'EOF'
+#!/bin/bash
+cd "$(dirname "$0")/usr/bin"
+exec ./my-instrument "$@"
+EOF
+chmod +x MyInstrument.AppDir/AppRun
+
+appimagetool MyInstrument.AppDir MyInstrument-0.1.0-x86_64.AppImage</code></pre>
+
+    <h3>Tarball for manual install</h3>
+    <pre><code>tar -czf my-instrument-0.1.0-linux-x64.tar.gz my-instrument-0.1.0-linux-x64/</code></pre>
+
+    <hr style="margin:32px 0">
+
+    <!-- Assets -->
+    <span class="anchor" id="dist-assets"></span>
+    <h2>Bundling Assets & Hot-Reload in Production</h2>
+
+    <p>scheng instruments load shaders from the filesystem by default. For distribution, you have two options:</p>
+
+    <h3>Option A — Ship assets alongside binary (recommended)</h3>
+    <p>Keep shaders as files next to the binary. Users can still edit them. Hot-reload works in production. This is the simplest approach and the one used by all four templates.</p>
+
+    <pre><code><span class="c">// Resolve assets relative to the executable at runtime</span>
+<span class="kw">fn</span> <span class="fn">asset_dir</span>() -> std::path::PathBuf {
+    <span class="kw">let</span> exe = std::env::current_exe().unwrap();
+    <span class="kw">let</span> dir = exe.parent().unwrap();
+    <span class="c">// macOS .app bundle: binary is in Contents/MacOS/, assets in Contents/Resources/</span>
+    <span class="kw">let</span> resources = dir.parent().unwrap().join(<span class="st">"Resources"</span>);
+    <span class="kw">if</span> resources.exists() { resources } <span class="kw">else</span> { dir.to_path_buf() }
+}</code></pre>
+
+    <h3>Option B — Embed shaders at compile time</h3>
+    <p>Use <code>include_str!</code> to bake shaders into the binary. No external files needed, but hot-reload is disabled in production.</p>
+
+    <pre><code><span class="c">// Embed shader at compile time — no external file needed</span>
+<span class="kw">const</span> MAIN_FRAG: &str = include_str!(<span class="st">"../assets/shaders/main.frag"</span>);
+
+<span class="c">// In tick() — use embedded string directly</span>
+cfg.frag_shader = Some(MAIN_FRAG.to_string());
+
+<span class="c">// Or support both: embedded default with filesystem override</span>
+cfg.frag_shader = Some(
+    std::fs::read_to_string(<span class="st">"assets/shaders/main.frag"</span>)
+        .unwrap_or_else(|_| MAIN_FRAG.to_string())
+);</code></pre>
+
+    <div class="callout tip">
+      <strong>HYBRID APPROACH</strong>
+      Ship with embedded shaders as fallback (<code>include_str!</code>) but check for filesystem overrides first. This gives end users the ability to customize shaders without needing Rust installed, while keeping the binary self-contained.
+    </div>
 
     <!-- ═══════════════════════════════════════════════ CRATE MAP -->
     <span class="anchor" id="crate-map"></span>
