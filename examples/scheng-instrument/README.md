@@ -1,144 +1,74 @@
-# scheng instrument example
+# scheng-instrument
 
-A minimal but complete instrument built on the scheng SDK.
-Copy this as a starting point for your own instruments.
+The reference instrument for the scheng SDK. If you're new to scheng, start here.
 
----
-
-## What it demonstrates
-
-| Feature | How |
-|---------|-----|
-| Shader loading | `assets/shaders/main.frag` loaded at startup |
-| Hot-reload | Edit shader or params.json while running — updates in ~100ms |
-| Live params | `assets/params.json` → MIDI CC + OSC → uniform values |
-| Syphon output | Metal server `"scheng"` — visible in OBS, VDMX, Resolume |
-| FFmpeg output | RTSP stream or local file recording |
+This is a full-featured instrument that demonstrates every SDK capability in one place — hot-reload shaders, MIDI, OSC, webcam, video, Syphon, NDI, RTMP, and file recording.
 
 ---
 
-## Running
+## Getting started in 3 steps
+
+### 1. Clone the SDK
 
 ```bash
-# Default: Syphon output, no FFmpeg
+git clone https://github.com/yourusername/scheng
+cd scheng
+```
+
+### 2. Run the example instrument
+
+```bash
+cd examples/scheng-instrument
 cargo run --release
+```
 
-# Stream to RTSP (start mediamtx first: ./mediamtx)
+A window opens showing an animated gradient shader. That's it — you're rendering on the GPU.
+
+### 3. Edit the shader live
+
+Open `assets/shaders/main.frag` in any editor. Change something — save. The window updates instantly. No restart, no recompile wait. This is hot-reload.
+
+---
+
+## What's demonstrated
+
+| Feature | How to activate |
+|---------|----------------|
+| Hot-reload GLSL | Edit any file in `assets/shaders/` and save |
+| MIDI control | Connect any MIDI device — CC1 maps to `u_brightness` |
+| OSC control | Send to `127.0.0.1:9000` — address `/scheng/u_brightness` |
+| Webcam input | `--webcam 0` (use `--list-cameras` to find your index) |
+| Video file | `--video path/to/clip.mp4` |
+| Syphon receive | `--syphon-receive "OBS"` (macOS) |
+| RTMP receive | `--rtmp-in rtmp://localhost:1935/live/key` |
+| Syphon output | Always active on macOS as `"scheng-instrument"` |
+| NDI output | Always active when NDI SDK is installed |
+| RTMP stream | `--stream rtmp://localhost:1935/live/key` |
+| RTSP stream | `--stream rtsp://localhost:8554/live` |
+| File recording | `--record output.mp4` |
+| 4K | `--width 3840 --height 2160` |
+| MSAA | `--msaa 4` |
+
+---
+
+## CLI reference
+
+```bash
+# Resolution
+cargo run --release -- --width 1920 --height 1080
+cargo run --release -- --width 3840 --height 2160 --msaa 4
+
+# Inputs
+cargo run --release -- --webcam 1
+cargo run --release -- --list-cameras
+cargo run --release -- --video clip.mp4
+cargo run --release -- --syphon-receive "Resolume Arena"
+cargo run --release -- --rtmp-in rtmp://localhost:1935/live/key
+
+# Outputs
+cargo run --release -- --stream rtmp://localhost:1935/live/key
 cargo run --release -- --stream rtsp://localhost:8554/live
-
-# Record to file
-cargo run --release -- --record recording.mp4
-
-# Stream + custom resolution
-cargo run --release -- --stream rtsp://localhost:8554/live --width 1920 --height 1080
-
-# List MIDI ports
-cargo run --release -- --list-midi
-
-# Without Syphon (no framework needed)
-cargo run --release --no-default-features --features midi
-```
-
----
-
-## Live control
-
-### MIDI CC (any connected controller)
-
-| CC | Parameter | Default |
-|----|-----------|---------|
-| 1  | u_speed (mod wheel) | 1.0 |
-| 7  | u_brightness (volume) | 1.0 |
-| 14 | u_hue_shift | 0.0 |
-
-### OSC (default port 9000)
-
-Send from TouchOSC, Max/MSP, SuperCollider, python-osc, etc.:
-
-```
-/scheng/uniform/u_speed       <float 0–5>
-/scheng/uniform/u_brightness  <float 0–2>
-/scheng/uniform/u_hue_shift   <float -180–180>
-```
-
-Python example:
-```python
-from pythonosc.udp_client import SimpleUDPClient
-c = SimpleUDPClient("127.0.0.1", 9000)
-c.send_message("/scheng/uniform/u_brightness", 0.75)
-```
-
----
-
-## Hot-reload
-
-Edit `assets/shaders/main.frag` while the instrument is running.
-Save the file — the shader recompiles and updates within ~100ms.
-If the shader has a syntax error, the previous version continues running
-and the error is printed to the console.
-
-Edit `assets/params.json` to add/remove/adjust parameters.
-New parameters appear immediately; existing values are preserved.
-
----
-
-## Extending this instrument
-
-### Add a new parameter
-
-1. Add a uniform to `assets/shaders/main.frag`:
-   ```glsl
-   uniform float u_zoom;
-   ```
-
-2. Add an entry to `assets/params.json`:
-   ```json
-   {
-     "name":      "u_zoom",
-     "min":       0.5,
-     "max":       2.0,
-     "default":   1.0,
-     "smooth":    0.05,
-     "midi_cc":   15,
-     "osc_addr":  "/scheng/uniform/u_zoom"
-   }
-   ```
-
-That's it. The parameter is now live — MIDI CC 15 and OSC address both work.
-
-### Add a second shader pass
-
-```rust
-// In main.rs:
-let pass_node = graph.add_node(NodeKind::ShaderPass);
-graph.connect_named(main_node, "out", pass_node, "in").unwrap();
-graph.connect_named(pass_node, "out", out_node,  "in").unwrap();
-
-builder.register("pass", pass_node);
-builder.set_shader(pass_node, std::fs::read_to_string("assets/shaders/pass.frag")?);
-```
-
-### Add video input
-
-```rust
-use scheng_input_video::VideoSourceManager;
-
-let mut video = VideoSourceManager::new();
-video.register(main_node, "assets/clip.mp4", &runtime.ctx.device, &runtime.ctx.queue)?;
-
-// In render loop, before execute_frame:
-video.update(ctx.time, &runtime.ctx.queue);
-```
-
-### Add Syphon input (receive from another app)
-
-```rust
-use scheng_input_syphon::SyphonReceiver;
-
-let mut recv = SyphonReceiver::connect("OBS", mtl_ptr, &device, &queue)?;
-
-// In render loop:
-recv.poll_with_device(&device, &queue);
+cargo run --release -- --record output.mp4
 ```
 
 ---
@@ -146,27 +76,37 @@ recv.poll_with_device(&device, &queue);
 ## Project layout
 
 ```
-scheng-instrument/
-├── Cargo.toml           — dependencies + feature flags
-├── assets/
-│   ├── params.json      — parameter schema (hot-reloaded)
-│   └── shaders/
-│       └── main.frag    — main fragment shader (hot-reloaded)
-└── src/
-    └── main.rs          — instrument entry point
+examples/scheng-instrument/
+├── Cargo.toml
+├── build.rs             ← rpath for Syphon.framework (macOS)
+├── src/
+│   └── main.rs          ← instrument entry point
+└── assets/
+    └── shaders/
+        └── main.frag    ← edit this live
 ```
 
 ---
 
-## SDK crates used
+## Building your own instrument
 
-| Crate | Role |
-|-------|------|
-| `scheng-graph` | Node graph: ShaderSource → PixelsOut |
-| `scheng-runtime-wgpu` | GPU execution, wgpu Metal/DX12/Vulkan |
-| `scheng-param-store` | JSON schema → live values → NodeConfig |
-| `scheng-input-midi` | MIDI CC → params (optional) |
-| `scheng-control-osc-wgpu` | OSC UDP → params |
-| `scheng-hotreload` | File watcher → shader/params reload |
-| `scheng-output-syphon` | Syphon Metal server (macOS, optional) |
-| `scheng-output-ffmpeg` | FFmpeg stream/record (optional) |
+Once you understand how this example works, use a template as your starting point:
+
+- **`scheng-gradient`** — smallest possible instrument, same hot-reload pattern
+- **`scheng-mixer`** — adds Syphon inputs and MIDI T-bar
+- **`scheng-processor`** — adds webcam and per-pixel effects
+- **`scheng-video-mixer`** — adds video file playback
+
+See the [Developer Reference](https://yourusername.github.io/scheng/developer-reference.html) for full SDK documentation.
+
+---
+
+## Troubleshooting
+
+**No MIDI ports found** — Enable IAC Driver: Audio MIDI Setup → MIDI Studio → IAC Driver → Device is online.
+
+**Webcam fails to open** — Run `--list-cameras` and use the correct index. FaceTime HD is typically index 1 on macOS.
+
+**Syphon sources not found** — Sources appear at frame 5+. If nothing shows after a few seconds, verify the sending app has Syphon output enabled.
+
+**Shader compile error** — Check the log output for the GLSL error. Line numbers are relative to your shader body.

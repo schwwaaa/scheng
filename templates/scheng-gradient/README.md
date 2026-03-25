@@ -1,85 +1,83 @@
 # scheng-gradient
 
-Minimal [scheng](https://github.com/your-org/scheng) instrument.
+<p align="center">
+  <img src="https://img.shields.io/badge/scheng-template-3b82f6?style=flat-square"/>
+  <img src="https://img.shields.io/badge/complexity-minimal-10b981?style=flat-square"/>
+  <img src="https://img.shields.io/badge/hot--reload-yes-06b6d4?style=flat-square"/>
+</p>
 
-Opens a window and hot-reloads a GLSL fragment shader from `assets/shaders/main.frag`.
-Edit and save the shader — the output updates immediately.
+The minimal scheng starter template. One shader, hot-reload, no I/O dependencies.
 
-## Requirements
+This is the fastest path from zero to a GPU-rendered window. Start here, then add what you need.
 
-- Rust 1.75+
-- macOS (Metal) / Windows (DX12) / Linux (Vulkan)
-- macOS only: `vendor/Syphon.framework` in the scheng workspace (for Syphon I/O)
+---
 
-## Setup
-
-1. Clone scheng next to this project:
-   ```
-   projects/
-     scheng/
-     scheng-gradient/    ← this project
-   ```
-
-2. Build and run:
-   ```bash
-   cargo run --release
-   ```
-
-## Run options
+## Run
 
 ```bash
-# Custom resolution
-cargo run --release -- --width 1920 --height 1080
+cargo run --release
+```
 
-# 4K
-cargo run --release -- --width 3840 --height 2160
-
-# 4K + MSAA 4x anti-aliasing
+```bash
+# 4K with MSAA
 cargo run --release -- --width 3840 --height 2160 --msaa 4
-
-# Stream to RTMP (requires mediamtx or similar)
-cargo run --release -- --stream rtmp://localhost:1935/live/key
-
-# Stream to RTSP
-cargo run --release -- --stream rtsp://localhost:8554/live
-
-# Record to file
-cargo run --release -- --record output.mp4
 ```
 
-## Shader
+---
 
-Edit `assets/shaders/main.frag` — changes are picked up live.
+## How it works
 
-Available built-in uniforms:
-| Uniform | Type | Description |
-|---------|------|-------------|
-| `uTime` | `float` | Seconds since start |
-| `uFrame` | `float` | Frame counter |
-| `uResolution` | `vec2` | Width × height in pixels |
-| `iChannel0–3` | `sampler2D` | Input textures (when I/O enabled) |
+The instrument opens a window and renders `assets/shaders/main.frag` every frame. Edit the shader file and save — the window updates instantly.
 
-Custom `u_*` uniforms are automatically exposed via OSC and MIDI CC.
+```glsl
+// assets/shaders/main.frag
+void main() {
+    vec2  uv  = v_uv;
+    float t   = uTime;
+    vec3  col = 0.5 + 0.5 * cos(t + uv.xyx + vec3(0, 2, 4));
+    fragColor = vec4(col, 1.0);
+}
+```
 
-## Adding I/O
+**Built-in shader uniforms** — always available, no declaration needed:
 
-Uncomment the relevant sections in `Cargo.toml` and `src/main.rs`:
+| Uniform | Type | Value |
+|---------|------|-------|
+| `uTime` | float | Seconds since start |
+| `uFrame` | uint | Frame counter |
+| `uResolution` | vec2 | Width × height |
+| `v_uv` | vec2 | UV coordinates [0,1] |
+| `fragColor` | vec4 out | Write your pixel here |
 
-| Feature | What it enables |
-|---------|----------------|
-| `midi`  | MIDI CC → uniform control |
-| `osc`   | OSC → uniform control |
-| `syphon` | Syphon output (macOS) |
-| `stream` | RTMP/RTSP/file output |
+---
 
-## Architecture
+## Project layout
 
 ```
-assets/shaders/main.frag
-        ↓ hot-reload
-   ShaderSource node
-        ↓ wgpu render
-   PixelsOut node
-        ↓
-   PreviewSink → window
+scheng-gradient/
+├── Cargo.toml
+├── build.rs
+├── src/
+│   └── main.rs
+└── assets/
+    └── shaders/
+        └── main.frag    ← edit this
 ```
+
+Place this project next to the `scheng/` workspace:
+
+```
+projects/
+  scheng/             ← SDK workspace
+  scheng-gradient/    ← this project
+```
+
+---
+
+## Next steps
+
+Add MIDI control → **`scheng-processor`**
+Add Syphon I/O → **`scheng-mixer`**
+Add video files → **`scheng-video-mixer`**
+
+Full documentation: [Developer Reference](https://yourusername.github.io/scheng/developer-reference.html)

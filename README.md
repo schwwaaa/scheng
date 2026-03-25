@@ -13,8 +13,6 @@
   <img src="https://img.shields.io/badge/license-MIT-10b981?style=flat-square"/>
 </p>
 
-
-
 ---
 
 ## What is scheng?
@@ -40,6 +38,7 @@ cargo run --release -- --width 1920 --height 1080 --msaa 4
 - **bt.709 colorspace** — correct color tagging on all FFmpeg output
 - **4K + MSAA** — runtime resolution and anti-aliasing control
 - **Graph-based** — composable node topology, deterministic execution
+- **Spout output** — Windows DX texture sharing *(coming soon)*
 
 ---
 
@@ -87,12 +86,12 @@ Requirements: Rust 1.75+, ffmpeg in PATH. macOS: `vendor/Syphon.framework` for S
 
 ## Documentation
 
-| What | Where |
-|-----|------|
-| **Website & Overview** | [scheng.dev](https://scheng.dev) |
-| **Developer Reference** | [scheng.dev/developer-reference](https://scheng.dev/developer-reference) |
-| **Architecture Diagrams** | [scheng.dev/architecture](https://scheng.dev/architecture) |
-| **SDK Quick Reference** | [scheng.dev/sdk-reference](https://scheng.dev/sdk-reference) |
+| | |
+|--|--|
+| **Website & Overview** | [scheng.dev](https://yourusername.github.io/scheng) |
+| **Developer Reference** | [scheng.dev/developer-reference](https://yourusername.github.io/scheng/developer-reference) |
+| **Architecture Diagrams** | [scheng.dev/architecture](https://yourusername.github.io/scheng/architecture) |
+| **SDK Quick Reference** | [scheng.dev/sdk-reference](https://yourusername.github.io/scheng/sdk-reference) |
 
 ---
 
@@ -125,4 +124,3 @@ examples/
 ## License
 
 MIT — see [LICENSE](LICENSE).
- 
