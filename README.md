@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="35%" height="35%" src="https://raw.githubusercontent.com/schwwaaa/scheng/refs/heads/main/img/logo.png"/>  
+  <a href="https://schwwaaa.github.io/scheng/"><img width="35%" height="35%" src="https://raw.githubusercontent.com/schwwaaa/scheng/refs/heads/main/img/logo.png"/></a>
 </p>
 
 <p align="center"><em>GPU-accelerated video synthesis SDK for Rust</em></p> 
@@ -11,6 +11,12 @@
   <img src="https://img.shields.io/badge/Rust-1.75%2B-orange?style=flat-square&logo=rust"/>
   <img src="https://img.shields.io/badge/wgpu-23-06b6d4?style=flat-square"/>
   <img src="https://img.shields.io/badge/license-MIT-10b981?style=flat-square"/>
+</p>
+
+
+<p align="center">
+  <a href="https://schwwaaa.github.io/scheng/">Website</a> | <a href="https://schwwaaa.github.io/scheng/architecture.html">Architecture</a>  | <a href="https://schwwaaa.github.io/scheng/developer-reference.html">SDK Reference</a> | <a href="https://schwwaaa.github.io/scheng/developer-reference.html#quickstart">Quickstart</a>
+  <br/>
 </p>
 
 ---
