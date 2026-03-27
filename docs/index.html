@@ -1,1188 +1,1337 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>scheng — GPU Video Synthesis SDK</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet">
-<style>
-:root {
-  --ink: #0a0a0f;
-  --paper: #f2f0eb;
-  --electric: #3b82f6;
-  --electric-dim: #1d4ed8;
-  --violet: #8b5cf6;
-  --cyan: #06b6d4;
-  --amber: #f59e0b;
-  --grid: rgba(59,130,246,0.07);
-  --mono: 'Space Mono', monospace;
-  --sans: 'DM Sans', sans-serif;
-}
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-html { scroll-behavior: smooth; }
-
-body {
-  background: var(--ink);
-  color: var(--paper);
-  font-family: var(--sans);
-  font-size: 17px;
-  line-height: 1.65;
-  overflow-x: hidden;
-}
-
-/* ── Grid canvas bg ── */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 48px 48px;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.wrap { max-width: 1160px; margin: 0 auto; padding: 0 32px; position: relative; z-index: 1; }
-
-/* ── Nav ── */
-nav {
-  padding: 24px 32px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: relative;
-  z-index: 10;
-}
-
-.logo {
-  font-family: var(--mono);
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--electric);
-  text-decoration: none;
-}
-
-.logo span { color: var(--paper); }
-
-nav ul {
-  list-style: none;
-  display: flex;
-  gap: 40px;
-}
-
-nav a {
-  color: rgba(242,240,235,0.6);
-  text-decoration: none;
-  font-size: 14px;
-  font-family: var(--mono);
-  letter-spacing: 0.04em;
-  transition: color 0.2s;
-}
-nav a:hover { color: var(--electric); }
-
-.nav-cta {
-  background: var(--electric);
-  color: var(--ink) !important;
-  padding: 8px 20px;
-  border-radius: 3px;
-  font-weight: 700;
-}
-.nav-cta:hover { background: var(--cyan) !important; color: var(--ink) !important; }
-
-/* ── Hero ── */
-.hero {
-  padding: 120px 32px 100px;
-  position: relative;
-  z-index: 1;
-}
-
-.hero-eyebrow {
-  font-family: var(--mono);
-  font-size: 12px;
-  letter-spacing: 0.2em;
-  color: var(--electric);
-  text-transform: uppercase;
-  margin-bottom: 32px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.hero-eyebrow::before {
-  content: '';
-  width: 32px;
-  height: 1px;
-  background: var(--electric);
-}
-
-.hero h1 {
-  font-family: var(--mono);
-  font-size: clamp(52px, 8vw, 104px);
-  font-weight: 700;
-  line-height: 0.9;
-  letter-spacing: -0.04em;
-  margin-bottom: 48px;
-}
-
-.hero h1 .line1 { color: var(--paper); display: block; }
-.hero h1 .line2 { color: var(--electric); display: block; }
-.hero h1 .line3 { color: rgba(242,240,235,0.25); display: block; }
-
-.hero-sub {
-  max-width: 560px;
-  font-size: 20px;
-  font-weight: 300;
-  color: rgba(242,240,235,0.7);
-  margin-bottom: 56px;
-  line-height: 1.6;
-}
-
-.hero-actions {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 80px;
-}
-
-.btn-primary {
-  background: var(--electric);
-  color: var(--ink);
-  font-family: var(--mono);
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  padding: 14px 32px;
-  border-radius: 3px;
-  text-decoration: none;
-  display: inline-block;
-  transition: background 0.2s, transform 0.15s;
-}
-.btn-primary:hover { background: var(--cyan); transform: translateY(-1px); }
-
-.btn-secondary {
-  border: 1px solid rgba(242,240,235,0.2);
-  color: var(--paper);
-  font-family: var(--mono);
-  font-size: 14px;
-  letter-spacing: 0.04em;
-  padding: 14px 32px;
-  border-radius: 3px;
-  text-decoration: none;
-  display: inline-block;
-  transition: border-color 0.2s, background 0.2s;
-}
-.btn-secondary:hover { border-color: var(--electric); background: rgba(59,130,246,0.08); }
-
-/* ── Signal chain diagram ── */
-.signal-chain {
-  border: 1px solid rgba(59,130,246,0.2);
-  border-radius: 8px;
-  padding: 32px;
-  background: rgba(59,130,246,0.03);
-  font-family: var(--mono);
-  font-size: 13px;
-  overflow-x: auto;
-  margin-bottom: 64px;
-}
-
-.chain-title {
-  color: var(--electric);
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  margin-bottom: 24px;
-}
-
-.chain-row {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  margin-bottom: 16px;
-  flex-wrap: nowrap;
-}
-
-.chain-node {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 4px;
-  padding: 8px 16px;
-  white-space: nowrap;
-  transition: border-color 0.2s, background 0.2s;
-  cursor: default;
-}
-.chain-node:hover { border-color: var(--electric); background: rgba(59,130,246,0.1); }
-.chain-node.input { border-color: rgba(6,182,212,0.4); color: var(--cyan); }
-.chain-node.process { border-color: rgba(59,130,246,0.4); color: var(--electric); }
-.chain-node.output { border-color: rgba(139,92,246,0.4); color: var(--violet); }
-.chain-node.control { border-color: rgba(245,158,11,0.4); color: var(--amber); }
-
-.chain-arrow {
-  color: rgba(255,255,255,0.2);
-  padding: 0 8px;
-  font-size: 16px;
-  flex-shrink: 0;
-}
-
-.chain-label {
-  font-size: 11px;
-  color: rgba(242,240,235,0.3);
-  letter-spacing: 0.1em;
-  margin-top: 4px;
-}
-
-/* ── Stats strip ── */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: 120px;
-}
-
-.stat {
-  background: var(--ink);
-  padding: 40px 32px;
-  text-align: center;
-}
-
-.stat-num {
-  font-family: var(--mono);
-  font-size: 48px;
-  font-weight: 700;
-  color: var(--electric);
-  line-height: 1;
-  margin-bottom: 8px;
-}
-
-.stat-label {
-  font-size: 13px;
-  color: rgba(242,240,235,0.4);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-/* ── Section ── */
-section {
-  padding: 100px 0;
-  position: relative;
-  z-index: 1;
-}
-
-section > *:last-child {
-  margin-bottom: 0;
-}
-
-.section-label {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  color: var(--electric);
-  text-transform: uppercase;
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.section-label::before {
-  content: '';
-  width: 24px;
-  height: 1px;
-  background: var(--electric);
-}
-
-h2 {
-  font-family: var(--mono);
-  font-size: clamp(32px, 4vw, 52px);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-  margin-bottom: 24px;
-}
-
-.section-intro {
-  font-size: 19px;
-  font-weight: 300;
-  color: rgba(242,240,235,0.65);
-  max-width: 640px;
-  margin-bottom: 56px;
-}
-
-/* ── Use case cards ── */
-.use-cases {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: 0;
-}
-
-.use-card {
-  background: var(--ink);
-  padding: 48px 36px;
-  transition: background 0.2s;
-  cursor: default;
-}
-.use-card:hover { background: rgba(59,130,246,0.06); }
-
-.use-icon {
-  font-size: 32px;
-  margin-bottom: 20px;
-  display: block;
-}
-
-.use-card h3 {
-  font-family: var(--mono);
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin-bottom: 12px;
-  color: var(--paper);
-}
-
-.use-card p {
-  font-size: 15px;
-  color: rgba(242,240,235,0.55);
-  line-height: 1.6;
-}
-
-.use-tag {
-  display: inline-block;
-  margin-top: 20px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--electric);
-  border: 1px solid rgba(59,130,246,0.3);
-  padding: 3px 10px;
-  border-radius: 2px;
-  letter-spacing: 0.08em;
-}
-
-/* ── IO grid ── */
-.io-grid {
-  display: grid;
-  grid-template-columns: 1fr 80px 1fr;
-  gap: 0;
-  align-items: start;
-  margin-bottom: 0;
-}
-
-.io-col { }
-
-.io-col-title {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  padding-bottom: 16px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-}
-
-.io-col-title.inputs { color: var(--cyan); }
-.io-col-title.outputs { color: var(--violet); }
-
-.io-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-}
-
-.io-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  margin-top: 7px;
-  flex-shrink: 0;
-}
-.io-dot.cyan { background: var(--cyan); }
-.io-dot.violet { background: var(--violet); }
-
-.io-item-name {
-  font-family: var(--mono);
-  font-size: 14px;
-  color: var(--paper);
-  font-weight: 700;
-}
-
-.io-item-desc {
-  font-size: 13px;
-  color: rgba(242,240,235,0.4);
-  margin-top: 2px;
-}
-
-.io-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 48px;
-  gap: 4px;
-}
-
-.io-center-node {
-  background: var(--electric);
-  color: var(--ink);
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 8px 12px;
-  border-radius: 4px;
-  text-align: center;
-  letter-spacing: 0.04em;
-  writing-mode: vertical-lr;
-  transform: rotate(180deg);
-  height: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* ── Pipeline diagram ── */
-.pipeline {
-  position: relative;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
-
-.pipeline-steps {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 2px;
-}
-
-.pipe-step {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 6px;
-  padding: 24px 16px;
-  text-align: center;
-  position: relative;
-  transition: background 0.2s, border-color 0.2s;
-}
-.pipe-step:hover { background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.3); }
-
-.pipe-step::after {
-  content: '→';
-  position: absolute;
-  right: -12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: rgba(255,255,255,0.15);
-  font-size: 14px;
-  z-index: 2;
-}
-.pipe-step:last-child::after { display: none; }
-
-.pipe-num {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--electric);
-  margin-bottom: 8px;
-  letter-spacing: 0.1em;
-}
-
-.pipe-name {
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--paper);
-  margin-bottom: 6px;
-}
-
-.pipe-desc {
-  font-size: 11px;
-  color: rgba(242,240,235,0.35);
-  line-height: 1.4;
-}
-
-/* ── Templates ── */
-.templates {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  margin-bottom: 0;
-}
-
-.template-card {
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 8px;
-  padding: 36px;
-  background: rgba(255,255,255,0.02);
-  transition: border-color 0.2s, background 0.2s;
-  cursor: default;
-}
-.template-card:hover { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.04); }
-
-.template-card h3 {
-  font-family: var(--mono);
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--electric);
-  margin-bottom: 8px;
-  letter-spacing: -0.01em;
-}
-
-.template-card .desc {
-  font-size: 15px;
-  color: rgba(242,240,235,0.6);
-  margin-bottom: 20px;
-  line-height: 1.5;
-}
-
-.template-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.tag {
-  font-family: var(--mono);
-  font-size: 11px;
-  padding: 3px 10px;
-  border-radius: 2px;
-  letter-spacing: 0.05em;
-}
-.tag.cyan { background: rgba(6,182,212,0.12); color: var(--cyan); border: 1px solid rgba(6,182,212,0.2); }
-.tag.violet { background: rgba(139,92,246,0.12); color: var(--violet); border: 1px solid rgba(139,92,246,0.2); }
-.tag.amber { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
-.tag.blue { background: rgba(59,130,246,0.12); color: var(--electric); border: 1px solid rgba(59,130,246,0.2); }
-
-.template-cmd {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: rgba(242,240,235,0.35);
-  margin-top: 16px;
-  padding: 10px 14px;
-  background: rgba(0,0,0,0.3);
-  border-radius: 4px;
-  border-left: 2px solid var(--electric);
-}
-
-/* ── Quality section ── */
-.quality-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.quality-item {
-  background: var(--ink);
-  padding: 40px 32px;
-}
-
-.quality-item h3 {
-  font-family: var(--mono);
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--electric);
-  margin-bottom: 12px;
-  letter-spacing: 0.02em;
-}
-
-.quality-item p {
-  font-size: 14px;
-  color: rgba(242,240,235,0.5);
-  line-height: 1.6;
-}
-
-.quality-spec {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--cyan);
-  margin-top: 12px;
-  padding: 4px 8px;
-  background: rgba(6,182,212,0.08);
-  border-radius: 2px;
-  display: inline-block;
-  letter-spacing: 0.05em;
-}
-
-/* ── CTA ── */
-.cta-section {
-  padding: 120px 0;
-  text-align: center;
-  position: relative;
-  z-index: 1;
-}
-
-.cta-section::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(59,130,246,0.06) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.cta-section h2 {
-  font-size: clamp(40px, 5vw, 72px);
-  margin-bottom: 24px;
-}
-
-.cta-section p {
-  font-size: 19px;
-  color: rgba(242,240,235,0.55);
-  margin-bottom: 48px;
-  max-width: 500px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* ── Footer ── */
-footer {
-  border-top: 1px solid rgba(255,255,255,0.06);
-  padding: 48px 32px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  z-index: 1;
-}
-
-.footer-logo {
-  font-family: var(--mono);
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--electric);
-}
-
-footer p {
-  font-size: 13px;
-  color: rgba(242,240,235,0.3);
-  font-family: var(--mono);
-}
-
-/* ── Animations ── */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.hero-eyebrow { animation: fadeUp 0.6s ease both; }
-.hero h1      { animation: fadeUp 0.6s ease 0.1s both; }
-.hero-sub     { animation: fadeUp 0.6s ease 0.2s both; }
-.hero-actions { animation: fadeUp 0.6s ease 0.3s both; }
-.signal-chain { animation: fadeUp 0.6s ease 0.4s both; }
-
-/* ── Divider ── */
-.divider {
-  border: none;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  margin: 80px 0;
-}
-
-section + .divider,
-.divider + section,
-.hero + .divider {
-  /* handled by section padding */
-}
-
-/* ── Responsive ── */
-@media (max-width: 900px) {
-  .use-cases { grid-template-columns: 1fr; }
-  .stats { grid-template-columns: repeat(2, 1fr); }
-  .pipeline-steps { grid-template-columns: repeat(3, 1fr); }
-  .pipeline-steps .pipe-step::after { display: none; }
-  .templates { grid-template-columns: 1fr; }
-  .quality-grid { grid-template-columns: 1fr; }
-  .io-grid { grid-template-columns: 1fr; }
-  .io-center { display: none; }
-  nav ul { display: none; }
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>scheng — GPU Video Synthesis SDK</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet">
+    <style>
+         :root {
+            --ink: #0a0a0f;
+            --paper: #f2f0eb;
+            --electric: #3b82f6;
+            --electric-dim: #1d4ed8;
+            --violet: #8b5cf6;
+            --cyan: #06b6d4;
+            --amber: #f59e0b;
+            --grid: rgba(59, 130, 246, 0.07);
+            --mono: 'Space Mono', monospace;
+            --sans: 'DM Sans', sans-serif;
+        }
+        
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            background: var(--ink);
+            color: var(--paper);
+            font-family: var(--sans);
+            font-size: 17px;
+            line-height: 1.65;
+            overflow-x: hidden;
+        }
+        /* ── Grid canvas bg ── */
+        
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+            background-size: 48px 48px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .wrap {
+            max-width: 1160px;
+            margin: 0 auto;
+            padding: 0 32px;
+            position: relative;
+            z-index: 1;
+        }
+        /* ── Nav ── */
+        
+        nav {
+            padding: 24px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .logo {
+            font-family: var(--mono);
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--electric);
+            text-decoration: none;
+        }
+        
+        .logo span {
+            color: var(--paper);
+        }
+        
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 40px;
+        }
+        
+        nav a {
+            color: rgba(242, 240, 235, 0.6);
+            text-decoration: none;
+            font-size: 14px;
+            font-family: var(--mono);
+            letter-spacing: 0.04em;
+            transition: color 0.2s;
+        }
+        
+        nav a:hover {
+            color: var(--electric);
+        }
+        
+        .nav-cta {
+            background: var(--electric);
+            color: var(--ink) !important;
+            padding: 8px 20px;
+            border-radius: 3px;
+            font-weight: 700;
+        }
+        
+        .nav-cta:hover {
+            background: var(--cyan) !important;
+            color: var(--ink) !important;
+        }
+        /* ── Hero ── */
+        
+        .hero {
+            padding: 120px 32px 100px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .hero-eyebrow {
+            font-family: var(--mono);
+            font-size: 12px;
+            letter-spacing: 0.2em;
+            color: var(--electric);
+            text-transform: uppercase;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .hero-eyebrow::before {
+            content: '';
+            width: 32px;
+            height: 1px;
+            background: var(--electric);
+        }
+        
+        .hero h1 {
+            font-family: var(--mono);
+            font-size: clamp(52px, 8vw, 104px);
+            font-weight: 700;
+            line-height: 0.9;
+            letter-spacing: -0.04em;
+            margin-bottom: 48px;
+        }
+        
+        .hero h1 .line1 {
+            color: var(--paper);
+            display: block;
+        }
+        
+        .hero h1 .line2 {
+            color: var(--electric);
+            display: block;
+        }
+        
+        .hero h1 .line3 {
+            color: rgba(242, 240, 235, 0.25);
+            display: block;
+        }
+        
+        .hero-sub {
+            max-width: 560px;
+            font-size: 20px;
+            font-weight: 300;
+            color: rgba(242, 240, 235, 0.7);
+            margin-bottom: 56px;
+            line-height: 1.6;
+        }
+        
+        .hero-actions {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 80px;
+        }
+        
+        .btn-primary {
+            background: var(--electric);
+            color: var(--ink);
+            font-family: var(--mono);
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            padding: 14px 32px;
+            border-radius: 3px;
+            text-decoration: none;
+            display: inline-block;
+            transition: background 0.2s, transform 0.15s;
+        }
+        
+        .btn-primary:hover {
+            background: var(--cyan);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            border: 1px solid rgba(242, 240, 235, 0.2);
+            color: var(--paper);
+            font-family: var(--mono);
+            font-size: 14px;
+            letter-spacing: 0.04em;
+            padding: 14px 32px;
+            border-radius: 3px;
+            text-decoration: none;
+            display: inline-block;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        
+        .btn-secondary:hover {
+            border-color: var(--electric);
+            background: rgba(59, 130, 246, 0.08);
+        }
+        /* ── Signal chain diagram ── */
+        
+        .signal-chain {
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 8px;
+            padding: 32px;
+            background: rgba(59, 130, 246, 0.03);
+            font-family: var(--mono);
+            font-size: 13px;
+            overflow-x: auto;
+            margin-bottom: 64px;
+        }
+        
+        .chain-title {
+            color: var(--electric);
+            font-size: 11px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+        }
+        
+        .chain-row {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 16px;
+            flex-wrap: nowrap;
+        }
+        
+        .chain-node {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            padding: 8px 16px;
+            white-space: nowrap;
+            transition: border-color 0.2s, background 0.2s;
+            cursor: default;
+        }
+        
+        .chain-node:hover {
+            border-color: var(--electric);
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .chain-node.input {
+            border-color: rgba(6, 182, 212, 0.4);
+            color: var(--cyan);
+        }
+        
+        .chain-node.process {
+            border-color: rgba(59, 130, 246, 0.4);
+            color: var(--electric);
+        }
+        
+        .chain-node.output {
+            border-color: rgba(139, 92, 246, 0.4);
+            color: var(--violet);
+        }
+        
+        .chain-node.control {
+            border-color: rgba(245, 158, 11, 0.4);
+            color: var(--amber);
+        }
+        
+        .chain-arrow {
+            color: rgba(255, 255, 255, 0.2);
+            padding: 0 8px;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        
+        .chain-label {
+            font-size: 11px;
+            color: rgba(242, 240, 235, 0.3);
+            letter-spacing: 0.1em;
+            margin-top: 4px;
+        }
+        /* ── Stats strip ── */
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 120px;
+        }
+        
+        .stat {
+            background: var(--ink);
+            padding: 40px 32px;
+            text-align: center;
+        }
+        
+        .stat-num {
+            font-family: var(--mono);
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--electric);
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+        
+        .stat-label {
+            font-size: 13px;
+            color: rgba(242, 240, 235, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        /* ── Section ── */
+        
+        section {
+            padding: 100px 0;
+            position: relative;
+            z-index: 1;
+        }
+        
+        section>*:last-child {
+            margin-bottom: 0;
+        }
+        
+        .section-label {
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: 0.2em;
+            color: var(--electric);
+            text-transform: uppercase;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .section-label::before {
+            content: '';
+            width: 24px;
+            height: 1px;
+            background: var(--electric);
+        }
+        
+        h2 {
+            font-family: var(--mono);
+            font-size: clamp(32px, 4vw, 52px);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.05;
+            margin-bottom: 24px;
+        }
+        
+        .section-intro {
+            font-size: 19px;
+            font-weight: 300;
+            color: rgba(242, 240, 235, 0.65);
+            max-width: 640px;
+            margin-bottom: 56px;
+        }
+        /* ── Use case cards ── */
+        
+        .use-cases {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 0;
+        }
+        
+        .use-card {
+            background: var(--ink);
+            padding: 48px 36px;
+            transition: background 0.2s;
+            cursor: default;
+        }
+        
+        .use-card:hover {
+            background: rgba(59, 130, 246, 0.06);
+        }
+        
+        .use-icon {
+            font-size: 32px;
+            margin-bottom: 20px;
+            display: block;
+        }
+        
+        .use-card h3 {
+            font-family: var(--mono);
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+            color: var(--paper);
+        }
+        
+        .use-card p {
+            font-size: 15px;
+            color: rgba(242, 240, 235, 0.55);
+            line-height: 1.6;
+        }
+        
+        .use-tag {
+            display: inline-block;
+            margin-top: 20px;
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--electric);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 3px 10px;
+            border-radius: 2px;
+            letter-spacing: 0.08em;
+        }
+        /* ── IO grid ── */
+        
+        .io-grid {
+            display: grid;
+            grid-template-columns: 1fr 80px 1fr;
+            gap: 0;
+            align-items: start;
+            margin-bottom: 0;
+        }
+        
+        .io-col {}
+        
+        .io-col-title {
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            padding-bottom: 16px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .io-col-title.inputs {
+            color: var(--cyan);
+        }
+        
+        .io-col-title.outputs {
+            color: var(--violet);
+        }
+        
+        .io-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        
+        .io-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-top: 7px;
+            flex-shrink: 0;
+        }
+        
+        .io-dot.cyan {
+            background: var(--cyan);
+        }
+        
+        .io-dot.violet {
+            background: var(--violet);
+        }
+        
+        .io-item-name {
+            font-family: var(--mono);
+            font-size: 14px;
+            color: var(--paper);
+            font-weight: 700;
+        }
+        
+        .io-item-desc {
+            font-size: 13px;
+            color: rgba(242, 240, 235, 0.4);
+            margin-top: 2px;
+        }
+        
+        .io-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 48px;
+            gap: 4px;
+        }
+        
+        .io-center-node {
+            background: var(--electric);
+            color: var(--ink);
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 8px 12px;
+            border-radius: 4px;
+            text-align: center;
+            letter-spacing: 0.04em;
+            writing-mode: vertical-lr;
+            transform: rotate(180deg);
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* ── Pipeline diagram ── */
+        
+        .pipeline {
+            position: relative;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .pipeline-steps {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 2px;
+        }
+        
+        .pipe-step {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 6px;
+            padding: 24px 16px;
+            text-align: center;
+            position: relative;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        
+        .pipe-step:hover {
+            background: rgba(59, 130, 246, 0.08);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+        
+        .pipe-step::after {
+            content: '→';
+            position: absolute;
+            right: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.15);
+            font-size: 14px;
+            z-index: 2;
+        }
+        
+        .pipe-step:last-child::after {
+            display: none;
+        }
+        
+        .pipe-num {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--electric);
+            margin-bottom: 8px;
+            letter-spacing: 0.1em;
+        }
+        
+        .pipe-name {
+            font-family: var(--mono);
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--paper);
+            margin-bottom: 6px;
+        }
+        
+        .pipe-desc {
+            font-size: 11px;
+            color: rgba(242, 240, 235, 0.35);
+            line-height: 1.4;
+        }
+        /* ── Templates ── */
+        
+        .templates {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 0;
+        }
+        
+        .template-card {
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 8px;
+            padding: 36px;
+            background: rgba(255, 255, 255, 0.02);
+            transition: border-color 0.2s, background 0.2s;
+            cursor: default;
+        }
+        
+        .template-card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            background: rgba(59, 130, 246, 0.04);
+        }
+        
+        .template-card h3 {
+            font-family: var(--mono);
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--electric);
+            margin-bottom: 8px;
+            letter-spacing: -0.01em;
+        }
+        
+        .template-card .desc {
+            font-size: 15px;
+            color: rgba(242, 240, 235, 0.6);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .template-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .tag {
+            font-family: var(--mono);
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 2px;
+            letter-spacing: 0.05em;
+        }
+        
+        .tag.cyan {
+            background: rgba(6, 182, 212, 0.12);
+            color: var(--cyan);
+            border: 1px solid rgba(6, 182, 212, 0.2);
+        }
+        
+        .tag.violet {
+            background: rgba(139, 92, 246, 0.12);
+            color: var(--violet);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+        
+        .tag.amber {
+            background: rgba(245, 158, 11, 0.12);
+            color: var(--amber);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+        
+        .tag.blue {
+            background: rgba(59, 130, 246, 0.12);
+            color: var(--electric);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        
+        .template-cmd {
+            font-family: var(--mono);
+            font-size: 12px;
+            color: rgba(242, 240, 235, 0.35);
+            margin-top: 16px;
+            padding: 10px 14px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            border-left: 2px solid var(--electric);
+        }
+        /* ── Quality section ── */
+        
+        .quality-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .quality-item {
+            background: var(--ink);
+            padding: 40px 32px;
+        }
+        
+        .quality-item h3 {
+            font-family: var(--mono);
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--electric);
+            margin-bottom: 12px;
+            letter-spacing: 0.02em;
+        }
+        
+        .quality-item p {
+            font-size: 14px;
+            color: rgba(242, 240, 235, 0.5);
+            line-height: 1.6;
+        }
+        
+        .quality-spec {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--cyan);
+            margin-top: 12px;
+            padding: 4px 8px;
+            background: rgba(6, 182, 212, 0.08);
+            border-radius: 2px;
+            display: inline-block;
+            letter-spacing: 0.05em;
+        }
+        /* ── CTA ── */
+        
+        .cta-section {
+            padding: 120px 0;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(59, 130, 246, 0.06) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        
+        .cta-section h2 {
+            font-size: clamp(40px, 5vw, 72px);
+            margin-bottom: 24px;
+        }
+        
+        .cta-section p {
+            font-size: 19px;
+            color: rgba(242, 240, 235, 0.55);
+            margin-bottom: 48px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        /* ── Footer ── */
+        
+        footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 48px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .footer-logo {
+            font-family: var(--mono);
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--electric);
+        }
+        
+        footer p {
+            font-size: 13px;
+            color: rgba(242, 240, 235, 0.3);
+            font-family: var(--mono);
+        }
+        /* ── Animations ── */
+        
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(24px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .hero-eyebrow {
+            animation: fadeUp 0.6s ease both;
+        }
+        
+        .hero h1 {
+            animation: fadeUp 0.6s ease 0.1s both;
+        }
+        
+        .hero-sub {
+            animation: fadeUp 0.6s ease 0.2s both;
+        }
+        
+        .hero-actions {
+            animation: fadeUp 0.6s ease 0.3s both;
+        }
+        
+        .signal-chain {
+            animation: fadeUp 0.6s ease 0.4s both;
+        }
+        /* ── Divider ── */
+        
+        .divider {
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            margin: 80px 0;
+        }
+        
+        section+.divider,
+        .divider+section,
+        .hero+.divider {
+            /* handled by section padding */
+        }
+        /* ── Responsive ── */
+        
+        @media (max-width: 900px) {
+            .use-cases {
+                grid-template-columns: 1fr;
+            }
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .pipeline-steps {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .pipeline-steps .pipe-step::after {
+                display: none;
+            }
+            .templates {
+                grid-template-columns: 1fr;
+            }
+            .quality-grid {
+                grid-template-columns: 1fr;
+            }
+            .io-grid {
+                grid-template-columns: 1fr;
+            }
+            .io-center {
+                display: none;
+            }
+            nav ul {
+                display: none;
+            }
+        }
+    </style>
 </head>
+
 <body>
 
-<!-- Nav -->
-<nav>
-  <a href="#" class="logo">sch<span>eng</span></a>
-  <ul>
-    <li><a href="#what">What is it</a></li>
-    <li><a href="#io">I/O</a></li>
-    <li><a href="#templates">Templates</a></li>
-    <li><a href="#quality">Quality</a></li>
-    <li><a href="#distribution">Ship It</a></li>
-    <li><a href="developer-reference.html" class="nav-cta">Dev Reference →</a></li>
-  </ul>
-</nav>
+    <!-- Nav -->
+    <nav>
+        <a href="#" class="logo">sch<span>eng</span></a>
+        <ul>
+            <li><a href="#what">What is it</a></li>
+            <li><a href="#io">I/O</a></li>
+            <li><a href="#templates">Templates</a></li>
+            <li><a href="#quality">Quality</a></li>
+            <li><a href="#distribution">Ship It</a></li>
+            <li><a href="sdk-reference.html" class="nav-cta">SDK Reference →</a></li>
+        </ul>
+    </nav>
 
-<!-- Hero -->
-<div class="hero wrap">
-  <div class="hero-eyebrow">GPU-Accelerated Video Synthesis</div>
-  <h1>
-    <span class="line1">Build video</span>
-    <span class="line2">instruments</span>
-    <span class="line3">in Rust.</span>
-  </h1>
-  <p class="hero-sub">
-    scheng is an open SDK for creating real-time shader instruments — live mixers, processors, and generators — with professional video I/O built in.
-  </p>
-  <div class="hero-actions">
-    <a href="#templates" class="btn-primary">Explore Templates</a>
-    <a href="sdk-reference.html" class="btn-secondary">SDK Reference →</a>
-  </div>
-
-  <!-- Signal chain diagram -->
-  <div class="signal-chain">
-    <div class="chain-title">// signal flow</div>
-    <div class="chain-row">
-      <div class="chain-node input">Syphon In</div>
-      <div class="chain-arrow">──</div>
-      <div class="chain-node input">NDI In</div>
-      <div class="chain-arrow">──</div>
-      <div class="chain-node input">Webcam</div>
-      <div class="chain-arrow">──</div>
-      <div class="chain-node input">Video File</div>
-      <div class="chain-arrow">──▶</div>
-      <div class="chain-node process">GPU Shader Graph</div>
-      <div class="chain-arrow">──▶</div>
-      <div class="chain-node output">Syphon Out</div>
-    </div>
-    <div class="chain-row">
-      <div class="chain-node control">MIDI CC</div>
-      <div class="chain-arrow">──</div>
-      <div class="chain-node control">OSC</div>
-      <div class="chain-arrow">──▶</div>
-      <div class="chain-node process">ParamStore</div>
-      <div class="chain-arrow">──▶</div>
-      <div class="chain-node process">Uniforms → Shader</div>
-      <div class="chain-arrow"></div>
-      <div class="chain-node output">NDI Out</div>
-    </div>
-    <div class="chain-row">
-      <div class="chain-node input">RTMP / RTSP</div>
-      <div class="chain-arrow">──▶</div>
-      <div class="chain-node process">Hot-Reload GLSL</div>
-      <div class="chain-arrow">──▶</div>
-      <div class="chain-node process">Rgba16Float</div>
-      <div class="chain-arrow">──▶</div>
-      <div class="chain-node output">RTMP Stream</div>
-      <div class="chain-arrow">──</div>
-      <div class="chain-node output">Record MP4</div>
-    </div>
-  </div>
-
-  <!-- Stats -->
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-num">16-bit</div>
-      <div class="stat-label">Float precision</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">4K</div>
-      <div class="stat-label">Resolution support</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">4×</div>
-      <div class="stat-label">MSAA anti-aliasing</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">0ms</div>
-      <div class="stat-label">Shader reload lag</div>
-    </div>
-  </div>
-</div>
-
-<hr class="divider">
-
-<!-- What is it -->
-<section id="what" class="wrap">
-  <div class="section-label">What is scheng</div>
-  <h2>A toolkit for<br>video artists.</h2>
-  <p class="section-intro">
-    scheng lets you write real-time video instruments in Rust with the full power of GPU shaders — and wire them to your existing video ecosystem in minutes.
-  </p>
-
-  <div class="use-cases">
-    <div class="use-card">
-      <span class="use-icon">🎛</span>
-      <h3>Live Performance</h3>
-      <p>Build MIDI-controlled video mixers and effects that respond to your hardware controllers in real time. T-bars, faders, buttons — all wired to GPU shader parameters.</p>
-      <span class="use-tag">MIDI · OSC · Live</span>
-    </div>
-    <div class="use-card">
-      <span class="use-icon">📹</span>
-      <h3>Video Processing</h3>
-      <p>Process webcam and video file inputs through custom GLSL shaders. Solarize, colorgrade, distort, composite — with hot-reload so you see changes instantly.</p>
-      <span class="use-tag">Webcam · Video · GLSL</span>
-    </div>
-    <div class="use-card">
-      <span class="use-icon">📡</span>
-      <h3>Broadcast & Stream</h3>
-      <p>Push your rendered output to Syphon, NDI, RTMP (YouTube, Twitch, OBS), or RTSP. Record to ProRes or H.264. Professional colorspace throughout.</p>
-      <span class="use-tag">RTMP · Syphon · NDI</span>
-    </div>
-    <div class="use-card">
-      <span class="use-icon">🏗</span>
-      <h3>SDK Integration</h3>
-      <p>Use scheng as a library in your own Rust application. The graph-based architecture composes cleanly — add nodes, connect edges, run your render loop.</p>
-      <span class="use-tag">Rust · API · Embed</span>
-    </div>
-    <div class="use-card">
-      <span class="use-icon">🎨</span>
-      <h3>Generative Art</h3>
-      <p>Write animated GLSL shaders with hot-reload. No restart, no recompile wait. Write, save, see — iterate at the speed of thought.</p>
-      <span class="use-tag">GLSL · Hot-reload</span>
-    </div>
-    <div class="use-card">
-      <span class="use-icon">🔌</span>
-      <h3>System Integration</h3>
-      <p>Receive Syphon or NDI from Resolume, VDMX, TouchDesigner. Output back. scheng fits into any professional video signal chain.</p>
-      <span class="use-tag">Syphon · NDI · VJ Tools</span>
-    </div>
-  </div>
-</section>
-
-<hr class="divider">
-
-<!-- Pipeline -->
-<section class="wrap">
-  <div class="section-label">How it works</div>
-  <h2>Every frame,<br>six steps.</h2>
-  <p class="section-intro">
-    scheng's render loop is deterministic and non-blocking. Inputs never stall the GPU. Outputs never stall the render loop.
-  </p>
-
-  <div class="pipeline">
-    <div class="pipeline-steps">
-      <div class="pipe-step">
-        <div class="pipe-num">01</div>
-        <div class="pipe-name">Poll Inputs</div>
-        <div class="pipe-desc">Webcam, video, NDI, Syphon — upload latest frame to GPU texture</div>
-      </div>
-      <div class="pipe-step">
-        <div class="pipe-num">02</div>
-        <div class="pipe-name">Step Params</div>
-        <div class="pipe-desc">Smooth MIDI/OSC targets toward values — silky control response</div>
-      </div>
-      <div class="pipe-step">
-        <div class="pipe-num">03</div>
-        <div class="pipe-name">Build Configs</div>
-        <div class="pipe-desc">Shader source, uniforms, and textures assembled per node</div>
-      </div>
-      <div class="pipe-step">
-        <div class="pipe-num">04</div>
-        <div class="pipe-name">Render Graph</div>
-        <div class="pipe-desc">One GPU pass per node — Rgba16Float precision throughout</div>
-      </div>
-      <div class="pipe-step">
-        <div class="pipe-num">05</div>
-        <div class="pipe-name">Submit GPU</div>
-        <div class="pipe-desc">All commands batched and submitted as one encoder</div>
-      </div>
-      <div class="pipe-step">
-        <div class="pipe-num">06</div>
-        <div class="pipe-name">Present Output</div>
-        <div class="pipe-desc">Preview, Syphon, NDI, RTMP — simultaneously if needed</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="divider">
-
-<!-- I/O -->
-<section id="io" class="wrap">
-  <div class="section-label">Inputs & Outputs</div>
-  <h2>Everything<br>connects.</h2>
-  <p class="section-intro">
-    scheng speaks the protocols of the professional video world out of the box.
-  </p>
-
-  <div class="io-grid">
-    <div class="io-col">
-      <div class="io-col-title inputs">// Inputs</div>
-      <div class="io-item">
-        <div class="io-dot cyan"></div>
-        <div>
-          <div class="io-item-name">Syphon Receive</div>
-          <div class="io-item-desc">Receive from Resolume, OBS, VDMX, TouchDesigner on macOS</div>
+    <!-- Hero -->
+    <div class="hero wrap">
+        <div class="hero-eyebrow">GPU-Accelerated Video Synthesis</div>
+        <h1>
+            <span class="line1">Build video</span>
+            <span class="line2">instruments</span>
+            <span class="line3">in Rust.</span>
+        </h1>
+        <p class="hero-sub">
+            scheng is an open SDK for creating real-time shader instruments — live mixers, processors, and generators — with professional video I/O built in.
+        </p>
+        <div class="hero-actions">
+            <a href="#templates" class="btn-primary">Explore Templates</a>
+            <a href="sdk-reference.html" class="btn-secondary">SDK Reference →</a>
         </div>
-      </div>
-      <div class="io-item">
-        <div class="io-dot cyan"></div>
-        <div>
-          <div class="io-item-name">NDI Receive</div>
-          <div class="io-item-desc">Receive from any NDI source on the network</div>
+
+        <!-- Signal chain diagram -->
+        <div class="signal-chain">
+            <div class="chain-title">// signal flow</div>
+            <div class="chain-row">
+                <div class="chain-node input">Syphon In</div>
+                <div class="chain-arrow">──</div>
+                <div class="chain-node input">NDI In</div>
+                <div class="chain-arrow">──</div>
+                <div class="chain-node input">Webcam</div>
+                <div class="chain-arrow">──</div>
+                <div class="chain-node input">Video File</div>
+                <div class="chain-arrow">──▶</div>
+                <div class="chain-node process">GPU Shader Graph</div>
+                <div class="chain-arrow">──▶</div>
+                <div class="chain-node output">Syphon Out</div>
+            </div>
+            <div class="chain-row">
+                <div class="chain-node control">MIDI CC</div>
+                <div class="chain-arrow">──</div>
+                <div class="chain-node control">OSC</div>
+                <div class="chain-arrow">──▶</div>
+                <div class="chain-node process">ParamStore</div>
+                <div class="chain-arrow">──▶</div>
+                <div class="chain-node process">Uniforms → Shader</div>
+                <div class="chain-arrow"></div>
+                <div class="chain-node output">NDI Out</div>
+            </div>
+            <div class="chain-row">
+                <div class="chain-node input">RTMP / RTSP</div>
+                <div class="chain-arrow">──▶</div>
+                <div class="chain-node process">Hot-Reload GLSL</div>
+                <div class="chain-arrow">──▶</div>
+                <div class="chain-node process">Rgba16Float</div>
+                <div class="chain-arrow">──▶</div>
+                <div class="chain-node output">RTMP Stream</div>
+                <div class="chain-arrow">──</div>
+                <div class="chain-node output">Record MP4</div>
+            </div>
         </div>
-      </div>
-      <div class="io-item">
-        <div class="io-dot cyan"></div>
-        <div>
-          <div class="io-item-name">Webcam</div>
-          <div class="io-item-desc">Any connected camera — FaceTime HD, USB, virtual cameras</div>
+
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-num">16-bit</div>
+                <div class="stat-label">Float precision</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num">4K</div>
+                <div class="stat-label">Resolution support</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num">4×</div>
+                <div class="stat-label">MSAA anti-aliasing</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num">0ms</div>
+                <div class="stat-label">Shader reload lag</div>
+            </div>
         </div>
-      </div>
-      <div class="io-item">
-        <div class="io-dot cyan"></div>
-        <div>
-          <div class="io-item-name">Video File</div>
-          <div class="io-item-desc">MP4, MOV, AVI, MKV, ProRes — any ffmpeg-readable format, loops</div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- What is it -->
+    <section id="what" class="wrap">
+        <div class="section-label">What is scheng</div>
+        <h2>A toolkit for<br>video artists.</h2>
+        <p class="section-intro">
+            scheng lets you write real-time video instruments in Rust with the full power of GPU shaders — and wire them to your existing video ecosystem in minutes.
+        </p>
+
+        <div class="use-cases">
+            <div class="use-card">
+                <span class="use-icon">🎛</span>
+                <h3>Live Performance</h3>
+                <p>Build MIDI-controlled video mixers and effects that respond to your hardware controllers in real time. T-bars, faders, buttons — all wired to GPU shader parameters.</p>
+                <span class="use-tag">MIDI · OSC · Live</span>
+            </div>
+            <div class="use-card">
+                <span class="use-icon">📹</span>
+                <h3>Video Processing</h3>
+                <p>Process webcam and video file inputs through custom GLSL shaders. Solarize, colorgrade, distort, composite — with hot-reload so you see changes instantly.</p>
+                <span class="use-tag">Webcam · Video · GLSL</span>
+            </div>
+            <div class="use-card">
+                <span class="use-icon">📡</span>
+                <h3>Broadcast & Stream</h3>
+                <p>Push your rendered output to Syphon, NDI, RTMP (YouTube, Twitch, OBS), or RTSP. Record to ProRes or H.264. Professional colorspace throughout.</p>
+                <span class="use-tag">RTMP · Syphon · NDI</span>
+            </div>
+            <div class="use-card">
+                <span class="use-icon">🏗</span>
+                <h3>SDK Integration</h3>
+                <p>Use scheng as a library in your own Rust application. The graph-based architecture composes cleanly — add nodes, connect edges, run your render loop.</p>
+                <span class="use-tag">Rust · API · Embed</span>
+            </div>
+            <div class="use-card">
+                <span class="use-icon">🎨</span>
+                <h3>Generative Art</h3>
+                <p>Write animated GLSL shaders with hot-reload. No restart, no recompile wait. Write, save, see — iterate at the speed of thought.</p>
+                <span class="use-tag">GLSL · Hot-reload</span>
+            </div>
+            <div class="use-card">
+                <span class="use-icon">🔌</span>
+                <h3>System Integration</h3>
+                <p>Receive Syphon or NDI from Resolume, VDMX, TouchDesigner. Output back. scheng fits into any professional video signal chain.</p>
+                <span class="use-tag">Syphon · NDI · VJ Tools</span>
+            </div>
         </div>
-      </div>
-      <div class="io-item">
-        <div class="io-dot cyan"></div>
-        <div>
-          <div class="io-item-name">RTMP / RTSP / SRT</div>
-          <div class="io-item-desc">Pull a live stream as an input texture</div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- Pipeline -->
+    <section class="wrap">
+        <div class="section-label">How it works</div>
+        <h2>Every frame,<br>six steps.</h2>
+        <p class="section-intro">
+            scheng's render loop is deterministic and non-blocking. Inputs never stall the GPU. Outputs never stall the render loop.
+        </p>
+
+        <div class="pipeline">
+            <div class="pipeline-steps">
+                <div class="pipe-step">
+                    <div class="pipe-num">01</div>
+                    <div class="pipe-name">Poll Inputs</div>
+                    <div class="pipe-desc">Webcam, video, NDI, Syphon — upload latest frame to GPU texture</div>
+                </div>
+                <div class="pipe-step">
+                    <div class="pipe-num">02</div>
+                    <div class="pipe-name">Step Params</div>
+                    <div class="pipe-desc">Smooth MIDI/OSC targets toward values — silky control response</div>
+                </div>
+                <div class="pipe-step">
+                    <div class="pipe-num">03</div>
+                    <div class="pipe-name">Build Configs</div>
+                    <div class="pipe-desc">Shader source, uniforms, and textures assembled per node</div>
+                </div>
+                <div class="pipe-step">
+                    <div class="pipe-num">04</div>
+                    <div class="pipe-name">Render Graph</div>
+                    <div class="pipe-desc">One GPU pass per node — Rgba16Float precision throughout</div>
+                </div>
+                <div class="pipe-step">
+                    <div class="pipe-num">05</div>
+                    <div class="pipe-name">Submit GPU</div>
+                    <div class="pipe-desc">All commands batched and submitted as one encoder</div>
+                </div>
+                <div class="pipe-step">
+                    <div class="pipe-num">06</div>
+                    <div class="pipe-name">Present Output</div>
+                    <div class="pipe-desc">Preview, Syphon, NDI, RTMP — simultaneously if needed</div>
+                </div>
+            </div>
         </div>
-      </div>
-      <div class="io-item">
-        <div class="io-dot cyan"></div>
-        <div>
-          <div class="io-item-name">MIDI CC</div>
-          <div class="io-item-desc">Any MIDI controller — maps to shader uniforms with smoothing</div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- I/O -->
+    <section id="io" class="wrap">
+        <div class="section-label">Inputs & Outputs</div>
+        <h2>Everything<br>connects.</h2>
+        <p class="section-intro">
+            scheng speaks the protocols of the professional video world out of the box.
+        </p>
+
+        <div class="io-grid">
+            <div class="io-col">
+                <div class="io-col-title inputs">// Inputs</div>
+                <div class="io-item">
+                    <div class="io-dot cyan"></div>
+                    <div>
+                        <div class="io-item-name">Syphon Receive</div>
+                        <div class="io-item-desc">Receive from Resolume, OBS, VDMX, TouchDesigner on macOS</div>
+                    </div>
+                </div>
+                <div class="io-item">
+                    <div class="io-dot cyan"></div>
+                    <div>
+                        <div class="io-item-name">NDI Receive</div>
+                        <div class="io-item-desc">Receive from any NDI source on the network</div>
+                    </div>
+                </div>
+                <div class="io-item">
+                    <div class="io-dot cyan"></div>
+                    <div>
+                        <div class="io-item-name">Webcam</div>
+                        <div class="io-item-desc">Any connected camera — FaceTime HD, USB, virtual cameras</div>
+                    </div>
+                </div>
+                <div class="io-item">
+                    <div class="io-dot cyan"></div>
+                    <div>
+                        <div class="io-item-name">Video File</div>
+                        <div class="io-item-desc">MP4, MOV, AVI, MKV, ProRes — any ffmpeg-readable format, loops</div>
+                    </div>
+                </div>
+                <div class="io-item">
+                    <div class="io-dot cyan"></div>
+                    <div>
+                        <div class="io-item-name">RTMP / RTSP / SRT</div>
+                        <div class="io-item-desc">Pull a live stream as an input texture</div>
+                    </div>
+                </div>
+                <div class="io-item">
+                    <div class="io-dot cyan"></div>
+                    <div>
+                        <div class="io-item-name">MIDI CC</div>
+                        <div class="io-item-desc">Any MIDI controller — maps to shader uniforms with smoothing</div>
+                    </div>
+                </div>
+                <div class="io-item">
+                    <div class="io-dot cyan"></div>
+                    <div>
+                        <div class="io-item-name">OSC</div>
+                        <div class="io-item-desc">Open Sound Control over UDP — control from any app or hardware</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="io-center">
+                <div class="io-center-node">scheng GPU</div>
+            </div>
+
+            <div class="io-col">
+                <div class="io-col-title outputs">// Outputs</div>
+                <div class="io-item">
+                    <div class="io-dot violet"></div>
+                    <div>
+                        <div class="io-item-name">Syphon Output</div>
+                        <div class="io-item-desc">Zero-copy Metal texture sharing — receive in Resolume, OBS, etc.</div>
+                    </div>
+                </div>
+                <div class="io-item">
+                    <div class="io-dot violet"></div>
+                    <div>
+                        <div class="io-item-name">NDI Output</div>
+                        <div class="io-item-desc">Broadcast over network to any NDI receiver</div>
+                    </div>
+                </div>
+                <div class="io-item">
+                    <div class="io-dot violet"></div>
+                    <div>
+                        <div class="io-item-name">RTMP Stream</div>
+                        <div class="io-item-desc">Push to YouTube, Twitch, OBS ingest, nginx-rtmp</div>
+                    </div>
+                </div>
+                <div class="io-item">
+                    <div class="io-dot violet"></div>
+                    <div>
+                        <div class="io-item-name">RTSP Stream</div>
+                        <div class="io-item-desc">Push to mediamtx, receive in VLC, Resolume, broadcast systems</div>
+                    </div>
+                </div>
+                <div class="io-item">
+                    <div class="io-dot violet"></div>
+                    <div>
+                        <div class="io-item-name">File Recording</div>
+                        <div class="io-item-desc">H.264 or ProRes to disk — non-blocking, never drops frames on render</div>
+                    </div>
+                </div>
+                <div class="io-item">
+                    <div class="io-dot violet"></div>
+                    <div>
+                        <div class="io-item-name">Preview Window</div>
+                        <div class="io-item-desc">Native windowed preview — resize-aware, sRGB color managed</div>
+                    </div>
+                </div>
+                <div class="io-item">
+                    <div class="io-dot violet"></div>
+                    <div>
+                        <div class="io-item-name">Spout (Windows)</div>
+                        <div class="io-item-desc">DirectX texture sharing for Windows video ecosystems</div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-      <div class="io-item">
-        <div class="io-dot cyan"></div>
-        <div>
-          <div class="io-item-name">OSC</div>
-          <div class="io-item-desc">Open Sound Control over UDP — control from any app or hardware</div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- Templates -->
+    <section id="templates" class="wrap">
+        <div class="section-label">Starter Templates</div>
+        <h2>Ready to run<br>in minutes.</h2>
+        <p class="section-intro">
+            Four reference instruments you can clone, run, and build on immediately. Each demonstrates a complete real-world signal chain.
+        </p>
+
+        <div class="templates">
+            <div class="template-card">
+                <h3>scheng-gradient</h3>
+                <p class="desc">The hello world. Opens a window and hot-reloads a GLSL fragment shader. Edit, save, see — zero restart. The perfect starting point for any new instrument.</p>
+                <div class="template-tags">
+                    <span class="tag blue">Hot-reload</span>
+                    <span class="tag blue">GLSL</span>
+                    <span class="tag blue">Minimal</span>
+                </div>
+                <div class="template-cmd">$ cargo run --release -- --msaa 4</div>
+            </div>
+
+            <div class="template-card">
+                <h3>scheng-mixer</h3>
+                <p class="desc">Two Syphon inputs crossfaded by a MIDI T-bar. Outputs to Syphon and preview. Inspired by analog Panasonic/Videonics mixer signal flow — rebuilt in GPU shaders.</p>
+                <div class="template-tags">
+                    <span class="tag cyan">Syphon In/Out</span>
+                    <span class="tag amber">MIDI T-bar</span>
+                    <span class="tag blue">Crossfade</span>
+                </div>
+                <div class="template-cmd">$ cargo run --release -- --syphon-a "Resolume" --syphon-b "OBS"</div>
+            </div>
+
+            <div class="template-card">
+                <h3>scheng-processor</h3>
+                <p class="desc">Webcam input through a live solarize effect. MIDI CC controls threshold and wet/dry mix. Demonstrates the full MIDI → shader uniform pipeline on live video.</p>
+                <div class="template-tags">
+                    <span class="tag cyan">Webcam</span>
+                    <span class="tag amber">MIDI</span>
+                    <span class="tag violet">Syphon Out</span>
+                </div>
+                <div class="template-cmd">$ cargo run --release -- --webcam 1</div>
+            </div>
+
+            <div class="template-card">
+                <h3>scheng-video-mixer</h3>
+                <p class="desc">Two looping video files crossfaded by a MIDI T-bar. Both videos loop automatically. The same T-bar mechanic as the Syphon mixer, but works entirely offline.</p>
+                <div class="template-tags">
+                    <span class="tag cyan">Video Files</span>
+                    <span class="tag amber">MIDI T-bar</span>
+                    <span class="tag violet">Syphon Out</span>
+                </div>
+                <div class="template-cmd">$ cargo run --release -- --video-a a.mp4 --video-b b.mp4</div>
+            </div>
         </div>
-      </div>
-    </div>
+    </section>
 
-    <div class="io-center">
-      <div class="io-center-node">scheng GPU</div>
-    </div>
+    <hr class="divider">
 
-    <div class="io-col">
-      <div class="io-col-title outputs">// Outputs</div>
-      <div class="io-item">
-        <div class="io-dot violet"></div>
-        <div>
-          <div class="io-item-name">Syphon Output</div>
-          <div class="io-item-desc">Zero-copy Metal texture sharing — receive in Resolume, OBS, etc.</div>
+    <!-- Quality -->
+    <section id="quality" class="wrap">
+        <div class="section-label">Quality</div>
+        <h2>Professional grade<br>from the start.</h2>
+        <p class="section-intro">
+            scheng doesn't cut corners on quality. The defaults are chosen for broadcast, not for demos.
+        </p>
+
+        <div class="quality-grid">
+            <div class="quality-item">
+                <h3>Rgba16Float Pipeline</h3>
+                <p>All render targets use 16-bit half-float precision internally. Multiple shader passes accumulate zero quantization error — no banding, ever.</p>
+                <span class="quality-spec">65536 values/channel vs 256 (8-bit)</span>
+            </div>
+            <div class="quality-item">
+                <h3>bt.709 Colorspace</h3>
+                <p>All FFmpeg output is tagged with Rec.709 metadata. Players, broadcast systems, and streaming platforms interpret colors correctly without manual configuration.</p>
+                <span class="quality-spec">-colorspace bt709 -color_trc bt709</span>
+            </div>
+            <div class="quality-item">
+                <h3>MSAA Anti-Aliasing</h3>
+                <p>4x MSAA available via a single flag. The pipeline infrastructure handles MSAA texture allocation and resolve automatically per frame.</p>
+                <span class="quality-spec">--msaa 4 — Metal/DX12/Vulkan</span>
+            </div>
+            <div class="quality-item">
+                <h3>Non-Blocking Architecture</h3>
+                <p>MIDI, video decode, and FFmpeg output run on dedicated threads. The render loop never waits — when the system is overloaded, frames drop gracefully.</p>
+                <span class="quality-spec">Bounded channels, try_send semantics</span>
+            </div>
+            <div class="quality-item">
+                <h3>4K & Beyond</h3>
+                <p>Render resolution is a runtime parameter. Switch from 720p to 4K between frames with automatic render target reallocation.</p>
+                <span class="quality-spec">--width 3840 --height 2160</span>
+            </div>
+            <div class="quality-item">
+                <h3>Zero-Copy Syphon</h3>
+                <p>Syphon output shares the Metal texture directly — no CPU readback, no copy. On Apple Silicon, this is effectively zero-latency texture sharing.</p>
+                <span class="quality-spec">Metal texture sharing — M1/M2</span>
+            </div>
         </div>
-      </div>
-      <div class="io-item">
-        <div class="io-dot violet"></div>
-        <div>
-          <div class="io-item-name">NDI Output</div>
-          <div class="io-item-desc">Broadcast over network to any NDI receiver</div>
+    </section>
+
+
+    <hr class="divider">
+
+    <!-- Distribution -->
+    <section id="distribution" class="wrap">
+        <div class="section-label">Distribution</div>
+        <h2>Ship your instrument.</h2>
+        <p class="section-intro">
+            A compiled scheng instrument is a native binary. Packaging it for each platform is straightforward — but each has its own requirements.
+        </p>
+
+        <div class="use-cases">
+            <div class="use-card">
+                <span class="use-icon"></span>
+                <h3>macOS — .app Bundle</h3>
+                <p>Package as a double-clickable <code>.app</code> bundle. Bundle <code>Syphon.framework</code> inside <code>Contents/Frameworks/</code>, fix rpaths with <code>install_name_tool</code>, then code sign and notarize with your Apple Developer
+                    certificate for Gatekeeper-free distribution.</p>
+                <span class="use-tag">codesign · notarytool · DMG</span>
+            </div>
+            <div class="use-card">
+                <span class="use-icon">🪟</span>
+                <h3>Windows — Folder + ZIP</h3>
+                <p>Ship as a folder containing the <code>.exe</code> and required DLLs. NDI instruments need <code>Processing.NDI.Lib.x64.dll</code> alongside the binary. ffmpeg must be available in PATH on the target machine.</p>
+                <span class="use-tag">DLL bundle · Inno Setup · Zip</span>
+            </div>
+            <div class="use-card">
+                <span class="use-icon">🐧</span>
+                <h3>Linux — AppImage</h3>
+                <p>Bundle as an AppImage for maximum compatibility across distributions. No installation required — a single executable file runs on any modern Linux with Vulkan drivers. Requires users to have a Vulkan-capable GPU.</p>
+                <span class="use-tag">AppImage · Tarball · Vulkan</span>
+            </div>
         </div>
-      </div>
-      <div class="io-item">
-        <div class="io-dot violet"></div>
-        <div>
-          <div class="io-item-name">RTMP Stream</div>
-          <div class="io-item-desc">Push to YouTube, Twitch, OBS ingest, nginx-rtmp</div>
+
+        <div class="signal-chain" style="margin-top:40px;">
+            <div class="chain-title">// recommended: hybrid asset loading</div>
+            <div class="chain-row">
+                <div class="chain-node process">include_str!() embedded fallback</div>
+                <div class="chain-arrow">+</div>
+                <div class="chain-node input">filesystem override at runtime</div>
+                <div class="chain-arrow">→</div>
+                <div class="chain-node output">hot-reload in dev, self-contained in prod</div>
+            </div>
         </div>
-      </div>
-      <div class="io-item">
-        <div class="io-dot violet"></div>
-        <div>
-          <div class="io-item-name">RTSP Stream</div>
-          <div class="io-item-desc">Push to mediamtx, receive in VLC, Resolume, broadcast systems</div>
+
+        <div style="margin-top:32px;">
+            <a href="sdk-reference.html#dist-overview" class="btn-secondary">Full packaging guide →</a>
         </div>
-      </div>
-      <div class="io-item">
-        <div class="io-dot violet"></div>
-        <div>
-          <div class="io-item-name">File Recording</div>
-          <div class="io-item-desc">H.264 or ProRes to disk — non-blocking, never drops frames on render</div>
+    </section>
+
+    <!-- CTA -->
+    <hr class="divider">
+
+    <section class="cta-section wrap">
+        <h2>Start building.</h2>
+        <p>Clone a template, run cargo build, and you're rendering on the GPU in under 5 minutes.</p>
+        <div class="hero-actions" style="justify-content:center">
+            <a href="sdk-reference.html" class="btn-primary">SDK Reference</a>
+            <a href="architecture.html" class="btn-secondary">Architecture Diagrams →</a>
         </div>
-      </div>
-      <div class="io-item">
-        <div class="io-dot violet"></div>
-        <div>
-          <div class="io-item-name">Preview Window</div>
-          <div class="io-item-desc">Native windowed preview — resize-aware, sRGB color managed</div>
-        </div>
-      </div>
-      <div class="io-item">
-        <div class="io-dot violet"></div>
-        <div>
-          <div class="io-item-name">Spout (Windows)</div>
-          <div class="io-item-desc">DirectX texture sharing for Windows video ecosystems</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+    </section>
 
-<hr class="divider">
+    <hr class="divider">
 
-<!-- Templates -->
-<section id="templates" class="wrap">
-  <div class="section-label">Starter Templates</div>
-  <h2>Ready to run<br>in minutes.</h2>
-  <p class="section-intro">
-    Four reference instruments you can clone, run, and build on immediately. Each demonstrates a complete real-world signal chain.
-  </p>
-
-  <div class="templates">
-    <div class="template-card">
-      <h3>scheng-gradient</h3>
-      <p class="desc">The hello world. Opens a window and hot-reloads a GLSL fragment shader. Edit, save, see — zero restart. The perfect starting point for any new instrument.</p>
-      <div class="template-tags">
-        <span class="tag blue">Hot-reload</span>
-        <span class="tag blue">GLSL</span>
-        <span class="tag blue">Minimal</span>
-      </div>
-      <div class="template-cmd">$ cargo run --release -- --msaa 4</div>
-    </div>
-
-    <div class="template-card">
-      <h3>scheng-mixer</h3>
-      <p class="desc">Two Syphon inputs crossfaded by a MIDI T-bar. Outputs to Syphon and preview. Inspired by analog Panasonic/Videonics mixer signal flow — rebuilt in GPU shaders.</p>
-      <div class="template-tags">
-        <span class="tag cyan">Syphon In/Out</span>
-        <span class="tag amber">MIDI T-bar</span>
-        <span class="tag blue">Crossfade</span>
-      </div>
-      <div class="template-cmd">$ cargo run --release -- --syphon-a "Resolume" --syphon-b "OBS"</div>
-    </div>
-
-    <div class="template-card">
-      <h3>scheng-processor</h3>
-      <p class="desc">Webcam input through a live solarize effect. MIDI CC controls threshold and wet/dry mix. Demonstrates the full MIDI → shader uniform pipeline on live video.</p>
-      <div class="template-tags">
-        <span class="tag cyan">Webcam</span>
-        <span class="tag amber">MIDI</span>
-        <span class="tag violet">Syphon Out</span>
-      </div>
-      <div class="template-cmd">$ cargo run --release -- --webcam 1</div>
-    </div>
-
-    <div class="template-card">
-      <h3>scheng-video-mixer</h3>
-      <p class="desc">Two looping video files crossfaded by a MIDI T-bar. Both videos loop automatically. The same T-bar mechanic as the Syphon mixer, but works entirely offline.</p>
-      <div class="template-tags">
-        <span class="tag cyan">Video Files</span>
-        <span class="tag amber">MIDI T-bar</span>
-        <span class="tag violet">Syphon Out</span>
-      </div>
-      <div class="template-cmd">$ cargo run --release -- --video-a a.mp4 --video-b b.mp4</div>
-    </div>
-  </div>
-</section>
-
-<hr class="divider">
-
-<!-- Quality -->
-<section id="quality" class="wrap">
-  <div class="section-label">Quality</div>
-  <h2>Professional grade<br>from the start.</h2>
-  <p class="section-intro">
-    scheng doesn't cut corners on quality. The defaults are chosen for broadcast, not for demos.
-  </p>
-
-  <div class="quality-grid">
-    <div class="quality-item">
-      <h3>Rgba16Float Pipeline</h3>
-      <p>All render targets use 16-bit half-float precision internally. Multiple shader passes accumulate zero quantization error — no banding, ever.</p>
-      <span class="quality-spec">65536 values/channel vs 256 (8-bit)</span>
-    </div>
-    <div class="quality-item">
-      <h3>bt.709 Colorspace</h3>
-      <p>All FFmpeg output is tagged with Rec.709 metadata. Players, broadcast systems, and streaming platforms interpret colors correctly without manual configuration.</p>
-      <span class="quality-spec">-colorspace bt709 -color_trc bt709</span>
-    </div>
-    <div class="quality-item">
-      <h3>MSAA Anti-Aliasing</h3>
-      <p>4x MSAA available via a single flag. The pipeline infrastructure handles MSAA texture allocation and resolve automatically per frame.</p>
-      <span class="quality-spec">--msaa 4 — Metal/DX12/Vulkan</span>
-    </div>
-    <div class="quality-item">
-      <h3>Non-Blocking Architecture</h3>
-      <p>MIDI, video decode, and FFmpeg output run on dedicated threads. The render loop never waits — when the system is overloaded, frames drop gracefully.</p>
-      <span class="quality-spec">Bounded channels, try_send semantics</span>
-    </div>
-    <div class="quality-item">
-      <h3>4K & Beyond</h3>
-      <p>Render resolution is a runtime parameter. Switch from 720p to 4K between frames with automatic render target reallocation.</p>
-      <span class="quality-spec">--width 3840 --height 2160</span>
-    </div>
-    <div class="quality-item">
-      <h3>Zero-Copy Syphon</h3>
-      <p>Syphon output shares the Metal texture directly — no CPU readback, no copy. On Apple Silicon, this is effectively zero-latency texture sharing.</p>
-      <span class="quality-spec">Metal texture sharing — M1/M2</span>
-    </div>
-  </div>
-</section>
-
-
-<hr class="divider">
-
-<!-- Distribution -->
-<section id="distribution" class="wrap">
-  <div class="section-label">Distribution</div>
-  <h2>Ship your instrument.</h2>
-  <p class="section-intro">
-    A compiled scheng instrument is a native binary. Packaging it for each platform is straightforward — but each has its own requirements.
-  </p>
-
-  <div class="use-cases">
-    <div class="use-card">
-      <span class="use-icon"></span>
-      <h3>macOS — .app Bundle</h3>
-      <p>Package as a double-clickable <code>.app</code> bundle. Bundle <code>Syphon.framework</code> inside <code>Contents/Frameworks/</code>, fix rpaths with <code>install_name_tool</code>, then code sign and notarize with your Apple Developer certificate for Gatekeeper-free distribution.</p>
-      <span class="use-tag">codesign · notarytool · DMG</span>
-    </div>
-    <div class="use-card">
-      <span class="use-icon">🪟</span>
-      <h3>Windows — Folder + ZIP</h3>
-      <p>Ship as a folder containing the <code>.exe</code> and required DLLs. NDI instruments need <code>Processing.NDI.Lib.x64.dll</code> alongside the binary. ffmpeg must be available in PATH on the target machine.</p>
-      <span class="use-tag">DLL bundle · Inno Setup · Zip</span>
-    </div>
-    <div class="use-card">
-      <span class="use-icon">🐧</span>
-      <h3>Linux — AppImage</h3>
-      <p>Bundle as an AppImage for maximum compatibility across distributions. No installation required — a single executable file runs on any modern Linux with Vulkan drivers. Requires users to have a Vulkan-capable GPU.</p>
-      <span class="use-tag">AppImage · Tarball · Vulkan</span>
-    </div>
-  </div>
-
-  <div class="signal-chain" style="margin-top:40px;">
-    <div class="chain-title">// recommended: hybrid asset loading</div>
-    <div class="chain-row">
-      <div class="chain-node process">include_str!() embedded fallback</div>
-      <div class="chain-arrow">+</div>
-      <div class="chain-node input">filesystem override at runtime</div>
-      <div class="chain-arrow">→</div>
-      <div class="chain-node output">hot-reload in dev, self-contained in prod</div>
-    </div>
-  </div>
-
-  <div style="margin-top:32px;">
-    <a href="developer-reference.html#dist-overview" class="btn-secondary">Full packaging guide →</a>
-  </div>
-</section>
-
-<!-- CTA -->
-<hr class="divider">
-
-<section class="cta-section wrap">
-  <h2>Start building.</h2>
-  <p>Clone a template, run cargo build, and you're rendering on the GPU in under 5 minutes.</p>
-  <div class="hero-actions" style="justify-content:center">
-    <a href="developer-reference.html" class="btn-primary">Developer Reference</a>
-    <a href="architecture.html" class="btn-secondary">Architecture Diagrams →</a>
-  </div>
-</section>
-
-<hr class="divider">
-
-<footer>
-  <div class="footer-logo">scheng</div>
-  <p>GPU-accelerated video synthesis · v0.1.0 · Built on wgpu · Metal · DX12 · Vulkan</p>
-</footer>
+    <footer>
+        <div class="footer-logo">scheng</div>
+        <p>GPU-accelerated video synthesis · v0.1.0 · Built on wgpu · Metal · DX12 · Vulkan</p>
+    </footer>
 
 </body>
+
 </html>

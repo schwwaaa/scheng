@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Developer Reference — scheng SDK</title>
+<title>SDK Reference — scheng SDK</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet">
 <style>
@@ -304,7 +304,7 @@ hr { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 64px 0;
     <a href="#introduction">Introduction</a>
     <a href="#quickstart">5-Minute Quickstart</a>
     <a href="#core-concepts">Core Concepts</a>
-    <a href="#architecture">Architecture</a>
+    <a href="sdk-diagrams.html">SDK Diagrams</a>
   </div>
 
   <div class="nav-section">
@@ -390,10 +390,9 @@ hr { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 64px 0;
 <!-- ── Main ── -->
 <div class="main">
   <div class="topbar">
-    <span class="topbar-title">Developer Reference</span>
+    <span class="topbar-title">SDK Reference</span>
     <a href="index.html">Home</a>
-    <a href="architecture.html">Diagrams</a>
-    <a href="sdk-reference.html">Quick Ref</a>
+    <a href="sdk-diagrams.html">Diagrams</a>
   </div>
 
   <div class="content">
@@ -401,7 +400,7 @@ hr { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 64px 0;
     <!-- ═══════════════════════════════════════════════ INTRODUCTION -->
     <span class="anchor" id="introduction"></span>
     <div class="page-hero">
-      <div class="eyebrow">Developer Reference</div>
+      <div class="eyebrow">SDK Reference</div>
       <h1>scheng SDK</h1>
       <p class="lead">A Rust SDK for building GPU-accelerated video instruments. Write shader-based processors, mixers, and generators with professional I/O — MIDI, Syphon, NDI, RTMP, webcam, video, and more.</p>
     </div>
@@ -1298,7 +1297,7 @@ codesign --deep --force --sign "Developer ID Application: Your Name (TEAMID)" \
 
 <span class="c"># Notarize (submit to Apple for malware scan)</span>
 xcrun notarytool submit MyInstrument.zip \
-  --apple-id your@email.com \
+  --apple-id <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="98e1f7edead8fdf5f9f1f4b6fbf7f5">[email&#160;protected]</a> \
   --team-id TEAMID \
   --password app-specific-password \
   --wait
@@ -1671,7 +1670,7 @@ cargo test -p scheng-runtime-wgpu --test shader_library</code></pre>
 </div><!-- /main -->
 </div><!-- /layout -->
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // Active sidebar link on scroll
 const anchors = [...document.querySelectorAll('.anchor')];
 const links   = [...document.querySelectorAll('.nav-section a')];
@@ -1679,13 +1678,4 @@ const obs = new IntersectionObserver(entries => {
   entries.forEach(e => {
     if (e.isIntersecting) {
       links.forEach(l => l.classList.remove('active'));
-      const m = document.querySelector(`.nav-section a[href="#${e.target.id}"]`);
-      if (m) m.classList.add('active');
-    }
-  });
-}, { rootMargin: '-15% 0px -75% 0px', threshold: 0 });
-anchors.forEach(a => obs.observe(a));
-</script>
-
-</body>
-</html>
+      const m = document.quer

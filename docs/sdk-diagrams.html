@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDK Diagrams — scheng</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0a0a0f;
+  --paper: #f2f0eb;
+  --electric: #3b82f6;
+  --violet: #8b5cf6;
+  --cyan: #06b6d4;
+  --amber: #f59e0b;
+  --green: #10b981;
+  --red: #ef4444;
+  --grid: rgba(59,130,246,0.055);
+  --mono: 'Space Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+  --sidebar-w: 272px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--ink); color: var(--paper);
+  font-family: var(--sans); font-size: 16px; line-height: 1.75;
+  overflow-x: hidden;
+}
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background-image: linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size: 48px 48px; pointer-events: none; z-index: 0;
+}
+.layout { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: var(--sidebar-w); flex-shrink: 0;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  border-right: 1px solid rgba(255,255,255,0.07);
+  background: rgba(8,8,14,0.95); backdrop-filter: blur(12px);
+  padding: 0 0 40px;
+}
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+.sidebar-head { padding: 28px 24px 24px; border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: 8px; }
+.sidebar-head a { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--electric); text-decoration: none; }
+.sidebar-head a span { color: var(--paper); }
+.sidebar-head .ver { font-family: var(--mono); font-size: 10px; color: rgba(242,240,235,0.25); letter-spacing: 0.15em; margin-top: 4px; }
+.nav-section { padding: 16px 24px 0; }
+.nav-section-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: rgba(242,240,235,0.22); text-transform: uppercase; margin-bottom: 6px; }
+.nav-section a { display: block; font-size: 13px; color: rgba(242,240,235,0.48); text-decoration: none; padding: 4px 0; transition: color 0.15s; font-family: var(--sans); }
+.nav-section a:hover { color: var(--electric); }
+.nav-section a.active { color: var(--electric); font-weight: 500; }
+
+/* ── Main ── */
+.main { flex: 1; min-width: 0; }
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(8,8,14,0.95); backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 0 48px; height: 56px; display: flex; align-items: center; gap: 32px;
+}
+.topbar-title { font-family: var(--mono); font-size: 13px; color: rgba(242,240,235,0.6); margin-right: auto; }
+.topbar a { font-family: var(--mono); font-size: 12px; color: rgba(242,240,235,0.4); text-decoration: none; letter-spacing: 0.05em; transition: color 0.15s; }
+.topbar a:hover { color: var(--electric); }
+.content { padding: 60px 64px 120px; max-width: 1040px; }
+
+/* ── Page hero ── */
+.page-hero { margin-bottom: 64px; padding-bottom: 36px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; color: var(--electric); text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+.eyebrow::before { content: ''; width: 20px; height: 1px; background: var(--electric); }
+.page-hero h1 { font-family: var(--mono); font-size: 40px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; margin-bottom: 16px; }
+.page-hero .lead { font-size: 18px; color: rgba(242,240,235,0.55); max-width: 620px; line-height: 1.6; }
+
+/* ── Diagram blocks ── */
+.diagram-block { margin-bottom: 96px; }
+.diagram-block:last-child { margin-bottom: 0; }
+.diagram-num { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; color: var(--electric); text-transform: uppercase; margin-bottom: 6px; }
+.diagram-block h2 { font-family: var(--mono); font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 12px; color: var(--paper); }
+.diagram-block .intro { font-size: 16px; color: rgba(242,240,235,0.65); max-width: 720px; margin-bottom: 32px; line-height: 1.7; }
+.diagram-box {
+  background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px; padding: 40px; overflow-x: auto; margin-bottom: 32px;
+}
+.diagram-box svg { display: block; }
+
+/* ── Technical notes ── */
+.tech-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+.tech-note {
+  border: 1px solid rgba(255,255,255,0.07); border-radius: 6px;
+  padding: 18px 20px; background: rgba(255,255,255,0.02);
+}
+.tech-note h4 { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--electric); margin-bottom: 6px; letter-spacing: 0.03em; }
+.tech-note p { font-size: 13px; color: rgba(242,240,235,0.52); line-height: 1.6; margin: 0; }
+.tech-note code { font-family: var(--mono); font-size: 11px; background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 2px; color: var(--cyan); }
+
+/* ── Code ── */
+pre {
+  background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.08);
+  border-left: 3px solid var(--electric); border-radius: 6px;
+  padding: 18px 22px; overflow-x: auto; margin: 16px 0;
+}
+pre code { background: none; border: none; padding: 0; font-family: var(--mono); font-size: 12px; color: rgba(242,240,235,0.85); line-height: 1.8; }
+code { font-family: var(--mono); font-size: 13px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 3px; color: var(--cyan); }
+.c  { color: rgba(242,240,235,0.28); }
+.kw { color: var(--violet); }
+.ty { color: var(--cyan); }
+.st { color: var(--amber); }
+.fn { color: var(--electric); }
+.nm { color: var(--green); }
+
+/* ── Callout ── */
+.callout { border-radius: 6px; padding: 14px 18px; margin: 20px 0; font-size: 14px; line-height: 1.6; color: rgba(242,240,235,0.7); border-left: 3px solid; }
+.callout strong { display: block; margin-bottom: 3px; font-size: 12px; font-family: var(--mono); letter-spacing: 0.04em; }
+.callout.info  { background: rgba(59,130,246,0.06);  border-color: var(--electric); }
+.callout.info strong  { color: var(--electric); }
+.callout.warn  { background: rgba(245,158,11,0.06);  border-color: var(--amber); }
+.callout.warn strong  { color: var(--amber); }
+.callout.tip   { background: rgba(16,185,129,0.06);  border-color: var(--green); }
+.callout.tip strong   { color: var(--green); }
+
+/* ── Divider ── */
+hr { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 80px 0; }
+
+/* ── Anchor ── */
+.anchor { display: block; height: 72px; margin-top: -72px; visibility: hidden; }
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .sidebar { width: 220px; }
+  .content { padding: 48px 40px 80px; }
+  .tech-notes { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .content { padding: 32px 24px 80px; }
+  .topbar { padding: 0 24px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ── Sidebar ── -->
+<nav class="sidebar">
+  <div class="sidebar-head">
+    <a href="index.html">sch<span>eng</span></a>
+    <div class="ver">SDK DIAGRAMS · v0.1.0</div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">System</div>
+    <a href="#full-architecture">Full Architecture</a>
+    <a href="#layer-model">Layer Model</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Execution</div>
+    <a href="#frame-lifecycle">Per-Frame Lifecycle</a>
+    <a href="#graph-compile">Graph Compilation</a>
+    <a href="#render-pipeline">Render Pipeline</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Shaders</div>
+    <a href="#shader-compat">Compat Layer</a>
+    <a href="#uniform-binding">Uniform Binding</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Control</div>
+    <a href="#midi-routing">MIDI → Shader</a>
+    <a href="#paramstore-flow">ParamStore Flow</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">I/O</div>
+    <a href="#input-threading">Input Threading</a>
+    <a href="#output-sinks">Output Sinks</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Quality</div>
+    <a href="#texture-formats">Texture Formats</a>
+    <a href="#colorspace">Colorspace Chain</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Distribution</div>
+    <a href="#dist-bundle">Bundle Structure</a>
+    <a href="#asset-resolution">Asset Resolution</a>
+  </div>
+</nav>
+
+<!-- ── Main ── -->
+<div class="main">
+  <div class="topbar">
+    <span class="topbar-title">SDK Diagrams</span>
+    <a href="index.html">Home</a>
+    <a href="sdk-reference.html">SDK Reference</a>
+    <a href="architecture.html">Overview</a>
+  </div>
+
+  <div class="content">
+
+    <div class="page-hero">
+      <div class="eyebrow">SDK Diagrams</div>
+      <h1>Technical Architecture</h1>
+      <p class="lead">Implementation-level diagrams for every layer of the scheng SDK — from graph compilation through GPU execution, shader binding, control routing, texture formats, and distribution packaging.</p>
+    </div>
+
+    <!-- ═══════════════════════════════════ FULL ARCHITECTURE -->
+    <span class="anchor" id="full-architecture"></span>
+    <div class="diagram-block">
+      <div class="diagram-num">// Diagram 01</div>
+      <h2>Full System Architecture</h2>
+      <p class="intro">Every component in a running scheng instrument. Inputs arrive on dedicated threads, control routes through <code>ParamStore</code>, the GPU render graph executes deterministically each frame, and output sinks are called after <code>queue.submit()</code>.</p>
+
+      <div class="diagram-box">
+        <svg width="100%" viewBox="0 0 1000 560" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="a1" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="rgba(59,130,246,0.7)"/></marker>
+            <marker id="a1c" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="rgba(6,182,212,0.8)"/></marker>
+            <marker id="a1v" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="rgba(139,92,246,0.8)"/></marker>
+            <marker id="a1a" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="rgba(245,158,11,0.8)"/></marker>
+          </defs>
+
+          <!-- INPUTS -->
+          <text x="68" y="22" font-family="Space Mono" font-size="9" letter-spacing="3" fill="rgba(6,182,212,0.55)" text-anchor="middle">INPUTS</text>
+          <rect x="10" y="32"  width="116" height="32" rx="3" fill="rgba(6,182,212,0.07)" stroke="rgba(6,182,212,0.35)" stroke-width="1"/>
+          <text x="68" y="53" font-family="Space Mono" font-size="10" font-weight="700" fill="#06b6d4" text-anchor="middle">Syphon In</text>
+          <rect x="10" y="72"  width="116" height="32" rx="3" fill="rgba(6,182,212,0.07)" stroke="rgba(6,182,212,0.35)" stroke-width="1"/>
+          <text x="68" y="93" font-family="Space Mono" font-size="10" font-weight="700" fill="#06b6d4" text-anchor="middle">NDI Receive</text>
+          <rect x="10" y="112" width="116" height="32" rx="3" fill="rgba(6,182,212,0.07)" stroke="rgba(6,182,212,0.35)" stroke-width="1"/>
+          <text x="68" y="133" font-family="Space Mono" font-size="10" font-weight="700" fill="#06b6d4" text-anchor="middle">Webcam</text>
+          <rect x="10" y="152" width="116" height="32" rx="3" fill="rgba(6,182,212,0.07)" stroke="rgba(6,182,212,0.35)" stroke-width="1"/>
+          <text x="68" y="173" font-family="Space Mono" font-size="10" font-weight="700" fill="#06b6d4" text-anchor="middle">Video File</text>
+          <rect x="10" y="192" width="116" height="32" rx="3" fill="rgba(6,182,212,0.07)" stroke="rgba(6,182,212,0.35)" stroke-width="1"/>
+          <text x="68" y="213" font-family="Space Mono" font-size="10" font-weight="700" fill="#06b6d4" text-anchor="middle">RTMP / RTSP</text>
+
+          <!-- input → GPU -->
+          <line x1="126" y1="48"  x2="268" y2="148" stroke="rgba(6,182,212,0.3)" stroke-width="1.2" marker-end="url(#a1c)"/>
+          <line x1="126" y1="88"  x2="268" y2="160" stroke="rgba(6,182,212,0.3)" stroke-width="1.2" marker-end="url(#a1c)"/>
+          <line x1="126" y1="128" x2="268" y2="172" stroke="rgba(6,182,212,0.3)" stroke-width="1.2" marker-end="url(#a1c)"/>
+          <line x1="126" y1="168" x2="268" y2="184" stroke="rgba(6,182,212,0.3)" stroke-width="1.2" marker-end="url(#a1c)"/>
+          <line x1="126" y1="208" x2="268" y2="196" stroke="rgba(6,182,212,0.3)" stroke-width="1.2" marker-end="url(#a1c)"/>
+
+          <!-- CONTROL -->
+          <text x="68" y="306" font-family="Space Mono" font-size="9" letter-spacing="3" fill="rgba(245,158,11,0.55)" text-anchor="middle">CONTROL</text>
+          <rect x="10"  y="316" width="116" height="32" rx="3" fill="rgba(245,158,11,0.07)" stroke="rgba(245,158,11,0.35)" stroke-width="1"/>
+          <text x="68"  y="337" font-family="Space Mono" font-size="10" font-weight="700" fill="#f59e0b" text-anchor="middle">MIDI CC</text>
+          <rect x="10"  y="356" width="116" height="32" rx="3" fill="rgba(245,158,11,0.07)" stroke="rgba(245,158,11,0.35)" stroke-width="1"/>
+          <text x="68"  y="377" font-family="Space Mono" font-size="10" font-weight="700" fill="#f59e0b" text-anchor="middle">OSC</text>
+
+          <!-- ParamStore -->
+          <rect x="148" y="308" width="118" height="90" rx="3" fill="rgba(245,158,11,0.05)" stroke="rgba(245,158,11,0.25)" stroke-width="1"/>
+          <text x="207" y="329" font-family="Space Mono" font-size="10" font-weight="700" fill="#f59e0b" text-anchor="middle">ParamStore</text>
+          <text x="207" y="347" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">targets → values</text>
+          <text x="207" y="363" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">step_frame()</text>
+          <text x="207" y="379" font-family="Space Mono" font-size="9" fill="rgba(6,182,212,0.6)" text-anchor="middle">smooth=0.05</text>
+          <text x="207" y="393" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)" text-anchor="middle">each tick</text>
+
+          <line x1="126" y1="332" x2="146" y2="342" stroke="rgba(245,158,11,0.5)" stroke-width="1.2" marker-end="url(#a1a)"/>
+          <line x1="126" y1="372" x2="146" y2="362" stroke="rgba(245,158,11,0.5)" stroke-width="1.2" marker-end="url(#a1a)"/>
+          <!-- ParamStore → GPU core (dashed uniforms) -->
+          <line x1="266" y1="353" x2="316" y2="302" stroke="rgba(245,158,11,0.35)" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#a1a)"/>
+
+          <!-- GPU CORE -->
+          <rect x="270" y="68" width="570" height="346" rx="7" fill="rgba(59,130,246,0.03)" stroke="rgba(59,130,246,0.2)" stroke-width="1.5"/>
+          <text x="555" y="91" font-family="Space Mono" font-size="9" letter-spacing="3" fill="rgba(59,130,246,0.4)" text-anchor="middle">GPU CORE — WgpuRuntime</text>
+
+          <!-- Hot-Reload -->
+          <rect x="288" y="104" width="150" height="72" rx="3" fill="rgba(16,185,129,0.07)" stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+          <text x="363" y="124" font-family="Space Mono" font-size="10" font-weight="700" fill="#10b981" text-anchor="middle">Hot-Reload</text>
+          <text x="363" y="141" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">AssetWatcher</text>
+          <text x="363" y="157" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">naga GLSL → SPIR-V</text>
+          <text x="363" y="170" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">pipeline cache</text>
+
+          <!-- Shader Graph -->
+          <rect x="288" y="192" width="150" height="100" rx="3" fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.25)" stroke-width="1"/>
+          <text x="363" y="212" font-family="Space Mono" font-size="10" font-weight="700" fill="#3b82f6" text-anchor="middle">Shader Graph</text>
+          <text x="363" y="229" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">NodeConfig / frame</text>
+          <text x="363" y="245" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">uniforms HashMap</text>
+          <text x="363" y="261" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">input_textures[4]</text>
+          <text x="363" y="277" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">iChannel0–3</text>
+
+          <!-- Render Pipeline -->
+          <rect x="458" y="104" width="176" height="188" rx="3" fill="rgba(59,130,246,0.06)" stroke="rgba(59,130,246,0.22)" stroke-width="1"/>
+          <text x="546" y="124" font-family="Space Mono" font-size="10" font-weight="700" fill="#3b82f6" text-anchor="middle">Render Pipeline</text>
+          <text x="546" y="142" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">Rgba16Float targets</text>
+          <text x="546" y="158" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">MSAA 1× / 4× / 8×</text>
+          <text x="546" y="174" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">FrameBlock UBO</text>
+          <text x="546" y="190" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">CustomBlock UBO</text>
+          <text x="546" y="206" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">bind groups / pass</text>
+          <text x="546" y="222" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">topoological order</text>
+          <text x="546" y="238" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">CommandEncoder</text>
+          <text x="546" y="254" font-family="Space Mono" font-size="9" fill="rgba(6,182,212,0.6)" text-anchor="middle">queue.submit()</text>
+          <text x="546" y="270" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)" text-anchor="middle">one batch / frame</text>
+          <text x="546" y="284" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)" text-anchor="middle">Metal / DX12 / Vulkan</text>
+
+          <!-- Output Sinks -->
+          <rect x="654" y="104" width="168" height="188" rx="3" fill="rgba(139,92,246,0.06)" stroke="rgba(139,92,246,0.22)" stroke-width="1"/>
+          <text x="738" y="124" font-family="Space Mono" font-size="10" font-weight="700" fill="#8b5cf6" text-anchor="middle">OutputSinks</text>
+          <text x="738" y="142" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">PreviewSink</text>
+          <text x="738" y="158" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">SyphonSink</text>
+          <text x="738" y="174" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">NdiSink</text>
+          <text x="738" y="190" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">FfmpegSink</text>
+          <text x="738" y="206" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">SpoutSink (Win)</text>
+          <text x="738" y="226" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)" text-anchor="middle">present() called</text>
+          <text x="738" y="242" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)" text-anchor="middle">after submit()</text>
+          <text x="738" y="258" font-family="Space Mono" font-size="9" fill="rgba(6,182,212,0.6)" text-anchor="middle">non-blocking</text>
+          <text x="738" y="274" font-family="Space Mono" font-size="9" fill="rgba(6,182,212,0.6)" text-anchor="middle">drop-safe channels</text>
+          <text x="738" y="290" font-family="Space Mono" font-size="9" fill="rgba(16,185,129,0.5)" text-anchor="middle">trait OutputSink</text>
+
+          <!-- inner arrows -->
+          <line x1="438" y1="192" x2="456" y2="192" stroke="rgba(59,130,246,0.4)" stroke-width="1.2" marker-end="url(#a1)"/>
+          <line x1="634" y1="192" x2="652" y2="192" stroke="rgba(59,130,246,0.4)" stroke-width="1.2" marker-end="url(#a1)"/>
+
+          <!-- Frame loop strip -->
+          <rect x="288" y="316" width="534" height="26" rx="3" fill="rgba(59,130,246,0.04)" stroke="rgba(59,130,246,0.1)" stroke-width="1"/>
+          <text x="555" y="333" font-family="Space Mono" font-size="9" letter-spacing="1" fill="rgba(59,130,246,0.4)" text-anchor="middle">about_to_wait() → tick() → execute_frame() → queue.submit() → present()</text>
+
+          <!-- OUTPUTS -->
+          <text x="936" y="22" font-family="Space Mono" font-size="9" letter-spacing="3" fill="rgba(139,92,246,0.55)" text-anchor="middle">OUTPUTS</text>
+          <rect x="876" y="32"  width="116" height="32" rx="3" fill="rgba(139,92,246,0.07)" stroke="rgba(139,92,246,0.35)" stroke-width="1"/>
+          <text x="934" y="53" font-family="Space Mono" font-size="10" font-weight="700" fill="#8b5cf6" text-anchor="middle">Syphon Out</text>
+          <rect x="876" y="72"  width="116" height="32" rx="3" fill="rgba(139,92,246,0.07)" stroke="rgba(139,92,246,0.35)" stroke-width="1"/>
+          <text x="934" y="93" font-family="Space Mono" font-size="10" font-weight="700" fill="#8b5cf6" text-anchor="middle">NDI Out</text>
+          <rect x="876" y="112" width="116" height="32" rx="3" fill="rgba(139,92,246,0.07)" stroke="rgba(139,92,246,0.35)" stroke-width="1"/>
+          <text x="934" y="133" font-family="Space Mono" font-size="10" font-weight="700" fill="#8b5cf6" text-anchor="middle">RTMP Stream</text>
+          <rect x="876" y="152" width="116" height="32" rx="3" fill="rgba(139,92,246,0.07)" stroke="rgba(139,92,246,0.35)" stroke-width="1"/>
+          <text x="934" y="173" font-family="Space Mono" font-size="10" font-weight="700" fill="#8b5cf6" text-anchor="middle">RTSP Stream</text>
+          <rect x="876" y="192" width="116" height="32" rx="3" fill="rgba(139,92,246,0.07)" stroke="rgba(139,92,246,0.35)" stroke-width="1"/>
+          <text x="934" y="213" font-family="Space Mono" font-size="10" font-weight="700" fill="#8b5cf6" text-anchor="middle">Record MP4</text>
+          <rect x="876" y="232" width="116" height="32" rx="3" fill="rgba(139,92,246,0.07)" stroke="rgba(139,92,246,0.35)" stroke-width="1"/>
+          <text x="934" y="253" font-family="Space Mono" font-size="10" font-weight="700" fill="#8b5cf6" text-anchor="middle">Preview Window</text>
+
+          <!-- GPU → outputs -->
+          <line x1="822" y1="170" x2="874" y2="48"  stroke="rgba(139,92,246,0.3)" stroke-width="1.2" marker-end="url(#a1v)"/>
+          <line x1="822" y1="180" x2="874" y2="88"  stroke="rgba(139,92,246,0.3)" stroke-width="1.2" marker-end="url(#a1v)"/>
+          <line x1="822" y1="190" x2="874" y2="128" stroke="rgba(139,92,246,0.3)" stroke-width="1.2" marker-end="url(#a1v)"/>
+          <line x1="822" y1="200" x2="874" y2="168" stroke="rgba(139,92,246,0.3)" stroke-width="1.2" marker-end="url(#a1v)"/>
+          <line x1="822" y1="210" x2="874" y2="208" stroke="rgba(139,92,246,0.3)" stroke-width="1.2" marker-end="url(#a1v)"/>
+          <line x1="822" y1="220" x2="874" y2="248" stroke="rgba(139,92,246,0.3)" stroke-width="1.2" marker-end="url(#a1v)"/>
+
+          <!-- Legend -->
+          <rect x="10"  y="496" width="10" height="10" rx="2" fill="rgba(6,182,212,0.25)"   stroke="rgba(6,182,212,0.5)"   stroke-width="1"/>
+          <text x="26"  y="505" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)">Texture inputs (dedicated threads)</text>
+          <rect x="240" y="496" width="10" height="10" rx="2" fill="rgba(245,158,11,0.25)"  stroke="rgba(245,158,11,0.5)"  stroke-width="1"/>
+          <text x="256" y="505" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)">Control → ParamStore</text>
+          <rect x="430" y="496" width="10" height="10" rx="2" fill="rgba(59,130,246,0.25)"  stroke="rgba(59,130,246,0.5)"  stroke-width="1"/>
+          <text x="446" y="505" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)">GPU execution (render thread)</text>
+          <rect x="650" y="496" width="10" height="10" rx="2" fill="rgba(139,92,246,0.25)"  stroke="rgba(139,92,246,0.5)"  stroke-width="1"/>
+          <text x="666" y="505" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)">Output sinks (post-submit)</text>
+        </svg>
+      </div>
+
+      <div class="tech-notes">
+        <div class="tech-note">
+          <h4>Non-blocking I/O</h4>
+          <p>All input sources (webcam, video, NDI, Syphon, RTMP) run on dedicated threads and communicate via bounded channels. The GPU render thread never blocks waiting for input — when a source falls behind, frames drop gracefully using <code>try_send</code> semantics.</p>
+        </div>
+        <div class="tech-note">
+          <h4>Single CommandEncoder per frame</h4>
+          <p>All node render passes are encoded into one <code>CommandEncoder</code> and submitted as a single batch via <code>queue.submit()</code>. Output sinks are only called after submission — never before. This is the most common source of all-black output bugs.</p>
+        </div>
+        <div class="tech-note">
+          <h4>ParamStore is threadsafe</h4>
+          <p>Wrapped in <code>Arc&lt;Mutex&lt;ParamStore&gt;&gt;</code>. MIDI callbacks and OSC threads write targets from their threads. The render thread calls <code>step_frame()</code> and reads smoothed values. The mutex is held briefly — never across a frame boundary.</p>
+        </div>
+        <div class="tech-note">
+          <h4>Engine vs. instrument boundary</h4>
+          <p>Everything inside the GPU Core box is the engine. Everything outside — graph construction, time, MIDI, device management — belongs to the instrument. The engine does not own time, parse protocols, or manage hardware.</p>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════ LAYER MODEL -->
+    <span class="anchor" id="layer-model"></span>
+    <div class="diagram-block">
+      <div class="diagram-num">// Diagram 02</div>
+      <h2>Layer Model & Crate Boundaries</h2>
+      <p class="intro">scheng is organized into five isolated layers. No layer reaches backward across a boundary. This isolation is the primary guarantee of deterministic execution and long-term SDK stability.</p>
+
+      <div class="diagram-box">
+        <svg width="100%" viewBox="0 0 960 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Layer 1 -->
+          <rect x="0"   y="0"   width="960" height="64" rx="5" fill="rgba(6,182,212,0.06)"  stroke="rgba(6,182,212,0.22)"  stroke-width="1.5"/>
+          <text x="24"  y="22"  font-family="Space Mono" font-size="9" letter-spacing="2" fill="rgba(6,182,212,0.55)">LAYER 01</text>
+          <text x="24"  y="42"  font-family="Space Mono" font-size="14" font-weight="700" fill="#06b6d4">Instrument</text>
+          <text x="190" y="42"  font-family="Space Mono" font-size="11" fill="rgba(242,240,235,0.45)">Owns: graph construction · time · MIDI/OSC parsing · device management · output routing</text>
+          <text x="24"  y="57"  font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.28)">your application — wraps the engine, defines the instrument</text>
+          <!-- Layer 2 -->
+          <rect x="0"   y="72"  width="960" height="64" rx="5" fill="rgba(59,130,246,0.06)" stroke="rgba(59,130,246,0.2)"  stroke-width="1.5"/>
+          <text x="24"  y="94"  font-family="Space Mono" font-size="9" letter-spacing="2" fill="rgba(59,130,246,0.55)">LAYER 02</text>
+          <text x="24"  y="114" font-family="Space Mono" font-size="14" font-weight="700" fill="#3b82f6">scheng-graph</text>
+          <text x="190" y="114" font-family="Space Mono" font-size="11" fill="rgba(242,240,235,0.45)">Owns: node topology · port definitions · connection validation · compile() → ExecutionPlan</text>
+          <text x="24"  y="129" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.28)">No GPU. No behavior. Topology only. Static after compile().</text>
+          <!-- Layer 3 -->
+          <rect x="0"   y="144" width="960" height="64" rx="5" fill="rgba(59,130,246,0.06)" stroke="rgba(59,130,246,0.2)"  stroke-width="1.5"/>
+          <text x="24"  y="166" font-family="Space Mono" font-size="9" letter-spacing="2" fill="rgba(59,130,246,0.55)">LAYER 03</text>
+          <text x="24"  y="186" font-family="Space Mono" font-size="14" font-weight="700" fill="#3b82f6">scheng-runtime-wgpu</text>
+          <text x="280" y="186" font-family="Space Mono" font-size="11" fill="rgba(242,240,235,0.45)">Owns: execute_frame() · render targets · pipeline cache · compat layer · CustomBlock</text>
+          <text x="24"  y="201" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.28)">Deterministic executor. Does not own time, topology, or control protocols.</text>
+          <!-- Layer 4 -->
+          <rect x="0"   y="216" width="960" height="64" rx="5" fill="rgba(245,158,11,0.05)" stroke="rgba(245,158,11,0.18)" stroke-width="1.5"/>
+          <text x="24"  y="238" font-family="Space Mono" font-size="9" letter-spacing="2" fill="rgba(245,158,11,0.55)">LAYER 04</text>
+          <text x="24"  y="258" font-family="Space Mono" font-size="14" font-weight="700" fill="#f59e0b">scheng-param-store</text>
+          <text x="260" y="258" font-family="Space Mono" font-size="11" fill="rgba(242,240,235,0.45)">Owns: ParamStore · ParamSchema · smoothing · MIDI CC index · OSC address index</text>
+          <text x="24"  y="273" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.28)">Control bridge. Maps external signals to NodeConfig.uniforms. No protocol parsing.</text>
+          <!-- Layer 5 -->
+          <rect x="0"   y="288" width="960" height="64" rx="5" fill="rgba(139,92,246,0.05)" stroke="rgba(139,92,246,0.18)" stroke-width="1.5"/>
+          <text x="24"  y="310" font-family="Space Mono" font-size="9" letter-spacing="2" fill="rgba(139,92,246,0.55)">LAYER 05</text>
+          <text x="24"  y="330" font-family="Space Mono" font-size="14" font-weight="700" fill="#8b5cf6">I/O Crates (edge)</text>
+          <text x="200" y="330" font-family="Space Mono" font-size="11" fill="rgba(242,240,235,0.45)">Owns: device polling · texture upload · OutputSink impl · protocol-specific code</text>
+          <text x="24"  y="345" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.28)">scheng-input-* · scheng-output-* — evolve independently without breaking core guarantees.</text>
+
+          <!-- Downward arrows between layers -->
+          <line x1="480" y1="64"  x2="480" y2="72"  stroke="rgba(59,130,246,0.25)" stroke-width="1" stroke-dasharray="3,2"/>
+          <line x1="480" y1="136" x2="480" y2="144" stroke="rgba(59,130,246,0.25)" stroke-width="1" stroke-dasharray="3,2"/>
+          <line x1="480" y1="208" x2="480" y2="216" stroke="rgba(59,130,246,0.25)" stroke-width="1" stroke-dasharray="3,2"/>
+          <line x1="480" y1="280" x2="480" y2="288" stroke="rgba(59,130,246,0.25)" stroke-width="1" stroke-dasharray="3,2"/>
+        </svg>
+      </div>
+
+      <div class="callout info">
+        <strong>ARCHITECTURAL RULE</strong>
+        No layer reaches backward. Topology (scheng-graph) never calls the runtime. The runtime never parses MIDI. I/O crates never mutate graph topology. All interaction is explicit and flows downward through the layer stack.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════ FRAME LIFECYCLE -->
+    <span class="anchor" id="frame-lifecycle"></span>
+    <div class="diagram-block">
+      <div class="diagram-num">// Diagram 03</div>
+      <h2>Per-Frame Execution Lifecycle</h2>
+      <p class="intro">Every frame executes in exactly this sequence. The hot path avoids allocation, shader recompilation, and blocking I/O. GPU commands are batched into a single <code>CommandEncoder</code> and submitted once.</p>
+
+      <div class="diagram-box">
+        <svg width="100%" viewBox="0 0 960 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs><marker id="a3" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#3b82f6"/></marker></defs>
+
+          <!-- Steps -->
+          <rect x="0"   y="30" width="132" height="104" rx="4" fill="rgba(6,182,212,0.07)"  stroke="rgba(6,182,212,0.3)"  stroke-width="1.5"/>
+          <text x="66"  y="52"  font-family="Space Mono" font-size="9"  fill="rgba(6,182,212,0.7)" text-anchor="middle" letter-spacing="1">01</text>
+          <text x="66"  y="70"  font-family="Space Mono" font-size="11" font-weight="700" fill="#06b6d4" text-anchor="middle">Poll Inputs</text>
+          <text x="66"  y="88"  font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.4)" text-anchor="middle">webcam.poll()</text>
+          <text x="66"  y="103" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.4)" text-anchor="middle">vid.upload_frame()</text>
+          <text x="66"  y="118" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.4)" text-anchor="middle">syphon.poll()</text>
+          <text x="66"  y="133" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.28)" text-anchor="middle">→ Arc&lt;Texture&gt;</text>
+
+          <line x1="132" y1="82" x2="148" y2="82" stroke="rgba(59,130,246,0.5)" stroke-width="1.5" marker-end="url(#a3)"/>
+
+          <rect x="152" y="30" width="132" height="104" rx="4" fill="rgba(245,158,11,0.07)" stroke="rgba(245,158,11,0.3)"  stroke-width="1.5"/>
+          <text x="218" y="52"  font-family="Space Mono" font-size="9"  fill="rgba(245,158,11,0.7)" text-anchor="middle" letter-spacing="1">02</text>
+          <text x="218" y="70"  font-family="Space Mono" font-size="11" font-weight="700" fill="#f59e0b" text-anchor="middle">Step Params</text>
+          <text x="218" y="88"  font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.4)" text-anchor="middle">store.step_frame()</text>
+          <text x="218" y="103" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.4)" text-anchor="middle">targets → values</text>
+          <text x="218" y="118" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.4)" text-anchor="middle">smooth each param</text>
+          <text x="218" y="133" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.28)" text-anchor="middle">u_tbar, u_mix …</text>
+
+          <line x1="284" y1="82" x2="300" y2="82" stroke="rgba(59,130,246,0.5)" stroke-width="1.5" marker-end="url(#a3)"/>
+
+          <rect x="304" y="30" width="132" height="104" rx="4" fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.3)"  stroke-width="1.5"/>
+          <text x="370" y="52"  font-family="Space Mono" font-size="9"  fill="rgba(59,130,246,0.7)" text-anchor="middle" letter-spacing="1">03</text>
+          <text x="370" y="70"  font-family="Space Mono" font-size="11" font-weight="700" fill="#3b82f6" text-anchor="middle">Build Configs</text>
+          <text x="370" y="88"  font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.4)" text-anchor="middle">NodeConfig / node</text>
+          <text x="370" y="103" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.4)" text-anchor="middle">frag_shader src</text>
+          <text x="370" y="118" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.4)" text-anchor="middle">uniforms HashMap</text>
+          <text x="370" y="133" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.28)" text-anchor="middle">input_textures[4]</text>
+
+          <line x1="436" y1="82" x2="452" y2="82" stroke="rgba(59,130,246,0.5)" stroke-width="1.5" marker-end="url(#a3)"/>
+
+          <rect x="456" y="30" width="132" height="104" rx="4" fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.3)"  stroke-width="1.5"/>
+          <text x="522" y="52"  font-family="Space Mono" font-size="9"  fill="rgba(59,130,246,0.7)" text-anchor="middle" letter-spacing="1">04</text>
+          <text x="522" y="70"  font-family="Space Mono" font-size="11" font-weight="700" fill="#3b82f6" text-anchor="middle">GPU Render</text>
+          <text x="522" y="88"  font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.4)" text-anchor="middle">topo sort order</text>
+          <text x="522" y="103" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.4)" text-anchor="middle">RenderPass/node</text>
+          <text x="522" y="118" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.4)" text-anchor="middle">Rgba16Float target</text>
+          <text x="522" y="133" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.28)" text-anchor="middle">MSAA if active</text>
+
+          <line x1="588" y1="82" x2="604" y2="82" stroke="rgba(59,130,246,0.5)" stroke-width="1.5" marker-end="url(#a3)"/>
+
+          <rect x="608" y="30" width="132" height="104" rx="4" fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.3)"  stroke-width="1.5"/>
+          <text x="674" y="52"  font-family="Space Mono" font-size="9"  fill="rgba(59,130,246,0.7)" text-anchor="middle" letter-spacing="1">05</text>
+          <text x="674" y="70"  font-family="Space Mono" font-size="11" font-weight="700" fill="#3b82f6" text-anchor="middle">Submit</text>
+          <text x="674" y="88"  font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.4)" text-anchor="middle">queue.submit()</text>
+          <text x="674" y="103" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.4)" text-anchor="middle">one batch</text>
+          <text x="674" y="118" font-family="Space Mono" font-size="9"  fill="rgba(6,182,212,0.6)"  text-anchor="middle">GPU executes async</text>
+          <text x="674" y="133" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.28)" text-anchor="middle">CPU continues</text>
+
+          <line x1="740" y1="82" x2="756" y2="82" stroke="rgba(59,130,246,0.5)" stroke-width="1.5" marker-end="url(#a3)"/>
+
+          <rect x="760" y="30" width="200" height="104" rx="4" fill="rgba(139,92,246,0.07)" stroke="rgba(139,92,246,0.3)" stroke-width="1.5"/>
+          <text x="860" y="52"  font-family="Space Mono" font-size="9"  fill="rgba(139,92,246,0.7)" text-anchor="middle" letter-spacing="1">06</text>
+          <text x="860" y="70"  font-family="Space Mono" font-size="11" font-weight="700" fill="#8b5cf6" text-anchor="middle">Present Sinks</text>
+          <text x="860" y="88"  font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.4)" text-anchor="middle">sink.present()</text>
+          <text x="860" y="103" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.4)" text-anchor="middle">preview blit · Syphon</text>
+          <text x="860" y="118" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.4)" text-anchor="middle">NDI push · ffmpeg pipe</text>
+          <text x="860" y="133" font-family="Space Mono" font-size="9"  fill="rgba(16,185,129,0.6)"  text-anchor="middle">all after submit() ✓</text>
+
+          <text x="480" y="168" font-family="Space Mono" font-size="9" fill="rgba(59,130,246,0.3)" text-anchor="middle" letter-spacing="1">hot path — no allocation · no blocking I/O · no shader recompilation</text>
+        </svg>
+      </div>
+
+      <div class="callout warn">
+        <strong>CRITICAL ORDER — submit before present</strong>
+        <code>queue.submit()</code> must be called before any sink's <code>present()</code>. Calling <code>present()</code> before submission reads from a render target that hasn't been written yet — all pixels will be black or from the previous frame. <code>execute_frame()</code> enforces this order automatically.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════ SHADER COMPAT -->
+    <span class="anchor" id="shader-compat"></span>
+    <div class="diagram-block">
+      <div class="diagram-num">// Diagram 04</div>
+      <h2>Shader Compat Layer</h2>
+      <p class="intro">The compat layer processes your raw GLSL 330 source before GPU compilation. It strips standard uniform declarations (injecting them via UBO instead), rewrites <code>iChannel</code> sampler references, and collects custom <code>u_*</code> uniforms for the <code>CustomBlock</code>.</p>
+
+      <div class="diagram-box">
+        <svg width="100%" viewBox="0 0 960 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs><marker id="a4" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="rgba(59,130,246,0.6)"/></marker></defs>
+
+          <!-- User source -->
+          <rect x="0" y="20" width="220" height="260" rx="4" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+          <text x="110" y="42" font-family="Space Mono" font-size="10" font-weight="700" fill="rgba(242,240,235,0.5)" text-anchor="middle">User GLSL Source</text>
+          <text x="16" y="65"  font-family="Space Mono" font-size="10" fill="rgba(139,92,246,0.7)">#version 330 core</text>
+          <text x="16" y="83"  font-family="Space Mono" font-size="10" fill="rgba(239,68,68,0.6)">uniform float uTime;       ← strip</text>
+          <text x="16" y="101" font-family="Space Mono" font-size="10" fill="rgba(239,68,68,0.6)">uniform vec2 uResolution;  ← strip</text>
+          <text x="16" y="119" font-family="Space Mono" font-size="10" fill="rgba(239,68,68,0.6)">uniform sampler2D iChannel0; ← strip</text>
+          <text x="16" y="140" font-family="Space Mono" font-size="10" fill="rgba(245,158,11,0.8)">uniform float u_tbar;      ← collect</text>
+          <text x="16" y="158" font-family="Space Mono" font-size="10" fill="rgba(245,158,11,0.8)">uniform float u_mix;       ← collect</text>
+          <text x="16" y="180" font-family="Space Mono" font-size="10" fill="rgba(242,240,235,0.4)">void main() {</text>
+          <text x="16" y="198" font-family="Space Mono" font-size="10" fill="rgba(6,182,212,0.7)">  vec4 a = texture(iChannel0,</text>
+          <text x="16" y="214" font-family="Space Mono" font-size="10" fill="rgba(6,182,212,0.7)">                   v_uv);  ← rewrite</text>
+          <text x="16" y="232" font-family="Space Mono" font-size="10" fill="rgba(242,240,235,0.4)">  fragColor = mix(a, b,</text>
+          <text x="16" y="250" font-family="Space Mono" font-size="10" fill="rgba(242,240,235,0.4)">               u_tbar);</text>
+          <text x="16" y="268" font-family="Space Mono" font-size="10" fill="rgba(242,240,235,0.4)">}</text>
+
+          <!-- Arrow -->
+          <line x1="220" y1="150" x2="254" y2="150" stroke="rgba(59,130,246,0.5)" stroke-width="1.5" marker-end="url(#a4)"/>
+          <text x="237" y="144" font-family="Space Mono" font-size="8" fill="rgba(59,130,246,0.4)" text-anchor="middle">process()</text>
+
+          <!-- Compat operations -->
+          <rect x="258" y="20" width="198" height="260" rx="4" fill="rgba(59,130,246,0.05)" stroke="rgba(59,130,246,0.2)" stroke-width="1"/>
+          <text x="357" y="42" font-family="Space Mono" font-size="10" font-weight="700" fill="#3b82f6" text-anchor="middle">Compat Operations</text>
+          <text x="274" y="68"  font-family="Space Mono" font-size="9" fill="rgba(239,68,68,0.7)">1. Strip #version</text>
+          <text x="274" y="88"  font-family="Space Mono" font-size="9" fill="rgba(239,68,68,0.7)">2. Strip std uniforms</text>
+          <text x="274" y="104" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.3)">   uTime / uResolution</text>
+          <text x="274" y="120" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.3)">   uFrame / iChannelN</text>
+          <text x="274" y="144" font-family="Space Mono" font-size="9" fill="rgba(245,158,11,0.7)">3. Collect u_* names</text>
+          <text x="274" y="160" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.3)">   → custom_uniform_names</text>
+          <text x="274" y="176" font-family="Space Mono" font-size="9" fill="rgba(245,158,11,0.7)">4. Strip u_* declarations</text>
+          <text x="274" y="196" font-family="Space Mono" font-size="9" fill="rgba(6,182,212,0.7)">5. Rewrite iChannelN</text>
+          <text x="274" y="212" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.3)">   → sampler2D(tex, samp)</text>
+          <text x="274" y="232" font-family="Space Mono" font-size="9" fill="rgba(16,185,129,0.7)">6. Inject COMPAT_HEADER</text>
+          <text x="274" y="248" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.3)">   FrameBlock + CustomBlock</text>
+          <text x="274" y="268" font-family="Space Mono" font-size="9" fill="rgba(16,185,129,0.7)">7. Prepend + user body</text>
+
+          <!-- Arrow -->
+          <line x1="456" y1="150" x2="490" y2="150" stroke="rgba(59,130,246,0.5)" stroke-width="1.5" marker-end="url(#a4)"/>
+
+          <!-- Processed output -->
+          <rect x="494" y="20" width="234" height="260" rx="4" fill="rgba(16,185,129,0.04)" stroke="rgba(16,185,129,0.2)" stroke-width="1"/>
+          <text x="611" y="42" font-family="Space Mono" font-size="10" font-weight="700" fill="#10b981" text-anchor="middle">Processed GLSL</text>
+          <text x="510" y="65"  font-family="Space Mono" font-size="9" fill="rgba(139,92,246,0.6)">#version 450 core</text>
+          <text x="510" y="83"  font-family="Space Mono" font-size="9" fill="rgba(59,130,246,0.6)">layout(binding=5) uniform FrameBlock {</text>
+          <text x="510" y="99"  font-family="Space Mono" font-size="9" fill="rgba(59,130,246,0.5)">  vec2 uResolution; float uTime;</text>
+          <text x="510" y="115" font-family="Space Mono" font-size="9" fill="rgba(59,130,246,0.5)">  uint uFrame; };</text>
+          <text x="510" y="135" font-family="Space Mono" font-size="9" fill="rgba(245,158,11,0.7)">layout(binding=6) uniform CustomBlock {</text>
+          <text x="510" y="151" font-family="Space Mono" font-size="9" fill="rgba(245,158,11,0.6)">  float u_tbar;</text>
+          <text x="510" y="167" font-family="Space Mono" font-size="9" fill="rgba(245,158,11,0.6)">  float u_mix; };</text>
+          <text x="510" y="187" font-family="Space Mono" font-size="9" fill="rgba(6,182,212,0.6)">// iChannel0–3 samplers injected</text>
+          <text x="510" y="207" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.4)">void main() {</text>
+          <text x="510" y="223" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.4)">  vec4 a = texture(</text>
+          <text x="510" y="239" font-family="Space Mono" font-size="9" fill="rgba(6,182,212,0.6)">    sampler2D(iChannel0_tex,</text>
+          <text x="510" y="255" font-family="Space Mono" font-size="9" fill="rgba(6,182,212,0.6)">             iSampler), v_uv);</text>
+          <text x="510" y="275" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.4)">  fragColor = mix(a,b,u_tbar); }</text>
+
+          <!-- Arrow to naga -->
+          <line x1="728" y1="150" x2="762" y2="150" stroke="rgba(59,130,246,0.5)" stroke-width="1.5" marker-end="url(#a4)"/>
+          <text x="745" y="144" font-family="Space Mono" font-size="8" fill="rgba(59,130,246,0.4)" text-anchor="middle">naga</text>
+
+          <!-- SPIR-V -->
+          <rect x="766" y="80" width="190" height="140" rx="4" fill="rgba(139,92,246,0.05)" stroke="rgba(139,92,246,0.2)" stroke-width="1"/>
+          <text x="861" y="102" font-family="Space Mono" font-size="10" font-weight="700" fill="#8b5cf6" text-anchor="middle">SPIR-V / MSL</text>
+          <text x="861" y="124" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.35)" text-anchor="middle">compiled shader module</text>
+          <text x="861" y="144" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.35)" text-anchor="middle">cached by hash</text>
+          <text x="861" y="164" font-family="Space Mono" font-size="9"  fill="rgba(16,185,129,0.5)"  text-anchor="middle">lazy — first use only</text>
+          <text x="861" y="184" font-family="Space Mono" font-size="9"  fill="rgba(16,185,129,0.5)"  text-anchor="middle">recompile on src change</text>
+          <text x="861" y="204" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.28)" text-anchor="middle">Metal / DX12 / Vulkan</text>
+        </svg>
+      </div>
+
+      <div class="tech-notes">
+        <div class="tech-note">
+          <h4>Binding layout</h4>
+          <p>Binding 0–3: <code>iChannel0–3</code> texture views. Binding 4: <code>iSampler</code>. Binding 5: <code>FrameBlock</code> UBO (uResolution, uTime, uFrame). Binding 6: <code>CustomBlock</code> UBO (all <code>u_*</code> uniforms in declaration order).</p>
+        </div>
+        <div class="tech-note">
+          <h4>Pipeline cache key</h4>
+          <p>Pipelines are cached by <code>(shader_source_hash, sample_count)</code>. Changing <code>NodeConfig.frag_shader</code> invalidates the cache for that node. MSAA level changes also recompile. All other NodeConfig changes are free — no GPU work.</p>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════ MIDI ROUTING -->
+    <span class="anchor" id="midi-routing"></span>
+    <div class="diagram-block">
+      <div class="diagram-num">// Diagram 05</div>
+      <h2>MIDI → ParamStore → Shader</h2>
+      <p class="intro">The complete data path from a physical MIDI controller to a GPU uniform value. Three separate threads, two handoffs, one smoother.</p>
+
+      <div class="diagram-box">
+        <svg width="100%" viewBox="0 0 960 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs><marker id="a5" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="rgba(245,158,11,0.8)"/></marker></defs>
+
+          <!-- Thread labels -->
+          <text x="130" y="16" font-family="Space Mono" font-size="9" fill="rgba(245,158,11,0.35)" letter-spacing="1" text-anchor="middle">MIDI THREAD</text>
+          <text x="490" y="16" font-family="Space Mono" font-size="9" fill="rgba(59,130,246,0.35)" letter-spacing="1" text-anchor="middle">RENDER THREAD — every tick</text>
+          <line x1="260" y1="10" x2="260" y2="190" stroke="rgba(255,255,255,0.05)" stroke-width="1" stroke-dasharray="4,3"/>
+
+          <!-- MIDI controller -->
+          <rect x="0"   y="36" width="116" height="72" rx="4" fill="rgba(245,158,11,0.07)" stroke="rgba(245,158,11,0.3)" stroke-width="1"/>
+          <text x="58"  y="60"  font-family="Space Mono" font-size="10" font-weight="700" fill="#f59e0b" text-anchor="middle">MIDI Controller</text>
+          <text x="58"  y="78"  font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.38)" text-anchor="middle">CC1 = 64</text>
+          <text x="58"  y="96"  font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.28)" text-anchor="middle">any hardware</text>
+
+          <line x1="116" y1="72" x2="134" y2="72" stroke="rgba(245,158,11,0.6)" stroke-width="1.5" marker-end="url(#a5)"/>
+
+          <!-- midir callback -->
+          <rect x="138" y="36" width="118" height="72" rx="4" fill="rgba(245,158,11,0.05)" stroke="rgba(245,158,11,0.22)" stroke-width="1"/>
+          <text x="197" y="60"  font-family="Space Mono" font-size="10" font-weight="700" fill="#f59e0b" text-anchor="middle">midir callback</text>
+          <text x="197" y="78"  font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.38)" text-anchor="middle">msg[0]=0xB0</text>
+          <text x="197" y="94"  font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.38)" text-anchor="middle">cc=1 val=64</text>
+
+          <line x1="256" y1="72" x2="274" y2="72" stroke="rgba(245,158,11,0.6)" stroke-width="1.5" marker-end="url(#a5)"/>
+          <text x="265" y="66" font-family="Space Mono" font-size="8" fill="rgba(245,158,11,0.35)" text-anchor="middle">lock()</text>
+
+          <!-- ParamStore -->
+          <rect x="278" y="24" width="154" height="120" rx="4" fill="rgba(245,158,11,0.05)" stroke="rgba(245,158,11,0.25)" stroke-width="1.5"/>
+          <text x="355" y="46"  font-family="Space Mono" font-size="10" font-weight="700" fill="#f59e0b" text-anchor="middle">ParamStore</text>
+          <text x="355" y="64"  font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.38)" text-anchor="middle">set_by_midi_cc(1, 64)</text>
+          <text x="355" y="80"  font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.38)" text-anchor="middle">targets["u_tbar"]=0.5</text>
+          <text x="355" y="100" font-family="Space Mono" font-size="9"  fill="rgba(6,182,212,0.6)"   text-anchor="middle">step_frame() / tick</text>
+          <text x="355" y="116" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.38)" text-anchor="middle">val += (target-val)</text>
+          <text x="355" y="132" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.38)" text-anchor="middle">    * (1 - smooth)</text>
+
+          <line x1="432" y1="84" x2="450" y2="84" stroke="rgba(245,158,11,0.6)" stroke-width="1.5" marker-end="url(#a5)"/>
+
+          <!-- NodeConfig -->
+          <rect x="454" y="36" width="154" height="72" rx="4" fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.25)" stroke-width="1"/>
+          <text x="531" y="58"  font-family="Space Mono" font-size="10" font-weight="700" fill="#3b82f6" text-anchor="middle">NodeConfig</text>
+          <text x="531" y="76"  font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.38)" text-anchor="middle">uniforms["u_tbar"]</text>
+          <text x="531" y="92"  font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.38)" text-anchor="middle">= store.get("u_tbar")</text>
+
+          <line x1="608" y1="72" x2="626" y2="72" stroke="rgba(59,130,246,0.5)" stroke-width="1.5" marker-end="url(#a5)"/>
+
+          <!-- CustomBlock GPU -->
+          <rect x="630" y="36" width="154" height="72" rx="4" fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.25)" stroke-width="1"/>
+          <text x="707" y="58"  font-family="Space Mono" font-size="10" font-weight="700" fill="#3b82f6" text-anchor="middle">CustomBlock GPU</text>
+          <text x="707" y="76"  font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.38)" text-anchor="middle">binding 6 UBO</text>
+          <text x="707" y="92"  font-family="Space Mono" font-size="9"  fill="rgba(245,158,11,0.6)"  text-anchor="middle">float u_tbar = 0.502</text>
+
+          <line x1="784" y1="72" x2="802" y2="72" stroke="rgba(16,185,129,0.6)" stroke-width="1.5" marker-end="url(#a5)"/>
+
+          <!-- Shader -->
+          <rect x="806" y="24" width="150" height="120" rx="4" fill="rgba(16,185,129,0.06)" stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+          <text x="881" y="46"  font-family="Space Mono" font-size="10" font-weight="700" fill="#10b981" text-anchor="middle">GLSL Shader</text>
+          <text x="881" y="64"  font-family="Space Mono" font-size="9"  fill="rgba(245,158,11,0.6)"  text-anchor="middle">uniform float u_tbar;</text>
+          <text x="881" y="84"  font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.38)" text-anchor="middle">void main() {</text>
+          <text x="881" y="100" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.38)" text-anchor="middle">  mix(a, b, u_tbar)</text>
+          <text x="881" y="116" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.38)" text-anchor="middle">}</text>
+          <text x="881" y="136" font-family="Space Mono" font-size="9"  fill="rgba(16,185,129,0.5)"  text-anchor="middle">per-pixel GPU</text>
+
+          <text x="480" y="178" font-family="Space Mono" font-size="9" fill="rgba(59,130,246,0.3)" text-anchor="middle" letter-spacing="1">smooth=0.05 → reaches target in ~20 frames at 30fps — silky fader response, no stepping artifacts</text>
+        </svg>
+      </div>
+
+      <div class="callout warn">
+        <strong>STEP_FRAME() IS MANDATORY</strong>
+        <code>set_by_midi_cc()</code> writes to <code>targets</code>. <code>get()</code> reads from <code>values</code>. They are different HashMaps. The smoother only advances <code>values</code> toward <code>targets</code> when <code>step_frame()</code> is called. Without it, MIDI input appears to have no effect.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════ TEXTURE FORMATS -->
+    <span class="anchor" id="texture-formats"></span>
+    <div class="diagram-block">
+      <div class="diagram-num">// Diagram 06</div>
+      <h2>Texture Formats & Precision</h2>
+      <p class="intro">Input textures arrive as 8-bit. Internal render targets use 16-bit half-float. FFmpeg output converts back to 8-bit YUV with bt.709 color tagging. Each stage has a specific format for a specific reason.</p>
+
+      <div class="diagram-box">
+        <svg width="100%" viewBox="0 0 960 230" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs><marker id="a6" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="rgba(59,130,246,0.6)"/></marker></defs>
+
+          <!-- Row 1 labels -->
+          <text x="0" y="18" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)" letter-spacing="1">STAGE</text>
+          <text x="220" y="18" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)" letter-spacing="1">FORMAT</text>
+          <text x="400" y="18" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)" letter-spacing="1">PRECISION</text>
+          <text x="570" y="18" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)" letter-spacing="1">WHY</text>
+
+          <!-- Rows -->
+          <!-- Input sources -->
+          <rect x="0"   y="26" width="200" height="36" rx="3" fill="rgba(6,182,212,0.07)"  stroke="rgba(6,182,212,0.2)"  stroke-width="1"/>
+          <text x="100" y="49" font-family="Space Mono" font-size="10" font-weight="700" fill="#06b6d4" text-anchor="middle">Webcam / Video / NDI</text>
+          <rect x="210" y="26" width="170" height="36" rx="3" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+          <text x="295" y="49" font-family="Space Mono" font-size="10" fill="rgba(242,240,235,0.55)" text-anchor="middle">Rgba8Unorm</text>
+          <rect x="390" y="26" width="160" height="36" rx="3" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+          <text x="470" y="43" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.45)" text-anchor="middle">256 values/channel</text>
+          <text x="470" y="57" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)" text-anchor="middle">8-bit per channel</text>
+          <text x="570" y="43" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.45)">Hardware delivers 8-bit.</text>
+          <text x="570" y="57" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)">No benefit to 16-bit here.</text>
+
+          <!-- GPU render targets -->
+          <rect x="0"   y="72" width="200" height="36" rx="3" fill="rgba(59,130,246,0.07)"  stroke="rgba(59,130,246,0.25)" stroke-width="1.5"/>
+          <text x="100" y="95" font-family="Space Mono" font-size="10" font-weight="700" fill="#3b82f6" text-anchor="middle">GPU Render Targets</text>
+          <rect x="210" y="72" width="170" height="36" rx="3" fill="rgba(59,130,246,0.07)"  stroke="rgba(59,130,246,0.2)"  stroke-width="1.5"/>
+          <text x="295" y="95" font-family="Space Mono" font-size="10" fill="#3b82f6" text-anchor="middle">Rgba16Float</text>
+          <rect x="390" y="72" width="160" height="36" rx="3" fill="rgba(59,130,246,0.07)"  stroke="rgba(59,130,246,0.2)"  stroke-width="1.5"/>
+          <text x="470" y="89" font-family="Space Mono" font-size="9" fill="#3b82f6" text-anchor="middle">65,536 values/channel</text>
+          <text x="470" y="103" font-family="Space Mono" font-size="9" fill="rgba(59,130,246,0.5)" text-anchor="middle">16-bit half-float</text>
+          <text x="570" y="89" font-family="Space Mono" font-size="9" fill="rgba(59,130,246,0.7)">Eliminates quantization</text>
+          <text x="570" y="103" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)">banding across passes.</text>
+
+          <!-- Syphon input -->
+          <rect x="0"   y="118" width="200" height="36" rx="3" fill="rgba(6,182,212,0.05)"  stroke="rgba(6,182,212,0.15)" stroke-width="1"/>
+          <text x="100" y="141" font-family="Space Mono" font-size="10" font-weight="700" fill="rgba(6,182,212,0.7)" text-anchor="middle">Syphon Input (macOS)</text>
+          <rect x="210" y="118" width="170" height="36" rx="3" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+          <text x="295" y="141" font-family="Space Mono" font-size="10" fill="rgba(242,240,235,0.55)" text-anchor="middle">Rgba8Unorm</text>
+          <rect x="390" y="118" width="160" height="36" rx="3" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+          <text x="470" y="135" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.45)" text-anchor="middle">8-bit after BGRA→RGBA</text>
+          <text x="470" y="149" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)" text-anchor="middle">swap in Metal bridge</text>
+          <text x="570" y="135" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.45)">getBytes copies from Metal.</text>
+          <text x="570" y="149" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)">Channel swap is CPU-side.</text>
+
+          <!-- FFmpeg output -->
+          <rect x="0"   y="164" width="200" height="36" rx="3" fill="rgba(16,185,129,0.07)"  stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+          <text x="100" y="187" font-family="Space Mono" font-size="10" font-weight="700" fill="#10b981" text-anchor="middle">FFmpeg Output</text>
+          <rect x="210" y="164" width="170" height="36" rx="3" fill="rgba(16,185,129,0.05)"  stroke="rgba(16,185,129,0.2)"  stroke-width="1"/>
+          <text x="295" y="181" font-family="Space Mono" font-size="10" fill="#10b981" text-anchor="middle">YUV420P bt.709</text>
+          <text x="295" y="195" font-family="Space Mono" font-size="9" fill="rgba(16,185,129,0.5)" text-anchor="middle">f16→u8 in readback</text>
+          <rect x="390" y="164" width="160" height="36" rx="3" fill="rgba(16,185,129,0.05)"  stroke="rgba(16,185,129,0.2)"  stroke-width="1"/>
+          <text x="470" y="181" font-family="Space Mono" font-size="9" fill="rgba(16,185,129,0.7)" text-anchor="middle">8-bit YUV broadcast std</text>
+          <text x="470" y="195" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)" text-anchor="middle">color_range tv</text>
+          <text x="570" y="181" font-family="Space Mono" font-size="9" fill="rgba(16,185,129,0.7)">H.264 requires YUV420P.</text>
+          <text x="570" y="195" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)">bt.709 prevents SD shift.</text>
+
+          <!-- Preview -->
+          <rect x="0"   y="210" width="200" height="20" rx="3" fill="rgba(139,92,246,0.05)"  stroke="rgba(139,92,246,0.18)" stroke-width="1"/>
+          <text x="100" y="224" font-family="Space Mono" font-size="9" font-weight="700" fill="rgba(139,92,246,0.7)" text-anchor="middle">Preview Window</text>
+          <text x="295" y="224" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">sRGB surface (auto)</text>
+          <text x="470" y="224" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.35)" text-anchor="middle">display native</text>
+          <text x="570" y="224" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)">wgpu selects for display hardware.</text>
+        </svg>
+      </div>
+
+      <pre><code><span class="c">// From executor.rs — bt.709 FFmpeg flags applied automatically</span>
+<span class="st">"-colorspace"</span>, <span class="st">"bt709"</span>,
+<span class="st">"-color_primaries"</span>, <span class="st">"bt709"</span>,
+<span class="st">"-color_trc"</span>, <span class="st">"bt709"</span>,
+<span class="st">"-color_range"</span>, <span class="st">"tv"</span></code></pre>
+    </div>
+
+    <hr>
+
+    <!-- ═══════════════════════════════════ DIST BUNDLE -->
+    <span class="anchor" id="dist-bundle"></span>
+    <div class="diagram-block">
+      <div class="diagram-num">// Diagram 07</div>
+      <h2>Distribution Bundle Structure</h2>
+      <p class="intro">A scheng instrument compiles to a native binary. Each platform requires a different packaging format. The binary, framework/DLL dependencies, and shader assets must all be co-located so the instrument finds them at runtime without environment variables.</p>
+
+      <div class="diagram-box">
+        <svg width="100%" viewBox="0 0 960 430" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="a7" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="rgba(59,130,246,0.6)"/></marker>
+          </defs>
+
+          <!-- cargo build -->
+          <rect x="330" y="0" width="300" height="44" rx="5" fill="rgba(59,130,246,0.07)" stroke="rgba(59,130,246,0.3)" stroke-width="1.5"/>
+          <text x="480" y="17" font-family="Space Mono" font-size="11" font-weight="700" fill="#3b82f6" text-anchor="middle">cargo build --release</text>
+          <text x="480" y="34" font-family="Space Mono" font-size="9"  fill="rgba(242,240,235,0.38)" text-anchor="middle">target/release/my-instrument[.exe]</text>
+
+          <!-- branch lines -->
+          <line x1="480" y1="44"  x2="480" y2="60"  stroke="rgba(59,130,246,0.4)" stroke-width="1.5"/>
+          <line x1="152" y1="60"  x2="808" y2="60"  stroke="rgba(59,130,246,0.2)" stroke-width="1"/>
+          <line x1="152" y1="60"  x2="152" y2="76"  stroke="rgba(59,130,246,0.4)" stroke-width="1.5" marker-end="url(#a7)"/>
+          <line x1="480" y1="60"  x2="480" y2="76"  stroke="rgba(59,130,246,0.4)" stroke-width="1.5" marker-end="url(#a7)"/>
+          <line x1="808" y1="60"  x2="808" y2="76"  stroke="rgba(59,130,246,0.4)" stroke-width="1.5" marker-end="url(#a7)"/>
+          <text x="152" y="72"  font-family="Space Mono" font-size="9" fill="rgba(6,182,212,0.5)"   text-anchor="middle">macOS</text>
+          <text x="480" y="72"  font-family="Space Mono" font-size="9" fill="rgba(139,92,246,0.5)" text-anchor="middle">Windows</text>
+          <text x="808" y="72"  font-family="Space Mono" font-size="9" fill="rgba(16,185,129,0.5)"  text-anchor="middle">Linux</text>
+
+          <!-- macOS .app -->
+          <rect x="0"   y="80" width="304" height="220" rx="5" fill="rgba(6,182,212,0.04)"  stroke="rgba(6,182,212,0.22)" stroke-width="1.5"/>
+          <text x="152" y="100" font-family="Space Mono" font-size="11" font-weight="700" fill="#06b6d4" text-anchor="middle">MyInstrument.app/Contents/</text>
+          <rect x="16"  y="108" width="272" height="24" rx="3" fill="rgba(6,182,212,0.06)"  stroke="rgba(6,182,212,0.15)" stroke-width="1"/>
+          <text x="30"  y="125" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.5)">MacOS/my-instrument</text>
+          <text x="242" y="125" font-family="Space Mono" font-size="9" fill="rgba(6,182,212,0.5)">← binary</text>
+          <rect x="16"  y="138" width="272" height="24" rx="3" fill="rgba(245,158,11,0.06)"  stroke="rgba(245,158,11,0.18)" stroke-width="1"/>
+          <text x="30"  y="155" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.5)">Frameworks/Syphon.framework</text>
+          <rect x="16"  y="168" width="272" height="24" rx="3" fill="rgba(245,158,11,0.05)"  stroke="rgba(245,158,11,0.14)" stroke-width="1"/>
+          <text x="30"  y="185" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.42)">Frameworks/libndi.dylib</text>
+          <text x="230" y="185" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)">if NDI</text>
+          <rect x="16"  y="198" width="272" height="24" rx="3" fill="rgba(59,130,246,0.05)"   stroke="rgba(59,130,246,0.15)" stroke-width="1"/>
+          <text x="30"  y="215" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.5)">Resources/assets/shaders/</text>
+
+          <!-- macOS steps -->
+          <text x="16" y="244" font-family="Space Mono" font-size="9" fill="rgba(16,185,129,0.7)">install_name_tool fix rpaths</text>
+          <text x="16" y="260" font-family="Space Mono" font-size="9" fill="rgba(16,185,129,0.7)">codesign --deep "Developer ID..."</text>
+          <text x="16" y="276" font-family="Space Mono" font-size="9" fill="rgba(16,185,129,0.7)">xcrun notarytool submit --wait</text>
+          <text x="16" y="292" font-family="Space Mono" font-size="9" fill="rgba(16,185,129,0.7)">xcrun stapler staple</text>
+
+          <!-- macOS output -->
+          <rect x="56" y="306" width="192" height="28" rx="3" fill="rgba(6,182,212,0.08)" stroke="rgba(6,182,212,0.3)" stroke-width="1"/>
+          <text x="152" y="325" font-family="Space Mono" font-size="10" font-weight="700" fill="#06b6d4" text-anchor="middle">→ MyInstrument.dmg</text>
+
+          <!-- Windows folder -->
+          <rect x="328" y="80" width="304" height="180" rx="5" fill="rgba(139,92,246,0.04)" stroke="rgba(139,92,246,0.22)" stroke-width="1.5"/>
+          <text x="480" y="100" font-family="Space Mono" font-size="11" font-weight="700" fill="#8b5cf6" text-anchor="middle">MyInstrument/ (folder)</text>
+          <rect x="344" y="108" width="272" height="24" rx="3" fill="rgba(139,92,246,0.06)" stroke="rgba(139,92,246,0.15)" stroke-width="1"/>
+          <text x="358" y="125" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.5)">my-instrument.exe</text>
+          <text x="546" y="125" font-family="Space Mono" font-size="9" fill="rgba(139,92,246,0.5)">← binary</text>
+          <rect x="344" y="138" width="272" height="24" rx="3" fill="rgba(245,158,11,0.05)" stroke="rgba(245,158,11,0.18)" stroke-width="1"/>
+          <text x="358" y="155" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.5)">Processing.NDI.Lib.x64.dll</text>
+          <text x="554" y="155" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)">NDI</text>
+          <rect x="344" y="168" width="272" height="24" rx="3" fill="rgba(245,158,11,0.04)" stroke="rgba(245,158,11,0.12)" stroke-width="1"/>
+          <text x="358" y="185" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.42)">Spout.dll</text>
+          <text x="490" y="185" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)">if Spout (coming soon)</text>
+          <rect x="344" y="198" width="272" height="24" rx="3" fill="rgba(59,130,246,0.04)"  stroke="rgba(59,130,246,0.12)" stroke-width="1"/>
+          <text x="358" y="215" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.5)">assets/shaders/</text>
+          <text x="358" y="242" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)">ffmpeg must be in PATH on target</text>
+
+          <!-- Windows output -->
+          <rect x="384" y="268" width="192" height="28" rx="3" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.3)" stroke-width="1"/>
+          <text x="480" y="287" font-family="Space Mono" font-size="10" font-weight="700" fill="#8b5cf6" text-anchor="middle">→ MyInstrument-win.zip</text>
+
+          <!-- Linux AppDir -->
+          <rect x="656" y="80" width="304" height="180" rx="5" fill="rgba(16,185,129,0.04)" stroke="rgba(16,185,129,0.22)" stroke-width="1.5"/>
+          <text x="808" y="100" font-family="Space Mono" font-size="11" font-weight="700" fill="#10b981" text-anchor="middle">MyInstrument.AppDir/</text>
+          <rect x="672" y="108" width="272" height="24" rx="3" fill="rgba(16,185,129,0.06)" stroke="rgba(16,185,129,0.15)" stroke-width="1"/>
+          <text x="686" y="125" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.5)">usr/bin/my-instrument</text>
+          <text x="850" y="125" font-family="Space Mono" font-size="9" fill="rgba(16,185,129,0.5)">← binary</text>
+          <rect x="672" y="138" width="272" height="24" rx="3" fill="rgba(59,130,246,0.04)"  stroke="rgba(59,130,246,0.12)" stroke-width="1"/>
+          <text x="686" y="155" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.5)">usr/bin/assets/shaders/</text>
+          <rect x="672" y="168" width="272" height="24" rx="3" fill="rgba(16,185,129,0.04)"  stroke="rgba(16,185,129,0.12)" stroke-width="1"/>
+          <text x="686" y="185" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.5)">AppRun</text>
+          <text x="780" y="185" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)">← entry point script</text>
+          <rect x="672" y="198" width="272" height="24" rx="3" fill="rgba(239,68,68,0.04)"    stroke="rgba(239,68,68,0.15)"  stroke-width="1"/>
+          <text x="686" y="215" font-family="Space Mono" font-size="9" fill="rgba(239,68,68,0.6)">requires Vulkan driver</text>
+          <text x="686" y="242" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.28)">appimagetool bundles → single exe</text>
+
+          <!-- Linux output -->
+          <rect x="712" y="268" width="192" height="28" rx="3" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.3)" stroke-width="1"/>
+          <text x="808" y="287" font-family="Space Mono" font-size="10" font-weight="700" fill="#10b981" text-anchor="middle">→ my-instrument.AppImage</text>
+
+          <!-- Shared: asset_dir note -->
+          <rect x="0" y="360" width="960" height="56" rx="5" fill="rgba(245,158,11,0.04)" stroke="rgba(245,158,11,0.18)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="480" y="380" font-family="Space Mono" font-size="10" font-weight="700" fill="#f59e0b" text-anchor="middle">All platforms: asset_dir() resolves shaders relative to binary</text>
+          <text x="480" y="398" font-family="Space Mono" font-size="9" fill="rgba(242,240,235,0.38)" text-anchor="middle">macOS: checks Contents/Resources/ first  ·  others: uses binary directory  ·  include_str!() fallback baked into binary</text>
+        </svg>
+      </div>
+
+      <pre><code><span class="c">// Hybrid asset resolution — works in dev AND distributed bundle</span>
+<span class="kw">fn</span> <span class="fn">asset_dir</span>() -> std::path::PathBuf {
+    <span class="kw">let</span> exe = std::env::current_exe().unwrap();
+    <span class="kw">let</span> dir = exe.parent().unwrap();
+    <span class="c">// macOS .app: binary is in Contents/MacOS/, assets in Contents/Resources/</span>
+    <span class="kw">let</span> resources = dir.parent().unwrap().join(<span class="st">"Resources"</span>);
+    <span class="kw">if</span> resources.exists() { resources } <span class="kw">else</span> { dir.to_path_buf() }
+}
+
+<span class="c">// Embedded fallback so the binary always works, even without shader files</span>
+<span class="kw">const</span> MAIN_FRAG: &str = include_str!(<span class="st">"../assets/shaders/main.frag"</span>);
+
+cfg.frag_shader = std::fs::read_to_string(asset_dir().join(<span class="st">"assets/shaders/main.frag"</span>))
+    .ok()
+    .or_else(|| Some(MAIN_FRAG.to_string()));</code></pre>
+    </div>
+
+    <div style="padding:48px 0 0; text-align:center;">
+      <a href="sdk-reference.html" style="font-family:var(--mono);font-size:14px;color:rgba(242,240,235,0.35);text-decoration:none;letter-spacing:0.05em;">← Back to SDK Reference</a>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /layout -->
+
+<script>
+const anchors = [...document.querySelectorAll('.anchor')];
+const links   = [...document.querySelectorAll('.nav-section a')];
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const m = document.querySelector(`.nav-section a[href="#${e.target.id}"]`);
+      if (m) m.classList.add('active');
+    }
+  });
+}, { rootMargin: '-15% 0px -75% 0px', threshold: 0 });
+anchors.forEach(a => obs.observe(a));
+</script>
+
+</body>
+</html>
