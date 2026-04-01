@@ -75,11 +75,22 @@ Initial SDK release. All core I/O primitives, four reference templates, full doc
 
 ## Roadmap
 
+### Near-term
+- **Plugin ecosystem** — `InputSource` and `OutputSink` traits published, plugin contract spec finalized
+- **`scheng-playground`** — interactive multi-shader explorer with keyboard shader switching
+- **SDF template** — signed distance field / vector graphics demonstration
+- **Raymarching template** — 3D via raymarched scenes in fragment shaders, no vertex pipeline required
 - **Spout output (Windows)** — C++ DX texture sharing bridge
+
+### Medium-term
+- **SBC / embedded targets** — Raspberry Pi 4/5 (wgpu Vulkan via Mesa), NVIDIA Jetson (wgpu Vulkan + NDI ARM)
+- **3D vertex pipeline** — extend WgpuRuntime to support mesh-based rendering alongside fullscreen quad
 - **wgpu 24 upgrade** — post-stabilization
 - **Frame interpolation** — RIFE or optical flow between decoded video frames
+
+### Long-term
 - **sRGB/linear colorspace** — correct gamma handling for webcam preview
-- **`scheng-playground`** — interactive multi-shader explorer with keyboard switching
+- **University / education toolkit** — simplified API surface, project templates for creative coding courses
 
 ---
 

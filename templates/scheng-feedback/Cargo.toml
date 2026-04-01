@@ -1,0 +1,20 @@
+[package]
+name        = "scheng-feedback"
+version     = "0.1.0"
+edition     = "2021"
+description = "Temporal feedback with luma key — trails, echo, smear, accumulation"
+
+[dependencies]
+scheng-runtime-wgpu = { path = "../scheng/crates/scheng-runtime-wgpu" }
+scheng-graph        = { path = "../scheng/crates/scheng-graph" }
+scheng-hotreload    = { path = "../scheng/crates/scheng-hotreload" }
+scheng-param-store  = { path = "../scheng/crates/scheng-param-store" }
+
+log        = "0.4"
+env_logger = "0.11"
+winit      = "0.30"
+wgpu       = "23"
+midir      = "0.9"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+scheng-output-syphon = { path = "../scheng/crates/scheng-output-syphon" }

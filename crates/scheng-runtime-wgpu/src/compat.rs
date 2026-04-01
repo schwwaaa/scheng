@@ -129,7 +129,7 @@ static RE_CUSTOM_UNIFORM: Lazy<Regex> = Lazy::new(|| {
 /// Maximum number of custom u_* uniforms packed into CustomBlock.
 pub const MAX_CUSTOM_UNIFORMS: usize = 16;
 
-pub fn process(user_frag: &str, node_label: &str) -> ProcessedShader {
+pub fn process(user_frag: &str, _node_label: &str) -> ProcessedShader {
     let mut src = user_frag.to_owned();
 
     // 1. Strip #version (we inject our own)

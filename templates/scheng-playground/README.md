@@ -2,28 +2,12 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/scheng-template-3b82f6?style=flat-square"/>
-  <img src="https://img.shields.io/badge/complexity-intermediate-f59e0b?style=flat-square"/>
-  <img src="https://img.shields.io/badge/purpose-explore%20%26%20learn-8b5cf6?style=flat-square"/>
+  <img src="https://img.shields.io/badge/complexity-explorer-8b5cf6?style=flat-square"/>
+  <img src="https://img.shields.io/badge/hot--reload-yes-06b6d4?style=flat-square"/>
+  <img src="https://img.shields.io/badge/MIDI-CC1--CC8-f59e0b?style=flat-square"/>
 </p>
 
-An interactive multi-shader playground for exploring scheng. Switch between shader programs at runtime, tweak parameters live, and experiment with the graph system — no code changes needed.
-
----
-
-## What is this?
-
-`scheng-playground` is a development sandbox. Unlike the single-shader templates, it:
-
-- Loads **all `.frag` files** in `assets/shaders/` at startup
-- Lets you **cycle between shaders** with keyboard shortcuts
-- Exposes **8 MIDI-controlled parameters** (CC1–CC8) wired to `u_p1`–`u_p8` in every shader
-- Logs **FPS, resolution, current shader, and parameter values** to the terminal
-
-Use it to:
-- Rapidly prototype shader ideas without rebuilding
-- Learn how the scheng uniform system works
-- Test new shaders before adding them to a real instrument
-- Demonstrate the SDK to others
+Interactive multi-shader explorer. Drop any `.frag` file into `assets/shaders/`, cycle through them with arrow keys, and all 8 MIDI CC params are pre-wired to every shader.
 
 ---
 
@@ -31,98 +15,106 @@ Use it to:
 
 ```bash
 cargo run --release
+cargo run --release -- --width 1920 --height 1080
 ```
 
-### Keyboard shortcuts
+---
+
+## Keyboard
 
 | Key | Action |
 |-----|--------|
-| `→` / `]` | Next shader |
-| `←` / `[` | Previous shader |
+| `→` or `]` | Next shader |
+| `←` or `[` | Previous shader |
 | `R` | Reload all shaders from disk |
-| `F` | Toggle fullscreen |
+| `F` | Print shader list to terminal |
 | `Escape` | Quit |
+
+The window title always shows the current shader name and index.
 
 ---
 
-## Writing shaders for the playground
+## MIDI
 
-Every shader gets the standard scheng uniforms plus 8 playground parameters:
+CC1–CC8 map to `u_p1`–`u_p8` in every shader (range 0.0–1.0, smoothed).
+
+Declare only the params you actually use at the top of your shader:
 
 ```glsl
-// Standard uniforms (always available)
-// uTime, uFrame, uResolution, v_uv, fragColor
-
-// Playground parameters — all 0.0–1.0, controlled via MIDI CC1–CC8
-uniform float u_p1;  // CC1
+uniform float u_p1;  // CC1 — your description here
 uniform float u_p2;  // CC2
-uniform float u_p3;  // CC3
-uniform float u_p4;  // CC4
-uniform float u_p5;  // CC5
-uniform float u_p6;  // CC6
-uniform float u_p7;  // CC7
-uniform float u_p8;  // CC8
 ```
 
-Example shader using playground params:
+All 8 params are always uploaded to every shader — you just choose which ones to declare and use.
+
+---
+
+## Writing your own shader
+
+Start from `assets/shaders/08_template.frag`. All standard scheng uniforms are available without declaration:
 
 ```glsl
-// assets/shaders/plasma.frag
-uniform float u_p1;  // speed
-uniform float u_p2;  // scale
-uniform float u_p3;  // hue shift
+// Available in every shader — no declaration needed:
+// uTime        float   seconds since start
+// uFrame       uint    frame counter
+// uResolution  vec2    width × height in pixels
+// v_uv         vec2    UV coordinates [0,1]
+// fragColor    vec4    write your pixel here
+
+uniform float u_p1;  // declare the params you want
 
 void main() {
-    vec2  uv = v_uv * 2.0 - 1.0;
-    float t  = uTime * (0.5 + u_p1 * 2.0);
-    float s  = 2.0 + u_p2 * 6.0;
+    vec2  uv  = v_uv;
+    float t   = uTime;
 
-    float v  = sin(uv.x * s + t) + sin(uv.y * s - t);
-    vec3  col = 0.5 + 0.5 * cos(v * 3.14 + u_p3 * 6.28 + vec3(0, 2, 4));
-    fragColor = vec4(col, 1.0);
+    // your shader here
+
+    fragColor = vec4(uv, u_p1, 1.0);
 }
 ```
 
-Drop any `.frag` file into `assets/shaders/` and press `R` to load it without restarting.
+Save the file — it hot-reloads instantly. No restart needed.
 
 ---
 
-## Project layout
+## Included shaders
 
+| Shader | Description | Key params |
+|--------|-------------|-----------|
+| `01_gradient` | Animated color gradient — the hello world | CC1=speed, CC2=hue, CC3=frequency |
+| `02_plasma` | Layered sine-wave interference | CC1=speed, CC2=scale, CC3=hue |
+| `03_tunnel` | Rotating geometric tunnel | CC1=fly speed, CC2=rotation, CC3=sectors |
+| `04_noise` | Fractal Brownian motion (fBm) | CC1=speed, CC2=scale, CC3=octaves, CC4=warp |
+| `05_sdf2d` | 2D signed distance fields | CC1=speed, CC2=orbit, CC3=blend radius |
+| `06_voronoi` | Voronoi cellular noise | CC1=speed, CC2=scale, CC3=edge sharpness |
+| `07_lines` | Interference / moiré lines | CC1=speed, CC2=frequency, CC3=rotation |
+| `08_template` | Blank starting point — copy this | all yours |
+
+Files are loaded in alphabetical order. Prefix with numbers to control order.
+
+---
+
+## Adding your own shaders
+
+Just drop `.frag` files into `assets/shaders/`. Press `R` to reload without restarting. The playground picks up new files automatically.
+
+Naming tip: prefix with a number so they sort cleanly:
 ```
-scheng-playground/
-├── Cargo.toml
-├── build.rs
-├── src/
-│   └── main.rs
-└── assets/
-    └── shaders/
-        ├── gradient.frag    ← included starter shaders
-        ├── plasma.frag
-        ├── tunnel.frag
-        ├── solarize.frag
-        └── noise.frag
+assets/shaders/
+  01_gradient.frag
+  02_plasma.frag
+  09_my_experiment.frag   ← your new shader appears at position 9
+  10_another_idea.frag
 ```
 
 ---
 
-## MIDI parameter mapping
+## Output
 
-| CC | Parameter | Default | Range |
-|----|-----------|---------|-------|
-| CC1 | `u_p1` | 0.5 | 0.0–1.0 |
-| CC2 | `u_p2` | 0.5 | 0.0–1.0 |
-| CC3 | `u_p3` | 0.0 | 0.0–1.0 |
-| CC4 | `u_p4` | 0.0 | 0.0–1.0 |
-| CC5 | `u_p5` | 0.0 | 0.0–1.0 |
-| CC6 | `u_p6` | 0.0 | 0.0–1.0 |
-| CC7 | `u_p7` | 0.0 | 0.0–1.0 |
-| CC8 | `u_p8` | 0.0 | 0.0–1.0 |
-
-All values are smoothed (smooth=0.05) so CC changes are silky — no stepping.
+Syphon output is always active on macOS as `"scheng-playground"`. The currently displayed shader is always what Syphon sends — switching shaders switches the Syphon output instantly.
 
 ---
 
 ## Full documentation
 
-[Developer Reference](https://yourusername.github.io/scheng/developer-reference.html)
+[SDK Reference](https://yourusername.github.io/scheng/sdk-reference.html)

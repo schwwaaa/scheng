@@ -9,6 +9,7 @@ pub mod pipeline;
 pub mod render_target;
 pub mod shader;
 pub mod uniforms;
+pub mod plugin;
 
 pub use context::WgpuContext;
 pub use executor::{NodeConfig, OutputSink, WgpuRuntime};
