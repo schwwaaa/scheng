@@ -1,34 +1,41 @@
 //! `pipeline.rs` — render pipeline and bind group layout management.
 //!
-//! [`PipelineCache`] creates and caches one [`wgpu::RenderPipeline`] per unique
-//! fragment shader (keyed by source hash). Pipeline creation is expensive;
-//! caching ensures it only happens when the shader source changes.
+//! Two pipeline families:
+//!
+//! 1. **Fullscreen pipeline** (default): 3-vertex triangle, no vertex buffer.
+//!    Used by every ShaderSource, ShaderPass, Crossfade, etc.
+//!
+//! 2. **Geometry pipeline**: explicit vertex buffer of `[f32; 2]` NDC positions.
+//!    Used by MeshSource / MSH3 nodes with `PipelineTopology::LineList`,
+//!    `TriangleList`, or `PointList`.
+//!
+//! Both families share **one bind group layout** (bindings 0–7), so there is
+//! only one layout object and all nodes can use the same descriptor set
+//! structure. Binding 7 (MvpBlock) is always present; fullscreen nodes just
+//! upload an identity matrix.
 //!
 //! # Bind group layout (fixed — matches compat header)
 //!
-//! All scheng nodes share one bind group layout at group 0:
+//! | binding | type            | stage    |
+//! |--------:|-----------------|----------|
+//! |       0 | Texture2D       | FRAGMENT |
+//! |       1 | Texture2D       | FRAGMENT |
+//! |       2 | Texture2D       | FRAGMENT |
+//! |       3 | Texture2D       | FRAGMENT |
+//! |       4 | Sampler(Filter) | FRAGMENT |
+//! |       5 | UniformBuffer   | FRAGMENT | FrameBlock
+//! |       6 | UniformBuffer   | FRAGMENT | CustomBlock (u_* params)
+//! |       7 | UniformBuffer   | VERTEX   | MvpBlock (geometry matrix)
 //!
-//! | binding | type              | stage    |
-//! |--------:|-------------------|----------|
-//! |       0 | Texture2D         | FRAGMENT |
-//! |       1 | Texture2D         | FRAGMENT |
-//! |       2 | Texture2D         | FRAGMENT |
-//! |       3 | Texture2D         | FRAGMENT |
-//! |       4 | Sampler(Filter)   | FRAGMENT |
-//! |       5 | UniformBuffer     | FRAGMENT |
-//!
-//! This matches `compat.rs`'s injected header exactly.
-//!
-//! # Pipeline layout
-//!
-//! One bind group (group 0) containing all resources.
-//! No push constants, no vertex buffers (fullscreen triangle uses `vertex_index`).
+//! Binding 7 is VERTEX-stage only (fragment shaders never need the MVP).
 
 use std::collections::HashMap;
 
+use scheng_param_store::node_config::PipelineTopology;
+
 use crate::{
     render_target::RENDER_TARGET_FORMAT,
-    shader::{ShaderCache, VERTEX_SHADER_WGSL},
+    shader::{ShaderCache, VERTEX_SHADER_WGSL, VERTEX_SHADER_GEOMETRY_WGSL},
     WgpuError,
 };
 
@@ -37,14 +44,16 @@ pub struct NodePipeline {
     pub pipeline:             wgpu::RenderPipeline,
     pub bind_group_layout:    wgpu::BindGroupLayout,
     pub custom_uniform_names: Vec<String>,
+    pub topology:             PipelineTopology,
 }
 
-/// Cache of compiled render pipelines, keyed by fragment shader source hash.
+/// Cache key: (frag_hash, msaa_count, topology)
+type PipelineKey = (u64, u32, PipelineTopology);
+
+/// Cache of compiled render pipelines.
 pub struct PipelineCache {
-    /// Compiled pipelines, keyed by fragment shader source hash.
-    pipelines: HashMap<(u64, u32), NodePipeline>,
-    /// Shader module cache (vertex + fragment modules).
-    shaders: ShaderCache,
+    pipelines: HashMap<PipelineKey, NodePipeline>,
+    shaders:   ShaderCache,
 }
 
 impl PipelineCache {
@@ -52,19 +61,17 @@ impl PipelineCache {
         Self { pipelines: HashMap::new(), shaders: ShaderCache::new() }
     }
 
-    /// Get or create the render pipeline for a given fragment shader source.
+    /// Get or create the render pipeline for a given fragment shader + topology.
     ///
-    /// `frag_src` is the **original GLSL 330** source — compat preprocessing
-    /// happens inside [`ShaderCache::fragment_module`].
-    ///
-    /// The resulting pipeline is cached so subsequent calls with the same
-    /// source string are O(1).
+    /// `frag_src` is the **original GLSL 330** source.
+    /// `topology` selects fullscreen vs geometry pipeline family.
     pub fn get_or_create<'a>(
         &'a mut self,
-        device: &wgpu::Device,
-        frag_src: &str,
-        node_label: &str,
+        device:       &wgpu::Device,
+        frag_src:     &str,
+        node_label:   &str,
         sample_count: u32,
+        topology:     PipelineTopology,
     ) -> Result<&'a NodePipeline, WgpuError> {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
@@ -72,15 +79,12 @@ impl PipelineCache {
         let mut h = DefaultHasher::new();
         frag_src.hash(&mut h);
         let hash = h.finish();
-        let key = (hash, sample_count);
+        let key  = (hash, sample_count, topology);
 
         if !self.pipelines.contains_key(&key) {
             let pipeline = build_pipeline(
-                device,
-                &mut self.shaders,
-                frag_src,
-                node_label,
-                sample_count,
+                device, &mut self.shaders,
+                frag_src, node_label, sample_count, topology,
             )?;
             self.pipelines.insert(key, pipeline);
         }
@@ -88,7 +92,6 @@ impl PipelineCache {
         Ok(self.pipelines.get(&key).unwrap())
     }
 
-    /// Clear the pipeline cache (e.g. on hot-reload).
     pub fn clear(&mut self) {
         self.pipelines.clear();
         self.shaders.clear();
@@ -97,151 +100,154 @@ impl PipelineCache {
 
 // ── Pipeline construction ─────────────────────────────────────────────────
 
-/// Build a single render pipeline for one fragment shader.
 fn build_pipeline(
-    device: &wgpu::Device,
-    shaders: &mut ShaderCache,
-    frag_src: &str,
-    node_label: &str,
+    device:       &wgpu::Device,
+    shaders:      &mut ShaderCache,
+    frag_src:     &str,
+    node_label:   &str,
     sample_count: u32,
+    topology:     PipelineTopology,
 ) -> Result<NodePipeline, WgpuError> {
-    // Compile/get shader modules.
-    let vert_module = {
-        // Safety: we borrow shaders mutably for vert, then drop before frag borrow.
-        // The vertex shader is always the built-in WGSL — we cache it separately
-        // to avoid lifetime issues. Get it by value (wgpu::ShaderModule isn't Clone,
-        // so we re-create it if not cached — it's fast for WGSL).
-        // TODO: ShaderCache should store Arc<wgpu::ShaderModule> to allow sharing.
-        // For Phase 1, create the vertex module inline (it's tiny and cached by wgpu).
-        device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("scheng_vert"),
-            source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(VERTEX_SHADER_WGSL)),
-        })
+
+    // ── Vertex shader ────────────────────────────────────────────────────
+    // Fullscreen: built-in WGSL (no vertex buffer, uses vertex_index builtin)
+    // Geometry:   separate WGSL that reads @location(0) vec2<f32> positions
+    let vert_src = if topology.is_geometry() {
+        VERTEX_SHADER_GEOMETRY_WGSL
+    } else {
+        VERTEX_SHADER_WGSL
     };
 
-    let (frag_module, custom_uniform_names) = shaders.fragment_module_with_names(device, frag_src, node_label)?;
+    let vert_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label:  Some(&format!("{node_label}_vert")),
+        source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(vert_src)),
+    });
 
-    // Build the shared bind group layout.
+    // ── Fragment shader ──────────────────────────────────────────────────
+    let (frag_module, custom_uniform_names) =
+        shaders.fragment_module_with_names(device, frag_src, node_label)?;
+
+    // ── Bind group layout (same for both families) ───────────────────────
     let bind_group_layout = build_bind_group_layout(device, node_label);
 
-    // Build the pipeline layout.
+    // ── Pipeline layout ──────────────────────────────────────────────────
     let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-        label: Some(&format!("{}_layout", node_label)),
-        bind_group_layouts: &[&bind_group_layout],
+        label:                Some(&format!("{node_label}_layout")),
+        bind_group_layouts:   &[&bind_group_layout],
         push_constant_ranges: &[],
     });
 
-    // Build the render pipeline.
-    //
-    // NOTE on `entry_point`: WGSL uses "vs_main"; GLSL compiled via naga
-    // exposes the original entry point name, which for GLSL void main() is "main".
-    //
-    // NOTE on wgpu API version: in wgpu ≥ 0.20 / 22, VertexState and
-    // FragmentState have a `compilation_options` field. If your version
-    // doesn't have it, remove those lines.
+    // ── Vertex buffer layout (geometry only) ─────────────────────────────
+    // Two f32 per vertex: [x, y] in NDC space.
+    let vertex_buffer_layout = wgpu::VertexBufferLayout {
+        array_stride: (2 * std::mem::size_of::<f32>()) as wgpu::BufferAddress,
+        step_mode:    wgpu::VertexStepMode::Vertex,
+        attributes:   &[wgpu::VertexAttribute {
+            format:          wgpu::VertexFormat::Float32x2,
+            offset:          0,
+            shader_location: 0,  // @location(0) position: vec2<f32>
+        }],
+    };
+
+    let vertex_buffers: &[wgpu::VertexBufferLayout] = if topology.is_geometry() {
+        std::slice::from_ref(&vertex_buffer_layout)
+    } else {
+        &[]  // fullscreen — no vertex buffer
+    };
+
+    // ── Render pipeline ──────────────────────────────────────────────────
     let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-        label: Some(&format!("{}_pipeline", node_label)),
+        label:  Some(&format!("{node_label}_pipeline")),
         layout: Some(&pipeline_layout),
         vertex: wgpu::VertexState {
-            module: &vert_module,
-            entry_point: Some("vs_main"),
-            compilation_options: wgpu::PipelineCompilationOptions::default(),
-            // No vertex buffers — fullscreen triangle uses @builtin(vertex_index)
-            buffers: &[],
+            module:               &vert_module,
+            entry_point:          Some("vs_main"),
+            compilation_options:  wgpu::PipelineCompilationOptions::default(),
+            buffers:              vertex_buffers,
         },
         fragment: Some(wgpu::FragmentState {
-            module: frag_module,
-            // GLSL `void main()` → naga entry point name is "main"
-            entry_point: Some("main"),
+            module:              frag_module,
+            entry_point:         Some("main"),
             compilation_options: wgpu::PipelineCompilationOptions::default(),
             targets: &[Some(wgpu::ColorTargetState {
-                format: RENDER_TARGET_FORMAT,
-                // No blending — each node outputs a complete opaque frame.
-                // Blending semantics (for mixer nodes like Crossfade/Add)
-                // are handled in the fragment shader itself.
-                blend: None,
+                format:     RENDER_TARGET_FORMAT,
+                blend:      None,
                 write_mask: wgpu::ColorWrites::ALL,
             })],
         }),
         primitive: wgpu::PrimitiveState {
-            topology: wgpu::PrimitiveTopology::TriangleList,
+            topology:   topology.to_wgpu(),
             front_face: wgpu::FrontFace::Ccw,
-            cull_mode: None, // fullscreen triangle — cull mode doesn't matter
+            cull_mode:  None,
             ..Default::default()
         },
-        depth_stencil: None, // video pipeline never uses depth
+        depth_stencil: None,
         multisample: wgpu::MultisampleState {
-            count: sample_count,
-            mask: !0,
+            count:                     sample_count,
+            mask:                      !0,
             alpha_to_coverage_enabled: false,
         },
         multiview: None,
-        cache: None,
+        cache:     None,
     });
 
-    Ok(NodePipeline { pipeline, bind_group_layout, custom_uniform_names })
+    Ok(NodePipeline { pipeline, bind_group_layout, custom_uniform_names, topology })
 }
 
 // ── Bind group layout ─────────────────────────────────────────────────────
 
-/// Build the bind group layout that matches our compat header's binding slots.
+/// Build the shared bind group layout (bindings 0–7).
 ///
-/// All nodes share this layout — the specific textures bound to each slot
-/// change per-node per-frame, but the layout itself is constant.
+/// **All nodes share this layout.** Binding 7 (MvpBlock) is VERTEX-stage only;
+/// fullscreen nodes still need it in the bind group but just upload identity.
 pub fn build_bind_group_layout(device: &wgpu::Device, label: &str) -> wgpu::BindGroupLayout {
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-        label: Some(&format!("{}_bgl", label)),
+        label:   Some(&format!("{label}_bgl")),
         entries: &[
-            // binding 0 — iChannel0_tex
+            // 0–3: iChannel textures (fragment)
             tex_entry(0),
-            // binding 1 — iChannel1_tex
             tex_entry(1),
-            // binding 2 — iChannel2_tex
             tex_entry(2),
-            // binding 3 — iChannel3_tex
             tex_entry(3),
-            // binding 4 — iSampler (shared linear filtering sampler)
+            // 4: shared sampler (fragment)
             wgpu::BindGroupLayoutEntry {
-                binding: 4,
+                binding:    4,
                 visibility: wgpu::ShaderStages::FRAGMENT,
                 ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                 count: None,
             },
-            // binding 5 — FrameBlock uniform buffer
-            wgpu::BindGroupLayoutEntry {
-                binding: 5,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            // binding 6 — CustomBlock (per-node u_* uniforms)
-            wgpu::BindGroupLayoutEntry {
-                binding: 6,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
+            // 5: FrameBlock (fragment)
+            uniform_entry(5, wgpu::ShaderStages::FRAGMENT),
+            // 6: CustomBlock — u_* params (fragment)
+            uniform_entry(6, wgpu::ShaderStages::FRAGMENT),
+            // 7: MvpBlock — geometry matrix (vertex only)
+            //    Fullscreen nodes upload identity; cost is 64 bytes/frame, negligible.
+            uniform_entry(7, wgpu::ShaderStages::VERTEX),
         ],
     })
 }
 
-/// Convenience helper: a texture2D binding entry.
 fn tex_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     wgpu::BindGroupLayoutEntry {
         binding,
         visibility: wgpu::ShaderStages::FRAGMENT,
         ty: wgpu::BindingType::Texture {
-            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+            sample_type:    wgpu::TextureSampleType::Float { filterable: true },
             view_dimension: wgpu::TextureViewDimension::D2,
-            multisampled: false,
+            multisampled:   false,
+        },
+        count: None,
+    }
+}
+
+fn uniform_entry(binding: u32, visibility: wgpu::ShaderStages) -> wgpu::BindGroupLayoutEntry {
+    wgpu::BindGroupLayoutEntry {
+        binding,
+        visibility,
+        ty: wgpu::BindingType::Buffer {
+            ty:                 wgpu::BufferBindingType::Uniform,
+            has_dynamic_offset: false,
+            min_binding_size:   None,
         },
         count: None,
     }
