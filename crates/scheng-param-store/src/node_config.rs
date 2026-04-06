@@ -73,6 +73,15 @@ pub struct NodeConfig {
     /// Graph edges are used as fallback when a slot is None.
     pub input_textures: [Option<Arc<wgpu::Texture>>; 4],
 
+    /// Audio / FFT spectrum texture bound as `iAudio` in the shader (binding 8).
+    ///
+    /// Create a 2D texture with height=1 and width=fft_bin_count, format Rgba16Float.
+    /// Upload FFT magnitude into the R channel each frame via queue.write_texture().
+    /// In GLSL: `float mag = texture(iAudio, vec2(v_uv.x, 0.5)).r;`
+    ///
+    /// None → blank 1×1 black texture (shader reads 0.0).
+    pub audio_texture: Option<Arc<wgpu::Texture>>,
+
     // ── Geometry fields (only used when topology != Fullscreen) ──────────
 
     /// Vertex pipeline topology.
@@ -109,6 +118,7 @@ impl Default for NodeConfig {
             uniforms:       HashMap::new(),
             output_name:    None,
             input_textures: [None, None, None, None],
+            audio_texture:  None,
             topology:       PipelineTopology::Fullscreen,
             vertex_data:    None,
             mvp:            None,

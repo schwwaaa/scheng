@@ -1,0 +1,16 @@
+[package]
+name        = "scheng-input-screencapture"
+version     = "0.1.0"
+edition     = "2021"
+description = "Screen capture input for scheng — configurable region capture as a wgpu texture"
+
+[dependencies]
+scheng-runtime-wgpu = { path = "../scheng-runtime-wgpu" }
+scheng-graph        = { path = "../scheng-graph" }
+wgpu        = "23"
+log         = "0.4"
+thiserror   = "1"
+screenshots = "0.8"
+
+[dev-dependencies]
+env_logger = "0.11"

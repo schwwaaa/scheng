@@ -221,8 +221,9 @@ pub fn build_bind_group_layout(device: &wgpu::Device, label: &str) -> wgpu::Bind
             // 6: CustomBlock — u_* params (fragment)
             uniform_entry(6, wgpu::ShaderStages::FRAGMENT),
             // 7: MvpBlock — geometry matrix (vertex only)
-            //    Fullscreen nodes upload identity; cost is 64 bytes/frame, negligible.
             uniform_entry(7, wgpu::ShaderStages::VERTEX),
+            // 8: iAudio_tex — audio/FFT spectrum (fragment, 2D height=1)
+            tex_entry(8),
         ],
     })
 }

@@ -342,6 +342,7 @@ fn build_bind_group(
     uniform_manager: &UniformManager,
     custom_buffer:   &CustomUniformBuffer,
     mvp_buffer:      &MvpUniformBuffer,
+    audio_view:      &wgpu::TextureView,
 ) -> wgpu::BindGroup {
     device.create_bind_group(&wgpu::BindGroupDescriptor {
         label:   Some("scheng_bg"),
@@ -355,6 +356,7 @@ fn build_bind_group(
             wgpu::BindGroupEntry { binding: 5, resource: uniform_manager.buffer.as_entire_binding() },
             wgpu::BindGroupEntry { binding: 6, resource: custom_buffer.buffer.as_entire_binding() },
             wgpu::BindGroupEntry { binding: 7, resource: mvp_buffer.buffer.as_entire_binding() },
+            wgpu::BindGroupEntry { binding: 8, resource: wgpu::BindingResource::TextureView(audio_view) },
         ],
     })
 }
@@ -374,6 +376,7 @@ pub struct WgpuRuntime {
     /// Fix 4: vertex buffers for geometry nodes.
     geometry_buffers: HashMap<NodeId, GeometryBuffers>,
     blank_texture:   wgpu::Texture,
+    blank_audio:     wgpu::Texture,
     sampler:         wgpu::Sampler,
 }
 
@@ -382,6 +385,7 @@ impl WgpuRuntime {
         let ctx             = WgpuContext::new()?;
         let uniform_manager = UniformManager::new(&ctx.device);
         let blank_texture   = create_blank_texture(&ctx.device, &ctx.queue);
+        let blank_audio     = create_blank_audio_texture(&ctx.device, &ctx.queue);
         let sampler         = create_sampler(&ctx.device);
         log::info!(
             "scheng-runtime-wgpu ready — {}×{} — {}",
@@ -397,6 +401,7 @@ impl WgpuRuntime {
             mvp_buffers:            HashMap::new(),
             geometry_buffers:       HashMap::new(),
             blank_texture,
+            blank_audio,
             sampler,
         })
     }
@@ -409,6 +414,7 @@ impl WgpuRuntime {
     pub fn from_context(ctx: WgpuContext, width: u32, height: u32) -> Result<Self, WgpuError> {
         let uniform_manager = UniformManager::new(&ctx.device);
         let blank_texture   = create_blank_texture(&ctx.device, &ctx.queue);
+        let blank_audio     = create_blank_audio_texture(&ctx.device, &ctx.queue);
         let sampler         = create_sampler(&ctx.device);
         log::info!(
             "scheng-runtime-wgpu ready (windowed) — {}×{} — {}",
@@ -424,6 +430,7 @@ impl WgpuRuntime {
             mvp_buffers:            HashMap::new(),
             geometry_buffers:       HashMap::new(),
             blank_texture,
+            blank_audio,
             sampler,
         })
     }
@@ -519,6 +526,12 @@ impl WgpuRuntime {
                 .or_insert_with(|| MvpUniformBuffer::new(&self.ctx.device, &label));
             mvp_buf.update(&self.ctx.queue, config.mvp);
 
+            // ── C1: audio texture (blank fallback when None) ───────────────
+            let audio_view = config.audio_texture
+                .as_ref()
+                .map(|t| t.create_view(&wgpu::TextureViewDescriptor::default()))
+                .unwrap_or_else(|| self.blank_audio.create_view(&wgpu::TextureViewDescriptor::default()));
+
             // ── Bind group ─────────────────────────────────────────────────
             let bind_group = build_bind_group(
                 &self.ctx.device,
@@ -528,6 +541,7 @@ impl WgpuRuntime {
                 &self.uniform_manager,
                 custom_buf,
                 mvp_buf,
+                &audio_view,
             );
 
             // ── Choose render target ───────────────────────────────────────
@@ -646,6 +660,34 @@ fn get_attachment_ptrs(rt: &RenderTarget)
         None
     };
     (att, res)
+}
+
+/// Create a 1×1 blank audio texture (Rgba16Float, all zeros).
+/// Used as the fallback when NodeConfig::audio_texture is None.
+/// Instruments replace this with a real 1×N FFT texture each frame.
+fn create_blank_audio_texture(device: &wgpu::Device, queue: &wgpu::Queue) -> wgpu::Texture {
+    use crate::render_target::RENDER_TARGET_FORMAT;
+    let tex = device.create_texture(&wgpu::TextureDescriptor {
+        label:           Some("blank_audio_1x1"),
+        size:            wgpu::Extent3d { width: 1, height: 1, depth_or_array_layers: 1 },
+        mip_level_count: 1,
+        sample_count:    1,
+        dimension:       wgpu::TextureDimension::D2,
+        format:          RENDER_TARGET_FORMAT,
+        usage:           wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+        view_formats:    &[],
+    });
+    // Black Rgba16Float: 8 bytes, all zero (0.0 in all channels)
+    queue.write_texture(
+        wgpu::ImageCopyTexture {
+            texture: &tex, mip_level: 0,
+            origin: wgpu::Origin3d::ZERO, aspect: wgpu::TextureAspect::All,
+        },
+        &[0u8; 8],
+        wgpu::ImageDataLayout { offset: 0, bytes_per_row: Some(8), rows_per_image: Some(1) },
+        wgpu::Extent3d { width: 1, height: 1, depth_or_array_layers: 1 },
+    );
+    tex
 }
 
 fn create_sampler(device: &wgpu::Device) -> wgpu::Sampler {

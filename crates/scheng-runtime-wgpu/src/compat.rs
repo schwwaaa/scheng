@@ -53,6 +53,11 @@ layout(binding = 5) uniform FrameBlock {
 
 // NOTE: binding 6 (CustomBlock) is injected below when u_* uniforms are present.
 // NOTE: binding 7 (MvpBlock) is VERTEX-stage only — not visible in fragment shaders.
+
+// Audio / FFT spectrum (binding 8) — a 1×N texture, height always 1.
+// Sample as: texture(iAudio, vec2(normalized_bin, 0.5)).r
+layout(binding = 8) uniform texture2D iAudio_tex;
+#define iAudio sampler2D(iAudio_tex, iSampler)
 // ── end compat header ──────────────────────────────────────────────────────
 "#;
 

@@ -22,6 +22,7 @@ members = [
   "crates/scheng-input-webcam",
   "crates/scheng-input-video",
   "crates/scheng-input-ndi",
+  "crates/scheng-input-screencapture",
 
   # ── Control ───────────────────────────────────────────────────────────────
   "crates/scheng-control-osc",
