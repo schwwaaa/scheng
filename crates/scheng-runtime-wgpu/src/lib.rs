@@ -10,6 +10,7 @@ pub mod render_target;
 pub mod shader;
 pub mod uniforms;
 pub mod plugin;
+pub mod temporal_ring;
 
 pub use context::WgpuContext;
 // NodeConfig lives in scheng-param-store; re-export it from there.
@@ -19,6 +20,7 @@ pub use executor::{OutputSink, WgpuRuntime};
 pub use frame_ctx::FrameCtx;
 pub use render_target::RenderTarget;
 pub use shader::ShaderSource;
+pub use temporal_ring::TemporalRing;
 
 use thiserror::Error;
 

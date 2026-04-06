@@ -57,7 +57,7 @@ layout(binding = 5) uniform FrameBlock {
 "#;
 
 /// Maximum number of custom u_* uniforms packed into CustomBlock.
-pub const MAX_CUSTOM_UNIFORMS: usize = 16;
+pub const MAX_CUSTOM_UNIFORMS: usize = 32;
 
 pub struct ProcessedShader {
     pub source:               String,
@@ -96,7 +96,7 @@ static RE_CUSTOM_UNIFORM: Lazy<Regex> = Lazy::new(|| {
 
 // ── Public API ────────────────────────────────────────────────────────────
 
-pub fn process(user_frag: &str, _node_label: &str) -> ProcessedShader {
+pub fn process(user_frag: &str, node_label: &str) -> ProcessedShader {
     let mut src = user_frag.to_owned();
 
     // Normalize: ensure every uniform declaration starts on its own line.
@@ -116,6 +116,17 @@ pub fn process(user_frag: &str, _node_label: &str) -> ProcessedShader {
         .captures_iter(&src)
         .map(|cap| cap[1].to_owned())
         .collect();
+
+    if custom_uniform_names.len() > MAX_CUSTOM_UNIFORMS {
+        log::warn!(
+            "Shader '{}' declares {} custom uniforms but MAX_CUSTOM_UNIFORMS is {}. \
+             Uniforms beyond index {} will be ignored.",
+            node_label,
+            custom_uniform_names.len(),
+            MAX_CUSTOM_UNIFORMS,
+            MAX_CUSTOM_UNIFORMS - 1,
+        );
+    }
 
     if !custom_uniform_names.is_empty() {
         src = RE_CUSTOM_UNIFORM.replace_all(&src, "").into_owned();

@@ -231,6 +231,7 @@ impl Graph {
     }
 
     pub fn compile(&self) -> Result<Plan, EngineError> {
+        // Validate: all Output nodes must have their input connected.
         for n in self.nodes.values() {
             if n.kind.class() == NodeClass::Output {
                 let in_port = n.ports.iter().find(|p| p.dir == PortDir::In).map(|p| p.id);
@@ -242,9 +243,71 @@ impl Graph {
                 }
             }
         }
-        let mut nodes: Vec<NodeId> = self.nodes.keys().copied().collect();
-        nodes.sort_by_key(|id| id.0);
-        Ok(Plan { nodes, edges: self.edges.clone() })
+
+        // Topological sort via Kahn's algorithm.
+        //
+        // Builds execution order so every node renders after all its upstream
+        // dependencies. Also detects cycles — if any nodes remain after the
+        // sort, the graph contains a cycle and compile() returns an error.
+        //
+        // PreviousFrame is intentionally exempt from cycle detection: it reads
+        // the *previous* frame's output, so the cycle is broken by time. We
+        // treat its outgoing edges as not creating a dependency for ordering
+        // purposes — PreviousFrame is always scheduled first (it's a Source).
+
+        use std::collections::{HashMap as HM, VecDeque};
+
+        // in_degree[node] = number of upstream nodes that must render before it.
+        let mut in_degree: HM<NodeId, usize> = self.nodes.keys().map(|&id| (id, 0)).collect();
+        // adjacency: node → list of nodes that depend on it.
+        let mut adj: HM<NodeId, Vec<NodeId>> = self.nodes.keys().map(|&id| (id, vec![])).collect();
+
+        for edge in &self.edges {
+            let from = edge.from.node;
+            let to   = edge.to.node;
+            // PreviousFrame edges are time-broken — don't count as ordering deps.
+            if self.nodes.get(&from).map(|n| n.kind == NodeKind::PreviousFrame).unwrap_or(false) {
+                continue;
+            }
+            adj.entry(from).or_default().push(to);
+            *in_degree.entry(to).or_insert(0) += 1;
+        }
+
+        // Seed the queue with all nodes that have no upstream dependencies.
+        // Use stable ordering within the seed (by NodeId) so compilation is
+        // deterministic across runs.
+        let mut queue: VecDeque<NodeId> = {
+            let mut seeds: Vec<NodeId> = in_degree.iter()
+                .filter(|(_, &d)| d == 0)
+                .map(|(&id, _)| id)
+                .collect();
+            seeds.sort_by_key(|id| id.0);
+            seeds.into()
+        };
+
+        let mut ordered: Vec<NodeId> = Vec::with_capacity(self.nodes.len());
+
+        while let Some(node_id) = queue.pop_front() {
+            ordered.push(node_id);
+            if let Some(neighbors) = adj.get(&node_id) {
+                let mut next: Vec<NodeId> = neighbors.iter().filter_map(|&nb| {
+                    let d = in_degree.get_mut(&nb)?;
+                    *d -= 1;
+                    if *d == 0 { Some(nb) } else { None }
+                }).collect();
+                next.sort_by_key(|id| id.0); // stable tie-breaking
+                queue.extend(next);
+            }
+        }
+
+        // If not all nodes were visited, the graph has a cycle.
+        if ordered.len() != self.nodes.len() {
+            return Err(EngineError::other(
+                "compile: graph has a cycle — check your connections"
+            ));
+        }
+
+        Ok(Plan { nodes: ordered, edges: self.edges.clone() })
     }
 }
 
